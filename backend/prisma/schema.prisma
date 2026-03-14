@@ -1,0 +1,293 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// USER & AUTHENTICATION
+// ============================================================
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  company       String?
+  plan          Plan     @default(STARTER)
+  leadsUsed     Int      @default(0) @map("leads_used")
+  leadsLimit    Int      @default(1000) @map("leads_limit")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  projects   Project[]
+  campaigns  OutreachCampaign[]
+  searches   LeadSearch[]
+  emailAccounts EmailAccount[]
+
+  @@map("users")
+}
+
+enum Plan {
+  STARTER
+  PRO
+  AGENCY
+}
+
+// ============================================================
+// PROJECTS - Organize leads by project
+// ============================================================
+
+model Project {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  searches   LeadSearch[]
+  businesses Business[]
+  campaigns  OutreachCampaign[]
+
+  @@map("projects")
+}
+
+// ============================================================
+// LEAD SEARCHES - Track search queries
+// ============================================================
+
+model LeadSearch {
+  id           String       @id @default(uuid())
+  userId       String       @map("user_id")
+  projectId    String?      @map("project_id")
+  businessType String       @map("business_type")
+  location     String
+  status       SearchStatus @default(PENDING)
+  resultsCount Int          @default(0) @map("results_count")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  completedAt  DateTime?    @map("completed_at")
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project    Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  businesses Business[]
+
+  @@map("lead_searches")
+}
+
+enum SearchStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// ============================================================
+// BUSINESSES - Core lead data
+// ============================================================
+
+model Business {
+  id             String   @id @default(uuid())
+  projectId      String?  @map("project_id")
+  searchId       String?  @map("search_id")
+  name           String
+  address        String?
+  city           String?
+  state          String?
+  country        String?
+  phone          String?
+  websiteUrl     String?  @map("website_url")
+  googleMapsUrl  String?  @map("google_maps_url")
+  rating         Float?
+  reviewCount    Int?     @map("review_count")
+  businessType   String?  @map("business_type")
+  leadScore      Int      @default(0) @map("lead_score")
+  leadStatus     LeadStatus @default(NEW)  @map("lead_status")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  project        Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  search         LeadSearch?    @relation(fields: [searchId], references: [id], onDelete: SetNull)
+  contacts       Contact[]
+  socialProfiles SocialProfile[]
+  emailsSent     EmailSent[]
+
+  @@map("businesses")
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  REPLIED
+  MEETING_BOOKED
+  CLOSED
+}
+
+// ============================================================
+// CONTACTS - Extracted contact information
+// ============================================================
+
+model Contact {
+  id            String  @id @default(uuid())
+  businessId    String  @map("business_id")
+  email         String?
+  phone         String?
+  contactForm   String? @map("contact_form")
+  firstName     String? @map("first_name")
+  lastName      String? @map("last_name")
+  role          String?
+  isPrimary     Boolean @default(false) @map("is_primary")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("contacts")
+}
+
+// ============================================================
+// SOCIAL PROFILES - Social media links
+// ============================================================
+
+model SocialProfile {
+  id          String   @id @default(uuid())
+  businessId  String   @map("business_id")
+  platform    SocialPlatform
+  profileUrl  String   @map("profile_url")
+  username    String?
+  followers   Int?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("social_profiles")
+}
+
+enum SocialPlatform {
+  INSTAGRAM
+  FACEBOOK
+  LINKEDIN
+  TWITTER
+}
+
+// ============================================================
+// EMAIL ACCOUNTS - User's connected email accounts
+// ============================================================
+
+model EmailAccount {
+  id           String       @id @default(uuid())
+  userId       String       @map("user_id")
+  provider     EmailProvider
+  email        String
+  smtpHost     String?      @map("smtp_host")
+  smtpPort     Int?         @map("smtp_port")
+  smtpUser     String?      @map("smtp_user")
+  smtpPass     String?      @map("smtp_pass")
+  apiKey       String?      @map("api_key")
+  dailyLimit   Int          @default(50) @map("daily_limit")
+  sentToday    Int          @default(0) @map("sent_today")
+  isActive     Boolean      @default(true) @map("is_active")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns OutreachCampaign[]
+
+  @@map("email_accounts")
+}
+
+enum EmailProvider {
+  SMTP
+  SENDGRID
+  SES
+  GMAIL
+}
+
+// ============================================================
+// OUTREACH CAMPAIGNS
+// ============================================================
+
+model OutreachCampaign {
+  id              String         @id @default(uuid())
+  userId          String         @map("user_id")
+  projectId       String?        @map("project_id")
+  emailAccountId  String?        @map("email_account_id")
+  name            String
+  subject         String
+  bodyTemplate    String         @map("body_template")
+  channel         OutreachChannel @default(EMAIL)
+  status          CampaignStatus @default(DRAFT)
+  scheduledAt     DateTime?      @map("scheduled_at")
+  totalRecipients Int            @default(0) @map("total_recipients")
+  sentCount       Int            @default(0) @map("sent_count")
+  openCount       Int            @default(0) @map("open_count")
+  replyCount      Int            @default(0) @map("reply_count")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  // Follow-up settings
+  followUpEnabled  Boolean  @default(false) @map("follow_up_enabled")
+  followUpDays     Int      @default(3) @map("follow_up_days")
+  followUpTemplate String?  @map("follow_up_template")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project      Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  emailAccount EmailAccount? @relation(fields: [emailAccountId], references: [id], onDelete: SetNull)
+  emailsSent   EmailSent[]
+
+  @@map("outreach_campaigns")
+}
+
+enum OutreachChannel {
+  EMAIL
+  INSTAGRAM_DM
+  LINKEDIN
+  CONTACT_FORM
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+}
+
+// ============================================================
+// EMAILS SENT - Individual email tracking
+// ============================================================
+
+model EmailSent {
+  id           String      @id @default(uuid())
+  campaignId   String      @map("campaign_id")
+  businessId   String      @map("business_id")
+  toEmail      String      @map("to_email")
+  subject      String
+  body         String
+  status       EmailStatus @default(QUEUED)
+  openedAt     DateTime?   @map("opened_at")
+  repliedAt    DateTime?   @map("replied_at")
+  bouncedAt    DateTime?   @map("bounced_at")
+  sentAt       DateTime?   @map("sent_at")
+  scheduledAt  DateTime?   @map("scheduled_at")
+  errorMessage String?     @map("error_message")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  campaign OutreachCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  business Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("emails_sent")
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  OPENED
+  REPLIED
+  BOUNCED
+  FAILED
+}
