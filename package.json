@@ -1,0 +1,13 @@
+{
+  "name": "nexusai-services",
+  "version": "1.0.0",
+  "description": "NexusAI - AI Automation, AI Services & AI SaaS Solutions",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}
