@@ -1,420 +1,480 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NexusAI — AI Automation, Services & SaaS Solutions</title>
-  <meta name="description" content="NexusAI builds custom AI automation, AI-powered services, and SaaS products for businesses worldwide. From Punjab to the world.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veltrix AI | AI-Powered Growth Agency</title>
+<meta name="description" content="Veltrix AI - AI-Powered Growth Agency. We help zero-stage startups and small businesses grow with AI. Brand building, lead generation, content, marketing, automation — starting from just $25.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#ffffff;
+  --bg2:#f8f9fb;
+  --bg3:#f1f3f7;
+  --border:#e5e7ee;
+  --border2:#d4d8e3;
+  --muted:#9aa1b4;
+  --sub:#6b7385;
+  --body:#3b3f51;
+  --head:#12141d;
+  --blue:#0052FF;
+  --blue2:#0045d6;
+  --blue-l:rgba(0,82,255,.06);
+  --blue-m:rgba(0,82,255,.12);
+  --green:#00c978;
+  --green-l:rgba(0,201,120,.07);
+  --violet:#7c3aed;
+  --orange:#f97316;
+  --ff:'Outfit',sans-serif;
+  --fd:'Syne',sans-serif;
+  --fm:'IBM Plex Mono',monospace;
+  --ease:cubic-bezier(.4,0,.2,1);
+  --bounce:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{font-family:var(--ff);color:var(--body);background:var(--bg);-webkit-font-smoothing:antialiased}
+::selection{background:var(--blue);color:#fff}
+img{max-width:100%}
+.w{max-width:1140px;margin:0 auto;padding:0 32px}
+/* ANIMATIONS */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.reveal.vis{opacity:1;transform:none}
+.reveal.d1{transition-delay:.1s}.reveal.d2{transition-delay:.2s}.reveal.d3{transition-delay:.3s}.reveal.d4{transition-delay:.4s}
+/* ========== NAV ========== */
+.nav{position:fixed;top:0;left:0;right:0;z-index:999;height:68px;display:flex;align-items:center;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);border-bottom:1px solid transparent;transition:border-color .3s,box-shadow .3s}
+.nav.scrolled{border-color:var(--border);box-shadow:0 1px 12px rgba(0,0,0,.04)}
+.nav-c{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:1140px;margin:0 auto;padding:0 32px}
+.logo{display:flex;align-items:center;gap:9px;cursor:pointer}
+.logo-i{width:34px;height:34px;background:linear-gradient(135deg,var(--blue),#4a8bff);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:800;font-size:16px;color:#fff}
+.logo-t{font-family:var(--fd);font-weight:800;font-size:20px;color:var(--head);letter-spacing:-.3px}
+.logo-t b{color:var(--blue)}
+.nav-r{display:flex;align-items:center;gap:6px}
+.nav-l{font-size:13.5px;font-weight:500;color:var(--sub);padding:8px 16px;border-radius:8px;border:none;background:none;cursor:pointer;font-family:var(--ff);transition:.2s}
+.nav-l:hover{color:var(--head);background:var(--bg2)}
+.nav-b{font-size:13px;font-weight:600;color:#fff;padding:9px 22px;border-radius:100px;border:none;background:var(--head);cursor:pointer;font-family:var(--ff);transition:all .25s var(--bounce)}
+.nav-b:hover{background:var(--blue);transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,82,255,.18)}
+/* ========== HERO ========== */
+.hero{padding:150px 0 110px;position:relative;overflow:hidden}
+.hero-bg{position:absolute;top:-120px;right:-180px;width:650px;height:650px;border-radius:50%;background:radial-gradient(circle,rgba(0,82,255,.06),transparent 70%);pointer-events:none}
+.hero-bg2{position:absolute;bottom:-80px;left:-120px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(0,201,120,.04),transparent 70%);pointer-events:none}
+.hero-row{display:flex;align-items:center;gap:64px}
+.hero-left{flex:1.15;position:relative;z-index:1}
+.hero-right{flex:.85;position:relative;display:flex;justify-content:center}
+.hero-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 14px 5px 7px;background:var(--blue-l);border:1px solid var(--blue-m);border-radius:100px;font-family:var(--fm);font-size:11px;font-weight:600;color:var(--blue);margin-bottom:24px;letter-spacing:.3px}
+.hero-dot{width:7px;height:7px;border-radius:50%;background:var(--blue);animation:pul 2s infinite}
+@keyframes pul{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+.hero h1{font-family:var(--fd);font-size:56px;font-weight:800;color:var(--head);line-height:1.06;letter-spacing:-2.5px;margin-bottom:20px}
+.hero h1 .grd{background:linear-gradient(135deg,var(--blue),#4a8bff,#00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-p{font-size:18px;line-height:1.75;color:var(--sub);max-width:460px;margin-bottom:32px}
+.hero-btns{display:flex;gap:10px;margin-bottom:32px}
+.btn1{padding:14px 32px;background:var(--blue);color:#fff;border:none;border-radius:100px;font-size:15px;font-weight:600;font-family:var(--ff);cursor:pointer;transition:all .3s var(--bounce);box-shadow:0 4px 18px rgba(0,82,255,.18)}
+.btn1:hover{background:var(--blue2);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,82,255,.25)}
+.btn2{padding:14px 26px;background:none;color:var(--head);border:1.5px solid var(--border);border-radius:100px;font-size:15px;font-weight:600;font-family:var(--ff);cursor:pointer;transition:.25s}
+.btn2:hover{border-color:var(--border2);background:var(--bg2)}
+.hero-social{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+.faces{display:flex}.face{width:30px;height:30px;border-radius:50%;border:2px solid #fff;margin-left:-7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:var(--fd)}
+.face:first-child{margin-left:0}
+.f1{background:#dbeafe;color:#2563eb}.f2{background:#d1fae5;color:#059669}.f3{background:#fce7f3;color:#db2777}.f4{background:#fef3c7;color:#d97706}
+/* Hero orb */
+.orb-wrap{width:360px;height:360px;position:relative}
+.orb{width:100%;height:100%;border-radius:50%;background:linear-gradient(145deg,#f5f7fb,#eef1f8);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;position:relative}
+.orb::before{content:'';position:absolute;inset:-22px;border-radius:50%;border:1px dashed rgba(0,0,0,.06);animation:ro 40s linear infinite}
+@keyframes ro{to{transform:rotate(360deg)}}
+.orb-t{text-align:center;z-index:1}
+.orb-n{font-family:var(--fd);font-size:60px;font-weight:800;background:linear-gradient(135deg,var(--blue),#00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.orb-lb{font-size:13px;color:var(--muted);margin-top:2px}
+.fl{position:absolute;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:11px;box-shadow:0 4px 16px rgba(0,0,0,.05);font-size:12px;font-weight:600;color:var(--body);display:flex;align-items:center;gap:7px;white-space:nowrap;z-index:2;animation:bob 4.5s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.fl:nth-child(2){top:2%;left:-14%;animation-delay:0s}
+.fl:nth-child(3){top:30%;right:-18%;animation-delay:.6s}
+.fl:nth-child(4){bottom:22%;left:-10%;animation-delay:1.2s}
+.fl:nth-child(5){bottom:-2%;right:-6%;animation-delay:1.8s}
+.fl:nth-child(6){top:-7%;right:6%;animation-delay:.3s}
+.fl-i{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.fl-i.a{background:var(--blue-l)}.fl-i.b{background:var(--green-l)}.fl-i.c{background:rgba(124,58,237,.07)}.fl-i.d{background:rgba(249,115,22,.07)}.fl-i.e{background:rgba(244,63,94,.07)}
+/* ========== MARQUEE ========== */
+.marquee{padding:18px 0;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden}
+.mq-track{display:flex;gap:0;animation:mq 35s linear infinite;width:max-content}
+@keyframes mq{to{transform:translateX(-50%)}}
+.mq-i{padding:0 28px;font-family:var(--fd);font-size:14px;font-weight:700;color:var(--border2);white-space:nowrap;display:flex;align-items:center;gap:8px}
+.mq-i::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--border)}
+/* ========== SECTION ========== */
+.sec{padding:110px 0}
+.sec-alt{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.sec-dark{background:var(--head);color:#fff;border:none}
+.tag{font-family:var(--fm);font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:14px}
+.tag-c{text-align:center}
+.tag-w{color:#6ea8ff}
+.sh{font-family:var(--fd);font-size:42px;font-weight:800;color:var(--head);letter-spacing:-1.8px;line-height:1.1;margin-bottom:12px}
+.sh-c{text-align:center}
+.sh-w{color:#fff}
+.sd{font-size:17px;color:var(--sub);line-height:1.7;max-width:540px;margin-bottom:48px}
+.sd-c{text-align:center;margin-left:auto;margin-right:auto}
+.sd-w{color:rgba(255,255,255,.5)}
+/* ========== SERVICES ========== */
+.sv-g{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.sv{padding:28px 24px;border:1px solid var(--border);border-radius:16px;background:#fff;transition:all .4s var(--bounce);position:relative;overflow:hidden}
+.sv::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0;transform:scaleX(0);transform-origin:left;transition:transform .4s var(--bounce)}
+.sv:hover{border-color:var(--border2);transform:translateY(-6px);box-shadow:0 16px 48px rgba(0,0,0,.06)}
+.sv:hover::before{transform:scaleX(1)}
+.sv:nth-child(1)::before,.sv:nth-child(2)::before,.sv:nth-child(3)::before{background:var(--blue)}
+.sv:nth-child(4)::before,.sv:nth-child(5)::before,.sv:nth-child(6)::before{background:var(--green)}
+.sv:nth-child(7)::before,.sv:nth-child(8)::before,.sv:nth-child(9)::before{background:var(--violet)}
+.sv-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px;background:var(--bg2);border:1px solid var(--border)}
+.sv-n{font-family:var(--fd);font-size:16px;font-weight:700;color:var(--head);margin-bottom:6px}
+.sv-d{font-size:13px;color:var(--sub);line-height:1.7;margin-bottom:12px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{font-family:var(--fm);font-size:9.5px;font-weight:600;padding:3px 8px;border-radius:100px;background:var(--bg2);color:var(--sub);border:1px solid var(--border);letter-spacing:.2px}
+/* ========== RESULTS ========== */
+.res-g{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
+.res{padding:28px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.03);transition:all .3s var(--bounce)}
+.res:hover{border-color:rgba(255,255,255,.14);transform:translateY(-4px);background:rgba(255,255,255,.05)}
+.res-tag{font-family:var(--fm);font-size:10px;font-weight:600;color:#6ea8ff;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.res-tag::before{content:'';width:5px;height:5px;border-radius:50%;background:#6ea8ff}
+.res-t{font-size:16px;font-weight:600;color:#fff;margin-bottom:8px;line-height:1.4}
+.res-d{font-size:13px;color:rgba(255,255,255,.45);line-height:1.65;margin-bottom:16px}
+.res-nums{display:flex;gap:20px}
+.res-num{text-align:center}
+.res-nv{font-family:var(--fm);font-size:22px;font-weight:700;color:var(--green)}
+.res-nl{font-size:10px;color:rgba(255,255,255,.3);margin-top:2px}
+/* ========== WHO WE HELP ========== */
+.who-g{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
+.who{padding:32px 26px;border:1px solid var(--border);border-radius:18px;background:#fff;text-align:center;transition:all .35s var(--bounce)}
+.who:hover{transform:translateY(-5px);box-shadow:0 12px 40px rgba(0,0,0,.05)}
+.who.pop{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue),0 12px 40px rgba(0,82,255,.06)}
+.who-em{font-size:38px;margin-bottom:16px;display:block}
+.who-t{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--head);margin-bottom:8px}
+.who-d{font-size:13px;color:var(--sub);line-height:1.7}
+/* ========== PRICING BAR ========== */
+.price-bar{margin-top:40px;padding:36px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap}
+.pb-item{text-align:center}
+.pb-v{font-family:var(--fd);font-size:46px;font-weight:800;letter-spacing:-2px}
+.pb-v.bl{color:var(--blue)}.pb-v.gn{color:var(--green)}.pb-v.dk{color:var(--head)}
+.pb-l{font-size:13px;color:var(--muted);margin-top:2px}
+.pb-sep{width:1px;height:48px;background:var(--border)}
+.price-cta{text-align:center;margin-top:32px}
+.price-cta p{font-size:15px;color:var(--sub);line-height:1.7;max-width:500px;margin:0 auto 20px}
+/* ========== EXTRA SERVICES ========== */
+.extras{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:28px}
+.extra{padding:18px 14px;border:1px solid var(--border);border-radius:12px;text-align:center;background:#fff;transition:all .3s var(--bounce)}
+.extra:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.04)}
+.extra-em{font-size:20px;margin-bottom:6px;display:block}
+.extra-t{font-size:12px;font-weight:600;color:var(--body)}
+/* ========== STATS ========== */
+.stats-g{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.st{text-align:center;padding:28px 14px;border:1px solid var(--border);border-radius:14px;background:#fff;transition:all .3s var(--bounce)}
+.st:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.04)}
+.st-v{font-family:var(--fd);font-size:36px;font-weight:800;letter-spacing:-1px;margin-bottom:3px}
+.st-v.bl{color:var(--blue)}.st-v.gn{color:var(--green)}.st-v.dk{color:var(--head)}.st-v.vl{color:var(--violet)}
+.st-l{font-size:12px;color:var(--muted);font-weight:500}
+/* ========== TESTIMONIALS ========== */
+.t-g{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:48px}
+.tc{padding:28px;background:#fff;border:1px solid var(--border);border-radius:16px;transition:all .3s var(--bounce)}
+.tc:hover{box-shadow:0 10px 36px rgba(0,0,0,.05);transform:translateY(-4px)}
+.tc-s{color:#f59e0b;font-size:13px;letter-spacing:1.5px;margin-bottom:12px}
+.tc-q{font-size:14px;line-height:1.75;color:var(--body);margin-bottom:16px}
+.tc-a{display:flex;align-items:center;gap:10px}
+.tc-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:800;font-size:12px}
+.tc-av.a{background:#dbeafe;color:#2563eb}.tc-av.b{background:#d1fae5;color:#059669}.tc-av.c{background:#fce7f3;color:#db2777}.tc-av.d{background:#fef3c7;color:#d97706}.tc-av.e{background:#ede9fe;color:#7c3aed}
+.tc-nm{font-size:13px;font-weight:600;color:var(--head)}.tc-rl{font-size:11px;color:var(--muted)}
+/* ========== PROCESS ========== */
+.proc-g{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:48px}
+.proc{text-align:center;padding:24px 16px}
+.proc-n{font-family:var(--fd);font-size:48px;font-weight:800;color:var(--bg3);margin-bottom:12px;transition:color .3s}
+.proc:hover .proc-n{color:var(--blue-m)}
+.proc-t{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--head);margin-bottom:6px}
+.proc-d{font-size:12.5px;color:var(--sub);line-height:1.6}
+/* ========== FAQ ========== */
+.faq-list{max-width:700px;margin:48px auto 0}
+.fq{border-bottom:1px solid var(--border);padding:18px 0;cursor:pointer}
+.fq-q{display:flex;justify-content:space-between;align-items:center;font-family:var(--fd);font-size:16px;font-weight:600;color:var(--head);transition:color .2s;letter-spacing:-.2px}
+.fq-q:hover{color:var(--blue)}
+.fq-ic{font-size:20px;color:var(--muted);transition:transform .3s}
+.fq.open .fq-ic{transform:rotate(45deg);color:var(--blue)}
+.fq-a{max-height:0;overflow:hidden;transition:max-height .4s var(--ease)}
+.fq-a-in{padding:12px 0 4px;font-size:14px;color:var(--sub);line-height:1.7}
+.fq.open .fq-a{max-height:300px}
+/* ========== CTA ========== */
+.cta-wrap{padding:110px 0;background:var(--head);text-align:center;position:relative;overflow:hidden}
+.cta-wrap::before{content:'';position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(0,82,255,.1),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.cta-in{position:relative;z-index:1}
+.cta-in h2{font-family:var(--fd);font-size:44px;font-weight:800;color:#fff;letter-spacing:-1.8px;margin-bottom:14px}
+.cta-in p{font-size:17px;color:rgba(255,255,255,.5);max-width:480px;margin:0 auto 28px;line-height:1.7}
+.cta-btn{padding:16px 38px;background:var(--blue);color:#fff;border:none;border-radius:100px;font-size:16px;font-weight:700;font-family:var(--ff);cursor:pointer;transition:all .3s var(--bounce);box-shadow:0 4px 20px rgba(0,82,255,.25)}
+.cta-btn:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(0,82,255,.4)}
+.cta-nt{font-size:12px;color:rgba(255,255,255,.28);margin-top:12px;font-family:var(--fm)}
+/* ========== CONTACT ========== */
+.contact-g{display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:48px}
+.ci h3{font-family:var(--fd);font-size:24px;font-weight:800;color:var(--head);margin-bottom:12px;letter-spacing:-.3px}
+.ci>p{font-size:15px;color:var(--sub);line-height:1.7;margin-bottom:24px}
+.cd{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)}
+.cd:last-child{border:none}
+.cd-i{width:40px;height:40px;border-radius:10px;background:var(--blue-l);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.cd-lb{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600}
+.cd-vl{font-size:14px;color:var(--body);font-weight:500}
+.fg{margin-bottom:13px}
+.flb{display:block;font-size:12.5px;font-weight:600;color:var(--body);margin-bottom:4px}
+.fin{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--ff);font-size:14px;color:var(--head);background:#fff;outline:0;transition:.2s}
+.fin:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+.fta2{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--ff);font-size:14px;color:var(--head);background:#fff;outline:0;resize:vertical;min-height:100px;transition:.2s}
+.fta2:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+.fsel2{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--ff);font-size:14px;color:var(--head);background:#fff;outline:0;appearance:none;cursor:pointer;transition:.2s}
+.fsel2:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+.fsub{width:100%;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:100px;font-family:var(--ff);font-size:15px;font-weight:700;cursor:pointer;transition:all .3s var(--bounce);margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(0,82,255,.15)}
+.fsub:hover{background:var(--blue2);transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,82,255,.25)}
+.fsub-note{text-align:center;margin-top:8px;font-size:11.5px;color:var(--muted)}
+/* ========== FOOTER ========== */
+.foot{padding:56px 0 28px;border-top:1px solid var(--border)}
+.foot-top{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px}
+.foot-brand p{font-size:13px;color:var(--sub);line-height:1.7;margin-top:12px;max-width:260px}
+.fc-t{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--head);margin-bottom:12px}
+.fc-ls{display:flex;flex-direction:column;gap:7px}
+.fc-lk{font-size:13px;color:var(--sub);cursor:pointer;background:none;border:none;font-family:var(--ff);text-align:left;transition:color .2s}
+.fc-lk:hover{color:var(--blue)}
+.foot-bot{display:flex;justify-content:space-between;align-items:center;padding-top:20px;border-top:1px solid var(--border)}
+.foot-cp{font-size:12px;color:var(--muted)}
+/* ========== MOBILE MENU ========== */
+.mob-toggle{display:none;background:none;border:none;cursor:pointer;padding:4px;flex-direction:column;gap:5px}
+.mob-toggle span{width:22px;height:2px;background:var(--head);border-radius:2px;transition:all .3s}
+.mob-menu{display:none;position:fixed;top:68px;left:0;right:0;background:rgba(255,255,255,.98);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:16px 24px;z-index:998;flex-direction:column;gap:4px}
+.mob-menu.active{display:flex}
+.mob-menu button{width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-family:var(--ff);font-size:15px;font-weight:500;color:var(--body);border-radius:10px;cursor:pointer;transition:.2s}
+.mob-menu button:hover{background:var(--bg2);color:var(--head)}
+/* ========== RESPONSIVE ========== */
+@media(max-width:1024px){.sv-g{grid-template-columns:repeat(2,1fr)}.proc-g{grid-template-columns:repeat(2,1fr)}.stats-g{grid-template-columns:repeat(3,1fr)}.extras{grid-template-columns:repeat(2,1fr)}.foot-top{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.w{padding:0 20px}.nav-c{padding:0 20px}.nav-r{display:none}.mob-toggle{display:flex}.hero{padding:116px 0 72px}.hero-row{flex-direction:column;gap:40px}.hero h1{font-size:38px}.hero-right{display:none}.sv-g{grid-template-columns:1fr}.res-g{grid-template-columns:1fr}.who-g{grid-template-columns:1fr}.stats-g{grid-template-columns:repeat(2,1fr)}.t-g{grid-template-columns:1fr}.contact-g{grid-template-columns:1fr}.cta-in h2{font-size:32px}.foot-top{grid-template-columns:1fr}.foot-bot{flex-direction:column;gap:10px;text-align:center}.price-bar{flex-direction:column;gap:20px}.pb-sep{width:60px;height:1px}.proc-g{grid-template-columns:1fr 1fr}.sh{font-size:32px}.extras{grid-template-columns:1fr 1fr}}
+</style>
 </head>
 <body>
-
-  <!-- Navigation -->
-  <nav class="navbar" id="navbar">
-    <div class="container nav-container">
-      <a href="#" class="logo">
-        <span class="logo-icon">&#9671;</span> NexusAI
-      </a>
-      <div class="nav-links" id="navLinks">
-        <a href="#services">Services</a>
-        <a href="#solutions">Solutions</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#testimonials">Results</a>
-        <a href="#contact">Contact</a>
-        <a href="#waitlist" class="btn btn-nav">Join Waitlist</a>
-      </div>
-      <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle menu">
-        <span></span><span></span><span></span>
-      </button>
+<!-- NAV -->
+<div class="nav" id="nb"><div class="nav-c">
+  <div class="logo" onclick="goTop()"><div class="logo-i">V</div><div class="logo-t">Veltrix<b>AI</b></div></div>
+  <div class="nav-r">
+    <button class="nav-l" onclick="go('svc')">Services</button>
+    <button class="nav-l" onclick="go('results')">Results</button>
+    <button class="nav-l" onclick="go('pricing')">Pricing</button>
+    <button class="nav-l" onclick="go('reviews')">Reviews</button>
+    <button class="nav-l" onclick="go('faq')">FAQ</button>
+    <button class="nav-b" onclick="go('contact')">Get Started</button>
+  </div>
+  <button class="mob-toggle" onclick="document.getElementById('mobMenu').classList.toggle('active')" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</div></div>
+<!-- Mobile Menu -->
+<div class="mob-menu" id="mobMenu">
+  <button onclick="go('svc');this.parentElement.classList.remove('active')">Services</button>
+  <button onclick="go('results');this.parentElement.classList.remove('active')">Results</button>
+  <button onclick="go('pricing');this.parentElement.classList.remove('active')">Pricing</button>
+  <button onclick="go('reviews');this.parentElement.classList.remove('active')">Reviews</button>
+  <button onclick="go('faq');this.parentElement.classList.remove('active')">FAQ</button>
+  <button onclick="go('contact');this.parentElement.classList.remove('active')">Get Started</button>
+</div>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div><div class="hero-bg2"></div>
+  <div class="w"><div class="hero-row">
+    <div class="hero-left reveal">
+      <div class="hero-pill"><span class="hero-dot"></span>AI-POWERED GROWTH AGENCY</div>
+      <h1>Your Business.<br><span class="grd">Our AI Army.</span><br>10x Results.</h1>
+      <p class="hero-p">We help zero-stage startups and small businesses grow with AI. Brand building, lead generation, content, marketing, automation &#8212; starting from just $25.</p>
+      <div class="hero-btns"><button class="btn1" onclick="go('contact')">Start Your Project &#8594;</button><button class="btn2" onclick="go('svc')">Explore Services</button></div>
+      <div class="hero-social"><div class="faces"><div class="face f1">R</div><div class="face f2">A</div><div class="face f3">N</div><div class="face f4">P</div></div>Trusted by 50+ businesses worldwide</div>
     </div>
-  </nav>
-
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="hero-bg"></div>
-    <div class="container">
-      <div class="hero-content">
-        <div class="hero-badge">Trusted by 50+ Businesses Worldwide</div>
-        <h1>Transform Your Business<br>With <span class="gradient-text">AI Automation</span></h1>
-        <p class="hero-subtitle">We build custom AI solutions that save you 100+ hours/month, cut costs by 60%, and scale your revenue from $0 to $100K+. From AI chatbots to full SaaS products.</p>
-        <div class="hero-cta">
-          <a href="#waitlist" class="btn btn-primary btn-lg">Join the Waitlist — It's Free</a>
-          <a href="#services" class="btn btn-outline btn-lg">See Our Services</a>
-        </div>
-        <div class="hero-stats">
-          <div class="stat">
-            <strong>500+</strong>
-            <span>Automations Built</span>
-          </div>
-          <div class="stat">
-            <strong>60%</strong>
-            <span>Cost Reduction</span>
-          </div>
-          <div class="stat">
-            <strong>100+</strong>
-            <span>Hours Saved/Month</span>
-          </div>
-          <div class="stat">
-            <strong>24/7</strong>
-            <span>AI Support</span>
-          </div>
-        </div>
+    <div class="hero-right reveal d2">
+      <div class="orb-wrap">
+        <div class="orb"><div class="orb-t"><div class="orb-n">9</div><div class="orb-lb">Premium Services</div></div></div>
+        <div class="fl"><div class="fl-i a">&#128241;</div>Social Media</div>
+        <div class="fl"><div class="fl-i b">&#9997;&#65039;</div>Content</div>
+        <div class="fl"><div class="fl-i c">&#127908;</div>Podcasts</div>
+        <div class="fl"><div class="fl-i d">&#128202;</div>Pitch Decks</div>
+        <div class="fl"><div class="fl-i e">&#127912;</div>Branding</div>
       </div>
     </div>
-  </section>
-
-  <!-- Services Section -->
-  <section class="services" id="services">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-tag">What We Do</span>
-        <h2>AI-Powered Services That <span class="gradient-text">Drive Revenue</span></h2>
-        <p>End-to-end AI solutions for businesses of every size — from local shops in Punjab to global enterprises.</p>
-      </div>
-      <div class="services-grid">
-
-        <div class="service-card">
-          <div class="service-icon">&#9881;</div>
-          <h3>AI Automation</h3>
-          <p>Automate repetitive tasks — customer support, data entry, lead generation, invoicing, social media, and more. Save 100+ hours every month.</p>
-          <ul class="service-features">
-            <li>Workflow automation (Zapier, Make, custom)</li>
-            <li>AI chatbots & virtual assistants</li>
-            <li>Email & social media automation</li>
-            <li>Document processing & data extraction</li>
-          </ul>
-          <span class="service-price">Starting at $499/project</span>
-        </div>
-
-        <div class="service-card featured">
-          <div class="card-badge">Most Popular</div>
-          <div class="service-icon">&#9733;</div>
-          <h3>AI SaaS Development</h3>
-          <p>We build and launch full AI-powered SaaS products — from idea to market. You own it, we build it, and it generates revenue 24/7.</p>
-          <ul class="service-features">
-            <li>Custom AI SaaS product development</li>
-            <li>AI-powered dashboards & analytics</li>
-            <li>Subscription billing & user management</li>
-            <li>Full deployment & scaling</li>
-          </ul>
-          <span class="service-price">Starting at $2,999/project</span>
-        </div>
-
-        <div class="service-card">
-          <div class="service-icon">&#9879;</div>
-          <h3>AI Consulting & Strategy</h3>
-          <p>Not sure where AI fits in your business? We audit your operations and build a roadmap to save money and grow revenue with AI.</p>
-          <ul class="service-features">
-            <li>AI readiness assessment</li>
-            <li>Process optimization audit</li>
-            <li>ROI-focused AI strategy</li>
-            <li>Team training & implementation</li>
-          </ul>
-          <span class="service-price">Starting at $299/session</span>
-        </div>
-
-        <div class="service-card">
-          <div class="service-icon">&#128640;</div>
-          <h3>AI Marketing & Lead Gen</h3>
-          <p>AI-powered marketing funnels, content generation, SEO automation, and lead qualification that runs on autopilot.</p>
-          <ul class="service-features">
-            <li>AI content generation at scale</li>
-            <li>Automated lead scoring & nurturing</li>
-            <li>AI-powered SEO & ad optimization</li>
-            <li>Personalized email campaigns</li>
-          </ul>
-          <span class="service-price">Starting at $799/month</span>
-        </div>
-
-        <div class="service-card">
-          <div class="service-icon">&#128202;</div>
-          <h3>AI Data Analytics</h3>
-          <p>Turn your raw data into actionable insights with AI. Predictive analytics, dashboards, and automated reporting.</p>
-          <ul class="service-features">
-            <li>Custom AI dashboards</li>
-            <li>Predictive analytics models</li>
-            <li>Automated report generation</li>
-            <li>Business intelligence integration</li>
-          </ul>
-          <span class="service-price">Starting at $999/project</span>
-        </div>
-
-        <div class="service-card">
-          <div class="service-icon">&#128274;</div>
-          <h3>AI Integration & APIs</h3>
-          <p>Connect AI to your existing tools — CRM, ERP, ecommerce, accounting. Seamless integration with any platform.</p>
-          <ul class="service-features">
-            <li>CRM & ERP AI integration</li>
-            <li>Custom API development</li>
-            <li>Legacy system modernization</li>
-            <li>Multi-platform synchronization</li>
-          </ul>
-          <span class="service-price">Starting at $699/project</span>
-        </div>
-
-      </div>
+  </div></div>
+</section>
+<!-- MARQUEE -->
+<section class="marquee"><div class="mq-track" id="mqt"></div></section>
+<!-- SERVICES -->
+<section class="sec" id="svc"><div class="w">
+  <div class="tag tag-c reveal">Our Services</div>
+  <div class="sh sh-c reveal">Everything you need to<br>grow with AI</div>
+  <div class="sd sd-c reveal">Whether you are starting from zero or scaling an existing business, we build the systems that bring you customers. Starting from just $25.</div>
+  <div class="sv-g">
+    <div class="sv reveal"><div class="sv-icon">&#128241;</div><div class="sv-n">Social Media Management</div><div class="sv-d">Full Instagram, LinkedIn, Twitter, Facebook management. Content, design, scheduling, community, and growth.</div><div class="chips"><span class="chip">Reels</span><span class="chip">Carousels</span><span class="chip">Stories</span><span class="chip">Growth</span></div></div>
+    <div class="sv reveal d1"><div class="sv-icon">&#9997;&#65039;</div><div class="sv-n">Content Creation &amp; Writing</div><div class="sv-d">Blogs, newsletters, LinkedIn ghostwriting, email sequences, website copy, SEO content, and product descriptions.</div><div class="chips"><span class="chip">Blogs</span><span class="chip">Email</span><span class="chip">SEO</span><span class="chip">Ghostwriting</span></div></div>
+    <div class="sv reveal d2"><div class="sv-icon">&#127908;</div><div class="sv-n">AI Podcast Production</div><div class="sv-d">Turn blogs, courses, or documents into professional podcast episodes. Script to finished audio &#8212; no recording needed.</div><div class="chips"><span class="chip">NotebookLM</span><span class="chip">ElevenLabs</span><span class="chip">Show Notes</span></div></div>
+    <div class="sv reveal"><div class="sv-icon">&#128202;</div><div class="sv-n">Pitch Decks &amp; Docs</div><div class="sv-d">Investor-ready decks, one-pagers, business plans, market research, and financial models. Built to close deals.</div><div class="chips"><span class="chip">Decks</span><span class="chip">Reports</span><span class="chip">Analysis</span></div></div>
+    <div class="sv reveal d1"><div class="sv-icon">&#127912;</div><div class="sv-n">Brand Identity &amp; Design</div><div class="sv-d">Complete brand system &#8212; logo, colors, typography, social templates, business cards, and brand guidelines.</div><div class="chips"><span class="chip">Logo</span><span class="chip">Brand Kit</span><span class="chip">Templates</span></div></div>
+    <div class="sv reveal d2"><div class="sv-icon">&#128227;</div><div class="sv-n">Digital Marketing &amp; Ads</div><div class="sv-d">Meta Ads, Google Ads, funnels, landing pages, A/B testing, conversion optimization, and performance reporting.</div><div class="chips"><span class="chip">Meta Ads</span><span class="chip">Google Ads</span><span class="chip">Funnels</span></div></div>
+    <div class="sv reveal"><div class="sv-icon">&#9889;</div><div class="sv-n">Lead Generation Systems</div><div class="sv-d">Complete lead capture funnels, WhatsApp automation, AI chatbots, CRM setup, and sales pipeline systems.</div><div class="chips"><span class="chip">Funnels</span><span class="chip">WhatsApp</span><span class="chip">Chatbots</span><span class="chip">CRM</span></div></div>
+    <div class="sv reveal d1"><div class="sv-icon">&#128200;</div><div class="sv-n">AI Automation &amp; Workflows</div><div class="sv-d">Custom automations for content pipelines, customer support, email flows, data analysis, and business operations.</div><div class="chips"><span class="chip">Zapier</span><span class="chip">Custom GPTs</span><span class="chip">Bots</span></div></div>
+    <div class="sv reveal d2"><div class="sv-icon">&#127891;</div><div class="sv-n">Content Repurposing</div><div class="sv-d">Turn YouTube videos, courses, or long content into blogs, podcasts, email courses, social clips, and ebooks.</div><div class="chips"><span class="chip">YouTube</span><span class="chip">Courses</span><span class="chip">Multi-format</span></div></div>
+  </div>
+</div></section>
+<!-- RESULTS -->
+<section class="sec sec-dark" id="results"><div class="w">
+  <div class="tag tag-c tag-w reveal">Case Studies</div>
+  <div class="sh sh-c sh-w reveal">Real results for<br>real businesses</div>
+  <div class="sd sd-c sd-w reveal">What we have delivered for businesses just like yours.</div>
+  <div class="res-g">
+    <div class="res reveal"><div class="res-tag">FOOD BRAND</div><div class="res-t">An Amritsar-based food brand: 200 to 5,000+ followers in 60 days</div><div class="res-d">Complete social media overhaul. Daily reels, food photography, local hashtag strategy, and influencer collaboration.</div><div class="res-nums"><div class="res-num"><div class="res-nv">2,400%</div><div class="res-nl">Growth</div></div><div class="res-num"><div class="res-nv">340%</div><div class="res-nl">Reach</div></div></div></div>
+    <div class="res reveal d1"><div class="res-tag">FINTECH</div><div class="res-t">A fintech startup: Pitch deck that closed a 1.2 Cr seed round</div><div class="res-d">Market research, competitive analysis, financial modeling, and investor-grade deck. Delivered in 3 days.</div><div class="res-nums"><div class="res-num"><div class="res-nv">1.2 Cr</div><div class="res-nl">Raised</div></div><div class="res-num"><div class="res-nv">3 Days</div><div class="res-nl">Delivery</div></div></div></div>
+    <div class="res reveal d2"><div class="res-tag">EDUCATION</div><div class="res-t">An online educator: 8 podcast episodes from course material</div><div class="res-d">Transformed course content into professional podcast series. AI-generated audio with show notes and distribution.</div><div class="res-nums"><div class="res-num"><div class="res-nv">8 Eps</div><div class="res-nl">Produced</div></div><div class="res-num"><div class="res-nv">12K+</div><div class="res-nl">Listens</div></div></div></div>
+  </div>
+</div></section>
+<!-- WHO WE HELP + PRICING -->
+<section class="sec" id="pricing"><div class="w">
+  <div class="tag tag-c reveal">Who We Help</div>
+  <div class="sh sh-c reveal">From zero to scale &#8212;<br>we serve every stage</div>
+  <div class="sd sd-c reveal">No matter where you are in your business journey, we have the AI-powered services to get you to the next level.</div>
+  <div class="who-g">
+    <div class="who reveal"><span class="who-em">&#127937;</span><div class="who-t">Zero-Stage Businesses</div><div class="who-d">Just starting? No brand, no social media, no presence? We build everything from scratch &#8212; brand, content, first customers.</div></div>
+    <div class="who pop reveal d1"><span class="who-em">&#128640;</span><div class="who-t">Small-Scale Businesses</div><div class="who-d">Already running but need growth? We handle marketing, content, ads, lead generation, and customer acquisition.</div></div>
+    <div class="who reveal d2"><span class="who-em">&#127758;</span><div class="who-t">Growing Brands</div><div class="who-d">Ready to dominate? Complete AI growth systems &#8212; automation, lead funnels, multi-platform content, and full marketing engines.</div></div>
+  </div>
+  <div class="price-bar reveal">
+    <div class="pb-item"><div class="pb-v bl">$25</div><div class="pb-l">Starting from</div></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><div class="pb-v gn">24hr</div><div class="pb-l">Fast delivery</div></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><div class="pb-v dk">0</div><div class="pb-l">Hidden fees</div></div>
+  </div>
+  <div class="price-cta reveal">
+    <p>Every project is custom-priced based on your needs. Tell us what you want and we give you an honest quote within hours.</p>
+    <button class="btn1" onclick="go('contact')">Get a Free Quote &#8594;</button>
+  </div>
+  <div class="extras reveal">
+    <div class="extra"><span class="extra-em">&#9889;</span><div class="extra-t">Lead Generation</div></div>
+    <div class="extra"><span class="extra-em">&#128200;</span><div class="extra-t">Sales Funnels</div></div>
+    <div class="extra"><span class="extra-em">&#129302;</span><div class="extra-t">AI Chatbots</div></div>
+    <div class="extra"><span class="extra-em">&#128172;</span><div class="extra-t">WhatsApp Automation</div></div>
+  </div>
+</div></section>
+<!-- PROCESS -->
+<section class="sec sec-alt"><div class="w">
+  <div class="tag tag-c reveal">How It Works</div>
+  <div class="sh sh-c reveal">From idea to results<br>in 4 simple steps</div>
+  <div class="proc-g">
+    <div class="proc reveal"><div class="proc-n">01</div><div class="proc-t">Free Discovery Call</div><div class="proc-d">15-minute call. We learn your business, goals, audience. Zero commitment.</div></div>
+    <div class="proc reveal d1"><div class="proc-n">02</div><div class="proc-t">AI Strategy</div><div class="proc-d">We research your market and competitors. You approve the plan before work begins.</div></div>
+    <div class="proc reveal d2"><div class="proc-n">03</div><div class="proc-t">Rapid Execution</div><div class="proc-d">Our AI stack delivers at 10x speed. Every deliverable is human-reviewed for quality.</div></div>
+    <div class="proc reveal d3"><div class="proc-n">04</div><div class="proc-t">Launch &amp; Grow</div><div class="proc-d">We launch, track data, and optimize. Monthly reports with clear ROI metrics.</div></div>
+  </div>
+</div></section>
+<!-- STATS -->
+<section class="sec"><div class="w">
+  <div class="stats-g">
+    <div class="st reveal"><div class="st-v bl">10x</div><div class="st-l">Faster Delivery</div></div>
+    <div class="st reveal d1"><div class="st-v gn">50+</div><div class="st-l">Projects Done</div></div>
+    <div class="st reveal d2"><div class="st-v dk">9</div><div class="st-l">Core Services</div></div>
+    <div class="st reveal d3"><div class="st-v vl">10+</div><div class="st-l">AI Tools</div></div>
+    <div class="st reveal d4"><div class="st-v bl">98%</div><div class="st-l">Retention</div></div>
+  </div>
+</div></section>
+<!-- TESTIMONIALS -->
+<section class="sec sec-alt" id="reviews"><div class="w">
+  <div class="tag tag-c reveal">Reviews</div>
+  <div class="sh sh-c reveal">What clients say</div>
+  <div class="t-g">
+    <div class="tc reveal"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"Veltrix AI completely transformed our social media. We went from 200 followers to 5,000 in 2 months. Their content quality is insane for the price."</div><div class="tc-a"><div class="tc-av a">RK</div><div><div class="tc-nm">Rajveer K.</div><div class="tc-rl">Food Brand Owner</div></div></div></div>
+    <div class="tc reveal d1"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"They built our pitch deck in 3 days. We raised 1.2 Cr in our seed round. Better than agencies charging 10x more."</div><div class="tc-a"><div class="tc-av b">AS</div><div><div class="tc-nm">Arjun S.</div><div class="tc-rl">Fintech Co-Founder</div></div></div></div>
+    <div class="tc reveal d2"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"The AI podcast service blew my mind. Sent course material and got 8 pro episodes back. Students love the new format."</div><div class="tc-a"><div class="tc-av c">NM</div><div><div class="tc-nm">Neha M.</div><div class="tc-rl">Online Educator</div></div></div></div>
+    <div class="tc reveal"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"Complete brand identity in 48 hours. Logo, templates, business cards &#8212; premium quality at a fraction of normal agency costs."</div><div class="tc-a"><div class="tc-av d">PJ</div><div><div class="tc-nm">Priya J.</div><div class="tc-rl">Skincare Brand Founder</div></div></div></div>
+    <div class="tc reveal d1"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"Our ad ROAS went from 1.8x to 4.7x in one month. The AI-powered copy and targeting is leagues ahead of what we had."</div><div class="tc-a"><div class="tc-av e">VK</div><div><div class="tc-nm">Vikram K.</div><div class="tc-rl">Logistics CEO</div></div></div></div>
+    <div class="tc reveal d2"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"They handle everything &#8212; content, emails, social, course repurposing. Freed up 20+ hours per week. I just focus on coaching."</div><div class="tc-a"><div class="tc-av a">GS</div><div><div class="tc-nm">Dr. Gurpreet S.</div><div class="tc-rl">Business Coach</div></div></div></div>
+  </div>
+</div></section>
+<!-- FAQ -->
+<section class="sec" id="faq"><div class="w">
+  <div class="tag tag-c reveal">FAQ</div>
+  <div class="sh sh-c reveal">Common questions</div>
+  <div class="faq-list">
+    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">What does Veltrix AI do?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">We are a full-service AI-powered agency handling social media, content, podcasts, pitch decks, brand design, ads, lead generation, automation, and research. We serve zero-stage startups, small businesses, and growing brands.</div></div></div>
+    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">Is the work done by AI or humans?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">Both. AI does the heavy lifting for speed. Every deliverable is reviewed and refined by our team. You get AI speed with human quality control.</div></div></div>
+    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">How fast do you deliver?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">Most work is ready in 24-72 hours. Social content is batched weekly. Pitch decks take 2-3 days. Brand identity 3-5 days. Much faster than traditional agencies.</div></div></div>
+    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">Do you work outside India?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">Yes. We are based in Punjab, India but serve clients globally &#8212; India, US, UK, UAE, Canada, Australia. All work happens over WhatsApp, Zoom, and chat.</div></div></div>
+    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">What are your prices?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">Services start from just $25. Every project is custom-quoted based on your needs. No hidden fees, no contracts. Message us on WhatsApp for a free quote.</div></div></div>
+    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">Can you build lead generation systems?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">Absolutely. We build complete lead funnels, WhatsApp automation, AI chatbots, CRM setups, and sales pipelines. Everything you need to capture and convert leads on autopilot.</div></div></div>
+  </div>
+</div></section>
+<!-- CTA -->
+<section class="cta-wrap"><div class="w"><div class="cta-in">
+  <h2 class="reveal">Stop guessing.<br>Start growing with AI.</h2>
+  <p class="reveal d1">Get a free quote on WhatsApp. No commitment, no pressure. Just honest advice on how AI can grow your business.</p>
+  <button class="cta-btn reveal d2" onclick="go('contact')">Message Us on WhatsApp &#8594;</button>
+  <div class="cta-nt reveal d3">Free consultation. Reply within hours.</div>
+</div></div></section>
+<!-- CONTACT -->
+<section class="sec" id="contact"><div class="w">
+  <div class="tag reveal">Get In Touch</div>
+  <div class="sh reveal">Let's grow your<br>business together</div>
+  <div class="contact-g">
+    <div class="ci reveal">
+      <h3>Ready to start?</h3>
+      <p>Fill the form and it opens WhatsApp directly. Or message us anytime &#8212; we reply fast.</p>
+      <div class="cd"><div class="cd-i">&#128172;</div><div><div class="cd-lb">WhatsApp</div><div class="cd-vl">+91 82890 94569</div></div></div>
+      <div class="cd"><div class="cd-i">&#128231;</div><div><div class="cd-lb">Email</div><div class="cd-vl" id="eml"></div></div></div>
+      <div class="cd"><div class="cd-i">&#128205;</div><div><div class="cd-lb">Location</div><div class="cd-vl">Punjab, India &#183; Global Clients</div></div></div>
+      <div class="cd"><div class="cd-i">&#9201;</div><div><div class="cd-lb">Hours</div><div class="cd-vl">Mon - Sat, 9AM - 8PM IST</div></div></div>
     </div>
-  </section>
-
-  <!-- How It Works -->
-  <section class="how-it-works" id="solutions">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-tag">How It Works</span>
-        <h2>From Zero to Revenue in <span class="gradient-text">4 Simple Steps</span></h2>
-      </div>
-      <div class="steps-grid">
-        <div class="step">
-          <div class="step-number">01</div>
-          <h3>Free Discovery Call</h3>
-          <p>Tell us about your business. We identify exactly where AI can save you time and make you money.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">02</div>
-          <h3>Custom AI Strategy</h3>
-          <p>We design a tailored AI solution with clear ROI projections. You approve before we build anything.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">03</div>
-          <h3>Build & Deploy</h3>
-          <p>Our team builds, tests, and deploys your AI solution. Most projects are live within 2-4 weeks.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">04</div>
-          <h3>Scale & Optimize</h3>
-          <p>We monitor, optimize, and scale your AI systems. You watch your revenue grow on autopilot.</p>
-        </div>
-      </div>
+    <form id="wf" class="reveal d1" onsubmit="sendWA(event)">
+      <div class="fg"><label class="flb">Your Name</label><input class="fin" type="text" id="wn" placeholder="Full name" required></div>
+      <div class="fg"><label class="flb">Phone / WhatsApp</label><input class="fin" type="tel" id="wp" placeholder="+91 XXXXX XXXXX"></div>
+      <div class="fg"><label class="flb">Service You Need</label><select class="fsel2" id="ws" required><option value="" disabled selected>Select a service</option><option>Social Media Management</option><option>Content Creation</option><option>AI Podcast Production</option><option>Pitch Decks</option><option>Brand Identity</option><option>Digital Marketing / Ads</option><option>Lead Generation System</option><option>AI Automation</option><option>Content Repurposing</option><option>Full Growth Package</option></select></div>
+      <div class="fg"><label class="flb">Budget</label><select class="fsel2" id="wb"><option value="" disabled selected>Select budget</option><option>Under $50</option><option>$50 - $200</option><option>$200 - $500</option><option>$500+</option><option>One-time project</option><option>Not sure yet</option></select></div>
+      <div class="fg"><label class="flb">Project Details</label><textarea class="fta2" id="wm" placeholder="Tell us what you need..."></textarea></div>
+      <button type="submit" class="fsub">Send via WhatsApp &#128172;</button>
+      <div class="fsub-note">Opens WhatsApp with your inquiry</div>
+    </form>
+  </div>
+</div></section>
+<!-- FOOTER -->
+<div class="foot"><div class="w">
+  <div class="foot-top">
+    <div class="foot-brand">
+      <div class="logo" onclick="goTop()"><div class="logo-i" style="width:28px;height:28px;font-size:13px;border-radius:7px">V</div><div class="logo-t" style="font-size:17px">Veltrix<b>AI</b></div></div>
+      <p>AI-powered growth agency for startups and small businesses. We build the systems that bring you customers.</p>
     </div>
-  </section>
-
-  <!-- Pricing Section -->
-  <section class="pricing" id="pricing">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-tag">Pricing</span>
-        <h2>Plans That <span class="gradient-text">Scale With You</span></h2>
-        <p>Start small, grow big. No hidden fees. Cancel anytime.</p>
-      </div>
-      <div class="pricing-grid">
-
-        <div class="pricing-card">
-          <h3>Starter</h3>
-          <p class="pricing-desc">Perfect for small businesses & startups</p>
-          <div class="price">$499<span>/project</span></div>
-          <ul>
-            <li>1 AI automation workflow</li>
-            <li>Basic chatbot setup</li>
-            <li>Email automation</li>
-            <li>7-day delivery</li>
-            <li>30-day support</li>
-          </ul>
-          <a href="#waitlist" class="btn btn-outline btn-block">Get Started</a>
-        </div>
-
-        <div class="pricing-card featured">
-          <div class="card-badge">Best Value</div>
-          <h3>Growth</h3>
-          <p class="pricing-desc">For businesses ready to scale with AI</p>
-          <div class="price">$1,999<span>/month</span></div>
-          <ul>
-            <li>5 AI automation workflows</li>
-            <li>Advanced AI chatbot</li>
-            <li>AI lead generation system</li>
-            <li>Custom dashboard</li>
-            <li>Priority support</li>
-            <li>Monthly strategy calls</li>
-          </ul>
-          <a href="#waitlist" class="btn btn-primary btn-block">Get Started</a>
-        </div>
-
-        <div class="pricing-card">
-          <h3>Enterprise</h3>
-          <p class="pricing-desc">Full AI transformation for large teams</p>
-          <div class="price">Custom</div>
-          <ul>
-            <li>Unlimited AI workflows</li>
-            <li>Custom AI SaaS development</li>
-            <li>Dedicated AI engineer</li>
-            <li>24/7 priority support</li>
-            <li>Weekly strategy calls</li>
-            <li>Full system integration</li>
-          </ul>
-          <a href="#contact" class="btn btn-outline btn-block">Contact Us</a>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- Testimonials / Results -->
-  <section class="testimonials" id="testimonials">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-tag">Results</span>
-        <h2>Real Businesses, <span class="gradient-text">Real Results</span></h2>
-      </div>
-      <div class="testimonials-grid">
-        <div class="testimonial-card">
-          <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-          <p>"NexusAI automated our entire customer support. We went from 5 support agents to 1, saving $15,000/month. The AI handles 90% of tickets automatically."</p>
-          <div class="testimonial-author">
-            <strong>Rajinder S.</strong>
-            <span>E-commerce Owner, Punjab</span>
-          </div>
-        </div>
-        <div class="testimonial-card">
-          <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-          <p>"They built us a complete AI SaaS product in 3 weeks. It's now generating $12K/month in recurring revenue. Best investment we ever made."</p>
-          <div class="testimonial-author">
-            <strong>Amit K.</strong>
-            <span>Tech Startup, Delhi</span>
-          </div>
-        </div>
-        <div class="testimonial-card">
-          <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-          <p>"Our lead generation went from 50 leads/month to 500+ with their AI marketing system. Revenue tripled in 60 days."</p>
-          <div class="testimonial-author">
-            <strong>Sarah M.</strong>
-            <span>Marketing Agency, USA</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Waitlist Section -->
-  <section class="waitlist" id="waitlist">
-    <div class="container">
-      <div class="waitlist-content">
-        <div class="section-header">
-          <span class="section-tag">Limited Spots</span>
-          <h2>Join the Waitlist &<br><span class="gradient-text">Get Early Access</span></h2>
-          <p>We take on only 10 new clients per month to ensure quality. Join the waitlist to secure your spot and get 20% off your first project.</p>
-        </div>
-        <div class="waitlist-counter">
-          <span id="waitlistCount">0</span> people already joined
-        </div>
-        <form class="waitlist-form" id="waitlistForm">
-          <div class="form-row">
-            <input type="text" name="name" placeholder="Your Full Name" required>
-            <input type="email" name="email" placeholder="Your Email" required>
-          </div>
-          <div class="form-row">
-            <input type="text" name="company" placeholder="Company Name (Optional)">
-            <select name="service">
-              <option value="general">Select a Service</option>
-              <option value="automation">AI Automation</option>
-              <option value="saas">AI SaaS Development</option>
-              <option value="consulting">AI Consulting</option>
-              <option value="marketing">AI Marketing & Lead Gen</option>
-              <option value="analytics">AI Data Analytics</option>
-              <option value="integration">AI Integration</option>
-            </select>
-          </div>
-          <button type="submit" class="btn btn-primary btn-lg btn-block">Join the Waitlist — Get 20% Off</button>
-          <p class="form-note">No spam. No credit card required. Unsubscribe anytime.</p>
-        </form>
-      </div>
-    </div>
-  </section>
-
-  <!-- Contact Section -->
-  <section class="contact" id="contact">
-    <div class="container">
-      <div class="contact-grid">
-        <div class="contact-info">
-          <span class="section-tag">Get In Touch</span>
-          <h2>Ready to <span class="gradient-text">Get Started?</span></h2>
-          <p>Whether you're in Punjab, Delhi, or anywhere in the world — we work with businesses globally. Reach out and let's build something amazing together.</p>
-
-          <div class="contact-details">
-            <div class="contact-item">
-              <strong>Email</strong>
-              <span>hello@nexusai.services</span>
-            </div>
-            <div class="contact-item">
-              <strong>Phone / WhatsApp</strong>
-              <span>+91 XXXXX XXXXX</span>
-            </div>
-            <div class="contact-item">
-              <strong>Locations We Serve</strong>
-              <span>Punjab, Delhi, All India, USA, UK, Canada, UAE, Global</span>
-            </div>
-            <div class="contact-item">
-              <strong>Working Hours</strong>
-              <span>Mon-Sat: 9AM - 9PM IST | Available globally via async</span>
-            </div>
-          </div>
-
-          <div class="social-links">
-            <a href="#" class="social-link">LinkedIn</a>
-            <a href="#" class="social-link">Twitter/X</a>
-            <a href="#" class="social-link">Instagram</a>
-            <a href="#" class="social-link">WhatsApp</a>
-          </div>
-        </div>
-
-        <form class="contact-form" id="contactForm">
-          <input type="text" name="name" placeholder="Your Name" required>
-          <input type="email" name="email" placeholder="Your Email" required>
-          <input type="tel" name="phone" placeholder="Phone / WhatsApp (Optional)">
-          <select name="budget">
-            <option value="">Your Budget Range</option>
-            <option value="under-500">Under $500</option>
-            <option value="500-2000">$500 - $2,000</option>
-            <option value="2000-5000">$2,000 - $5,000</option>
-            <option value="5000-10000">$5,000 - $10,000</option>
-            <option value="10000+">$10,000+</option>
-          </select>
-          <textarea name="message" rows="4" placeholder="Tell us about your project and what you need..." required></textarea>
-          <button type="submit" class="btn btn-primary btn-lg btn-block">Send Message</button>
-        </form>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-brand">
-          <a href="#" class="logo"><span class="logo-icon">&#9671;</span> NexusAI</a>
-          <p>AI Automation, Services & SaaS Solutions for businesses worldwide. From Punjab to the world.</p>
-        </div>
-        <div class="footer-links">
-          <h4>Services</h4>
-          <a href="#services">AI Automation</a>
-          <a href="#services">AI SaaS Development</a>
-          <a href="#services">AI Consulting</a>
-          <a href="#services">AI Marketing</a>
-        </div>
-        <div class="footer-links">
-          <h4>Company</h4>
-          <a href="#testimonials">Results</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#contact">Contact</a>
-          <a href="#waitlist">Join Waitlist</a>
-        </div>
-        <div class="footer-links">
-          <h4>Regions</h4>
-          <a href="#contact">Punjab, India</a>
-          <a href="#contact">Delhi NCR</a>
-          <a href="#contact">USA & Canada</a>
-          <a href="#contact">UK & Europe</a>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <p>&copy; 2026 NexusAI. All rights reserved. Built with AI.</p>
-      </div>
-    </div>
-  </footer>
-
-  <!-- Toast Notification -->
-  <div class="toast" id="toast"></div>
-
-  <script src="app.js"></script>
+    <div><div class="fc-t">Services</div><div class="fc-ls"><button class="fc-lk" onclick="go('svc')">Social Media</button><button class="fc-lk" onclick="go('svc')">Content Writing</button><button class="fc-lk" onclick="go('svc')">AI Podcasts</button><button class="fc-lk" onclick="go('svc')">Brand Design</button><button class="fc-lk" onclick="go('svc')">Lead Generation</button></div></div>
+    <div><div class="fc-t">More</div><div class="fc-ls"><button class="fc-lk" onclick="go('svc')">Pitch Decks</button><button class="fc-lk" onclick="go('svc')">Digital Ads</button><button class="fc-lk" onclick="go('svc')">AI Automation</button><button class="fc-lk" onclick="go('svc')">Repurposing</button></div></div>
+    <div><div class="fc-t">Company</div><div class="fc-ls"><button class="fc-lk" onclick="go('results')">Case Studies</button><button class="fc-lk" onclick="go('pricing')">Pricing</button><button class="fc-lk" onclick="go('faq')">FAQ</button><button class="fc-lk" onclick="go('contact')">Contact</button></div></div>
+  </div>
+  <div class="foot-bot"><div class="foot-cp">&#169; 2026 Veltrix AI. All rights reserved.</div><div class="foot-cp">Punjab, India &#183; Serving Globally</div></div>
+</div></div>
+<script>
+document.getElementById('eml').textContent='veltrixaiservices'+'@'+'gmail.com';
+function go(id){var e=document.getElementById(id);if(e)window.scrollTo({top:e.getBoundingClientRect().top+window.pageYOffset-76,behavior:'smooth'})}
+function goTop(){window.scrollTo({top:0,behavior:'smooth'})}
+window.addEventListener('scroll',function(){document.getElementById('nb').classList.toggle('scrolled',window.scrollY>30)});
+// Scroll reveal
+var obs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('vis')})},{threshold:.08,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el)});
+// Marquee
+var tools=['Claude Pro','ChatGPT Pro','Gemini Pro','Canva Pro','NotebookLM','Adobe Creative','Midjourney','OpenClaw','ElevenLabs','Zapier AI','Perplexity','Notion AI','Figma AI','Runway ML','Descript'];
+var mt=document.getElementById('mqt');var h='';
+for(var r=0;r<3;r++)for(var i=0;i<tools.length;i++)h+='<div class="mq-i">'+tools[i]+'</div>';
+mt.innerHTML=h;
+// WhatsApp
+function sendWA(e){
+  e.preventDefault();
+  var n=document.getElementById('wn').value;
+  var p=document.getElementById('wp').value||'Not provided';
+  var s=document.getElementById('ws').value;
+  var b=document.getElementById('wb').value||'Not selected';
+  var m=document.getElementById('wm').value||'No details';
+  var t='*NEW INQUIRY - VELTRIX AI*%0A%0A';
+  t+='*Name:* '+encodeURIComponent(n)+'%0A';
+  t+='*Phone:* '+encodeURIComponent(p)+'%0A';
+  t+='*Service:* '+encodeURIComponent(s)+'%0A';
+  t+='*Budget:* '+encodeURIComponent(b)+'%0A%0A';
+  t+='*Details:*%0A'+encodeURIComponent(m)+'%0A%0A';
+  t+='_via VeltrixAI.com_';
+  window.open('https://api.whatsapp.com/send?phone=918289094569&text='+t,'_blank');
+  document.getElementById('wf').reset();
+}
+</script>
 </body>
 </html>
