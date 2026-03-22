@@ -1,0 +1,35 @@
+{
+  "name": "indian-stock-analytics-backend",
+  "version": "1.0.0",
+  "description": "Indian Stock Market Analytics SaaS - Backend",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "migrate": "node src/config/migrate.js",
+    "seed": "node src/config/seed.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
+    "node-cron": "^3.0.3",
+    "axios": "^1.6.2",
+    "ws": "^8.14.2",
+    "yahoo-finance2": "^2.9.0",
+    "node-telegram-bot-api": "^0.64.0",
+    "express-rate-limit": "^7.1.4",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "cheerio": "^1.0.0-rc.12",
+    "technical-indicators": "^3.1.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
