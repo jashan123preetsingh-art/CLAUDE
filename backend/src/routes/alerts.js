@@ -1,65 +1,31 @@
 const express = require('express');
 const router = express.Router();
-const { query } = require('../config/database');
 
-// GET /api/alerts
-router.get('/', async (req, res) => {
-  try {
-    const { userId = 1 } = req.query;
-    const result = await query(
-      `SELECT a.*, s.symbol, s.name FROM alerts a
-       JOIN stocks s ON a.stock_id = s.id
-       WHERE a.user_id = $1
-       ORDER BY a.created_at DESC`,
-      [userId]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch alerts' });
-  }
+const alerts = [];
+let alertIdCounter = 1;
+
+router.get('/', (req, res) => res.json(alerts));
+
+router.post('/', (req, res) => {
+  const { stockSymbol, alertType, condition } = req.body;
+  if (!stockSymbol || !alertType || !condition) return res.status(400).json({ error: 'stockSymbol, alertType, and condition required' });
+  const alert = { id: alertIdCounter++, symbol: stockSymbol.toUpperCase(), alert_type: alertType, condition, is_active: true, triggered_at: null, created_at: new Date().toISOString() };
+  alerts.push(alert);
+  res.json(alert);
 });
 
-// POST /api/alerts
-router.post('/', async (req, res) => {
-  try {
-    const { userId = 1, stockSymbol, alertType, condition } = req.body;
-    const stockResult = await query(`SELECT id FROM stocks WHERE UPPER(symbol) = UPPER($1)`, [stockSymbol]);
-    if (stockResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Stock not found' });
-    }
-
-    const result = await query(
-      `INSERT INTO alerts (user_id, stock_id, alert_type, condition)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [userId, stockResult.rows[0].id, alertType, JSON.stringify(condition)]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to create alert' });
-  }
+router.delete('/:id', (req, res) => {
+  const idx = alerts.findIndex(a => a.id === parseInt(req.params.id));
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  alerts.splice(idx, 1);
+  res.json({ success: true });
 });
 
-// DELETE /api/alerts/:id
-router.delete('/:id', async (req, res) => {
-  try {
-    await query(`DELETE FROM alerts WHERE id = $1`, [req.params.id]);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to delete alert' });
-  }
-});
-
-// PUT /api/alerts/:id/toggle
-router.put('/:id/toggle', async (req, res) => {
-  try {
-    const result = await query(
-      `UPDATE alerts SET is_active = NOT is_active WHERE id = $1 RETURNING *`,
-      [req.params.id]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to toggle alert' });
-  }
+router.put('/:id/toggle', (req, res) => {
+  const alert = alerts.find(a => a.id === parseInt(req.params.id));
+  if (!alert) return res.status(404).json({ error: 'Not found' });
+  alert.is_active = !alert.is_active;
+  res.json(alert);
 });
 
 module.exports = router;

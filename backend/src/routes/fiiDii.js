@@ -1,81 +1,73 @@
 const express = require('express');
 const router = express.Router();
-const { query } = require('../config/database');
-const { fetchFIIDIIData } = require('../services/dataFetcher');
+const { fetchFIIDIIData, fetchMultipleQuotes, NIFTY500_SYMBOLS, SECTOR_MAP } = require('../services/dataFetcher');
 
-// GET /api/fii-dii/latest
 router.get('/latest', async (req, res) => {
   try {
-    const result = await query(
-      `SELECT * FROM fii_dii_data ORDER BY date DESC LIMIT 1`
-    );
-
-    if (result.rows.length === 0) {
-      // Try live fetch
-      const liveData = await fetchFIIDIIData();
-      if (liveData) return res.json({ ...liveData, source: 'live' });
-      return res.json({ message: 'No FII/DII data available yet' });
+    const data = await fetchFIIDIIData();
+    if (data && Array.isArray(data)) {
+      const fii = data.find(d => d.category?.includes('FII'));
+      const dii = data.find(d => d.category?.includes('DII'));
+      return res.json({
+        date: fii?.date || new Date().toISOString().split('T')[0],
+        fii_buy: parseFloat(fii?.buyValue?.replace(/,/g, '')) || 0,
+        fii_sell: parseFloat(fii?.sellValue?.replace(/,/g, '')) || 0,
+        fii_net: parseFloat(fii?.netValue?.replace(/,/g, '')) || 0,
+        dii_buy: parseFloat(dii?.buyValue?.replace(/,/g, '')) || 0,
+        dii_sell: parseFloat(dii?.sellValue?.replace(/,/g, '')) || 0,
+        dii_net: parseFloat(dii?.netValue?.replace(/,/g, '')) || 0,
+        source: 'nse_live',
+      });
     }
-
-    res.json(result.rows[0]);
+    res.json({ error: 'NSE may be rate-limited. Try again.', source: 'nse_unavailable' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch FII/DII data' });
   }
 });
 
-// GET /api/fii-dii/history
 router.get('/history', async (req, res) => {
   try {
-    const { days = 30 } = req.query;
-    const result = await query(
-      `SELECT * FROM fii_dii_data ORDER BY date DESC LIMIT $1`,
-      [parseInt(days)]
-    );
-    res.json(result.rows);
+    const data = await fetchFIIDIIData();
+    res.json(data ? (Array.isArray(data) ? data : [data]) : []);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch FII/DII history' });
+    res.status(500).json({ error: 'Failed to fetch history' });
   }
 });
 
-// GET /api/fii-dii/cumulative
 router.get('/cumulative', async (req, res) => {
   try {
-    const result = await query(`
-      SELECT
-        SUM(fii_net) as fii_total_net,
-        SUM(dii_net) as dii_total_net,
-        SUM(CASE WHEN date >= NOW() - INTERVAL '15 days' THEN fii_net ELSE 0 END) as fii_15d_net,
-        SUM(CASE WHEN date >= NOW() - INTERVAL '15 days' THEN dii_net ELSE 0 END) as dii_15d_net,
-        SUM(CASE WHEN date >= NOW() - INTERVAL '30 days' THEN fii_net ELSE 0 END) as fii_30d_net,
-        SUM(CASE WHEN date >= NOW() - INTERVAL '30 days' THEN dii_net ELSE 0 END) as dii_30d_net,
-        (SELECT COUNT(*) FROM fii_dii_data WHERE fii_net < 0 AND date >= NOW() - INTERVAL '30 days') as fii_selling_days,
-        (SELECT COUNT(*) FROM fii_dii_data WHERE fii_net > 0 AND date >= NOW() - INTERVAL '30 days') as fii_buying_days
-      FROM fii_dii_data
-      WHERE date >= NOW() - INTERVAL '1 year'
-    `);
-
-    res.json(result.rows[0] || {});
+    const data = await fetchFIIDIIData();
+    if (data && Array.isArray(data)) {
+      const fii = data.find(d => d.category?.includes('FII'));
+      const dii = data.find(d => d.category?.includes('DII'));
+      return res.json({
+        fii_latest_net: parseFloat(fii?.netValue?.replace(/,/g, '')) || 0,
+        dii_latest_net: parseFloat(dii?.netValue?.replace(/,/g, '')) || 0,
+        source: 'nse_live',
+      });
+    }
+    res.json({});
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch cumulative data' });
+    res.status(500).json({ error: 'Failed' });
   }
 });
 
-// GET /api/fii-dii/sector-allocation
 router.get('/sector-allocation', async (req, res) => {
   try {
-    const result = await query(`
-      SELECT s.sector,
-        AVG(f.fii_holding) as avg_fii_holding,
-        AVG(f.dii_holding) as avg_dii_holding,
-        COUNT(*) as stock_count,
-        SUM(s.market_cap) as total_market_cap
-      FROM stocks s
-      JOIN fundamentals f ON s.id = f.stock_id
-      WHERE s.sector IS NOT NULL AND f.fii_holding IS NOT NULL
-      GROUP BY s.sector
-      ORDER BY avg_fii_holding DESC NULLS LAST
-    `);
-    res.json(result.rows);
+    const symbols = NIFTY500_SYMBOLS.slice(0, 50);
+    const quotes = await fetchMultipleQuotes(symbols);
+    const sectorMap = {};
+    quotes.forEach(q => {
+      if (!q.sector) return;
+      if (!sectorMap[q.sector]) sectorMap[q.sector] = { sector: q.sector, total_mcap: 0, count: 0 };
+      sectorMap[q.sector].total_mcap += (q.market_cap || 0);
+      sectorMap[q.sector].count++;
+    });
+    const totalMcap = Object.values(sectorMap).reduce((s, v) => s + v.total_mcap, 0);
+    const result = Object.values(sectorMap).map(s => ({
+      ...s, pct: totalMcap > 0 ? parseFloat((s.total_mcap / totalMcap * 100).toFixed(1)) : 0,
+    })).sort((a, b) => b.pct - a.pct);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch sector allocation' });
   }

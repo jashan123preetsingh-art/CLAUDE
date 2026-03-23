@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE = process.env.REACT_APP_API_URL || (
+  window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api'
+);
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -8,19 +10,18 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Add auth token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// API endpoints
 export const stocksAPI = {
   list: (params) => api.get('/stocks', { params }),
   detail: (symbol) => api.get(`/stocks/${symbol}`),
   live: (symbol) => api.get(`/stocks/${symbol}/live`),
   marketOverview: () => api.get('/stocks/market-overview'),
+  indices: () => api.get('/stocks/indices'),
   sectors: () => api.get('/stocks/sectors/list'),
 };
 
@@ -68,6 +69,12 @@ export const optionsAPI = {
 
 export const chartsAPI = {
   data: (symbol, params) => api.get(`/charts/${symbol}`, { params }),
+};
+
+export const sectorsAPI = {
+  list: () => api.get('/sectors'),
+  heatmap: () => api.get('/sectors/heatmap'),
+  detail: (sector) => api.get(`/sectors/${encodeURIComponent(sector)}`),
 };
 
 export default api;

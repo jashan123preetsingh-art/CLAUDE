@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
 const http = require('http');
+const path = require('path');
 const { WebSocketServer } = require('ws');
 require('dotenv').config();
 
@@ -16,7 +17,7 @@ const authRoutes = require('./routes/auth');
 const newsRoutes = require('./routes/news');
 const optionsRoutes = require('./routes/options');
 const chartRoutes = require('./routes/charts');
-const { startScheduler } = require('./jobs/scheduler');
+const sectorRoutes = require('./routes/sectors');
 const { setupWebSocket } = require('./services/websocket');
 
 const app = express();
@@ -24,7 +25,7 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 // Middleware
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(cors());
 app.use(compression());
 app.use(morgan('dev'));
@@ -40,22 +41,32 @@ app.use('/api/auth', authRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/options', optionsRoutes);
 app.use('/api/charts', chartRoutes);
+app.use('/api/sectors', sectorRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', mode: 'live_api', timestamp: new Date().toISOString() });
 });
 
-// WebSocket setup
-setupWebSocket(wss);
+// Serve React frontend build
+const frontendBuild = path.join(__dirname, '../../frontend/build');
+app.use(express.static(frontendBuild));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendBuild, 'index.html'));
+});
 
-// Start scheduler
-startScheduler();
+// WebSocket
+setupWebSocket(wss);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`WebSocket server running on ws://localhost:${PORT}/ws`);
+  console.log(`\n=== StockPulse Server ===`);
+  console.log(`API:       http://localhost:${PORT}/api`);
+  console.log(`Frontend:  http://localhost:${PORT}`);
+  console.log(`WebSocket: ws://localhost:${PORT}/ws`);
+  console.log(`Mode:      LIVE API (Yahoo Finance + NSE)`);
+  console.log(`Stocks:    ALL NSE/BSE via live API`);
+  console.log(`========================\n`);
 });
 
 module.exports = { app, server };

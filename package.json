@@ -1,0 +1,17 @@
+{
+  "name": "stockpulse-indian-bloomberg",
+  "version": "2.0.0",
+  "description": "Indian Bloomberg Terminal - Live NSE/BSE market data, heatmaps, charts, scanners",
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "render-build": "cd frontend && npm install && npm run build && cd ../backend && npm install"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

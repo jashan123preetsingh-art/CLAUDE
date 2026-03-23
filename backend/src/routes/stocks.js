@@ -1,117 +1,124 @@
 const express = require('express');
 const router = express.Router();
-const { query } = require('../config/database');
-const { fetchYahooQuote, fetchHistoricalData } = require('../services/dataFetcher');
+const { NIFTY500_SYMBOLS, SECTOR_MAP, fetchAllNSEStocks, fetchYahooQuote, fetchMultipleQuotes, fetchIndexQuote } = require('../services/dataFetcher');
 
-// GET /api/stocks - List all stocks with pagination and search
+// GET /api/stocks - All stocks with LIVE prices from NSE + Yahoo
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 50, search, sector, exchange, sort = 'symbol', order = 'ASC' } = req.query;
-    const offset = (page - 1) * limit;
-    let whereClauses = ['s.active = true'];
-    let params = [];
-    let paramIndex = 1;
+    const { search, sector, limit = 50, page = 1 } = req.query;
+
+    // Try NSE first for instant data
+    let stocks = await fetchAllNSEStocks();
 
     if (search) {
-      whereClauses.push(`(s.symbol ILIKE $${paramIndex} OR s.name ILIKE $${paramIndex})`);
-      params.push(`%${search}%`);
-      paramIndex++;
+      const s = search.toLowerCase();
+      stocks = stocks.filter(st => st.symbol.toLowerCase().includes(s) || (st.name || '').toLowerCase().includes(s));
     }
     if (sector) {
-      whereClauses.push(`s.sector = $${paramIndex}`);
-      params.push(sector);
-      paramIndex++;
-    }
-    if (exchange) {
-      whereClauses.push(`s.exchange = $${paramIndex}`);
-      params.push(exchange);
-      paramIndex++;
+      stocks = stocks.filter(st => st.sector === sector);
     }
 
-    const allowedSorts = { symbol: 's.symbol', name: 's.name', change_pct: 'p.change_pct', volume: 'p.volume', ltp: 'p.ltp', market_cap: 's.market_cap' };
-    const sortCol = allowedSorts[sort] || 's.symbol';
-    const sortOrder = order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    const total = stocks.length;
+    const offset = (page - 1) * limit;
+    const paged = stocks.slice(offset, offset + parseInt(limit));
 
-    const sql = `
-      SELECT s.*, p.ltp, p.change_pct, p.volume, p.day_high, p.day_low, p.week_52_high, p.week_52_low, p.prev_close, p.open, p.high, p.low
-      FROM stocks s
-      LEFT JOIN price_data p ON s.id = p.stock_id
-      WHERE ${whereClauses.join(' AND ')}
-      ORDER BY ${sortCol} ${sortOrder}
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `;
-    params.push(parseInt(limit), parseInt(offset));
-
-    const [result, countResult] = await Promise.all([
-      query(sql, params),
-      query(`SELECT COUNT(*) FROM stocks s WHERE ${whereClauses.join(' AND ')}`, params.slice(0, -2)),
-    ]);
+    // If NSE data doesn't have prices, enrich with Yahoo
+    if (paged.length > 0 && !paged[0].ltp) {
+      const symbols = paged.map(s => s.symbol);
+      const quotes = await fetchMultipleQuotes(symbols);
+      paged.forEach(s => {
+        const q = quotes.find(qq => qq.symbol === s.symbol);
+        if (q) Object.assign(s, q);
+      });
+    }
 
     res.json({
-      stocks: result.rows,
-      total: parseInt(countResult.rows[0].count),
+      stocks: paged,
+      total,
       page: parseInt(page),
-      totalPages: Math.ceil(countResult.rows[0].count / limit),
+      totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
-    console.error('Error fetching stocks:', err);
+    console.error('Stocks list error:', err.message);
     res.status(500).json({ error: 'Failed to fetch stocks' });
   }
 });
 
-// GET /api/stocks/market-overview
+// GET /api/stocks/market-overview - LIVE market overview
 router.get('/market-overview', async (req, res) => {
   try {
-    const [gainers, losers, active, sectors] = await Promise.all([
-      query(`SELECT s.symbol, s.name, p.ltp, p.change_pct, p.volume FROM stocks s JOIN price_data p ON s.id = p.stock_id WHERE p.change_pct > 0 ORDER BY p.change_pct DESC LIMIT 10`),
-      query(`SELECT s.symbol, s.name, p.ltp, p.change_pct, p.volume FROM stocks s JOIN price_data p ON s.id = p.stock_id WHERE p.change_pct < 0 ORDER BY p.change_pct ASC LIMIT 10`),
-      query(`SELECT s.symbol, s.name, p.ltp, p.change_pct, p.volume FROM stocks s JOIN price_data p ON s.id = p.stock_id WHERE p.volume > 0 ORDER BY p.volume DESC LIMIT 10`),
-      query(`SELECT s.sector, COUNT(*) as count, AVG(p.change_pct) as avg_change FROM stocks s JOIN price_data p ON s.id = p.stock_id WHERE s.sector IS NOT NULL GROUP BY s.sector ORDER BY avg_change DESC`),
-    ]);
+    let stocks = await fetchAllNSEStocks();
+
+    // If NSE returned priced data
+    if (stocks.length > 0 && stocks[0].ltp) {
+      const sorted = stocks.filter(q => q.ltp > 0);
+      const topGainers = [...sorted].sort((a, b) => (b.change_pct || 0) - (a.change_pct || 0)).slice(0, 10);
+      const topLosers = [...sorted].sort((a, b) => (a.change_pct || 0) - (b.change_pct || 0)).slice(0, 10);
+      const mostActive = [...sorted].sort((a, b) => (b.volume || 0) - (a.volume || 0)).slice(0, 10);
+
+      const sectorMap = {};
+      sorted.forEach(s => {
+        const sec = s.sector || 'Others';
+        if (!sectorMap[sec]) sectorMap[sec] = { sector: sec, totalChange: 0, count: 0 };
+        sectorMap[sec].totalChange += (s.change_pct || 0);
+        sectorMap[sec].count++;
+      });
+      const sectorPerformance = Object.values(sectorMap).map(s => ({
+        sector: s.sector, count: s.count,
+        avg_change: parseFloat((s.totalChange / s.count).toFixed(2)),
+      })).sort((a, b) => b.avg_change - a.avg_change);
+
+      return res.json({ topGainers, topLosers, mostActive, sectorPerformance, totalStocks: stocks.length });
+    }
+
+    // Fallback: Yahoo for top 50
+    const symbols = NIFTY500_SYMBOLS.slice(0, 50);
+    const quotes = await fetchMultipleQuotes(symbols);
+    const sorted = quotes.filter(q => q.ltp > 0);
 
     res.json({
-      topGainers: gainers.rows,
-      topLosers: losers.rows,
-      mostActive: active.rows,
-      sectorPerformance: sectors.rows,
+      topGainers: [...sorted].sort((a, b) => b.change_pct - a.change_pct).slice(0, 10),
+      topLosers: [...sorted].sort((a, b) => a.change_pct - b.change_pct).slice(0, 10),
+      mostActive: [...sorted].sort((a, b) => (b.volume || 0) - (a.volume || 0)).slice(0, 10),
+      sectorPerformance: [],
+      totalStocks: quotes.length,
     });
   } catch (err) {
-    console.error('Error fetching market overview:', err);
+    console.error('Market overview error:', err.message);
     res.status(500).json({ error: 'Failed to fetch market overview' });
   }
 });
 
-// GET /api/stocks/:symbol - Stock detail
+// GET /api/stocks/indices - Live index data
+router.get('/indices', async (req, res) => {
+  try {
+    const indices = ['NIFTY', 'BANKNIFTY', 'SENSEX'];
+    const results = await Promise.allSettled(indices.map(i => fetchIndexQuote(i)));
+    const data = results.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch indices' });
+  }
+});
+
+// GET /api/stocks/sectors/list
+router.get('/sectors/list', (req, res) => {
+  const sectors = [...new Set(Object.values(SECTOR_MAP))].sort();
+  res.json(sectors);
+});
+
+// GET /api/stocks/:symbol - LIVE stock detail
 router.get('/:symbol', async (req, res) => {
   try {
-    const { symbol } = req.params;
-    const result = await query(
-      `SELECT s.*, p.*, f.pe_ratio, f.pb_ratio, f.roe, f.roce, f.eps, f.dividend_yield,
-              f.debt_to_equity, f.current_ratio, f.book_value, f.revenue, f.net_profit,
-              f.operating_margin, f.net_margin, f.revenue_growth_yoy, f.profit_growth_yoy,
-              f.promoter_holding, f.promoter_pledge, f.fii_holding, f.dii_holding, f.public_holding
-       FROM stocks s
-       LEFT JOIN price_data p ON s.id = p.stock_id
-       LEFT JOIN fundamentals f ON s.id = f.stock_id
-       WHERE UPPER(s.symbol) = UPPER($1)`,
-      [symbol]
-    );
-
-    if (result.rows.length === 0) {
-      // Try fetching from Yahoo Finance
-      const quote = await fetchYahooQuote(symbol);
-      if (quote) return res.json({ ...quote, source: 'yahoo' });
-      return res.status(404).json({ error: 'Stock not found' });
-    }
-
-    res.json(result.rows[0]);
+    const quote = await fetchYahooQuote(req.params.symbol);
+    if (!quote) return res.status(404).json({ error: 'Stock not found' });
+    res.json(quote);
   } catch (err) {
-    console.error('Error fetching stock detail:', err);
     res.status(500).json({ error: 'Failed to fetch stock' });
   }
 });
 
-// GET /api/stocks/:symbol/live - Live quote from Yahoo
+// GET /api/stocks/:symbol/live
 router.get('/:symbol/live', async (req, res) => {
   try {
     const quote = await fetchYahooQuote(req.params.symbol);
@@ -119,16 +126,6 @@ router.get('/:symbol/live', async (req, res) => {
     res.json(quote);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch live quote' });
-  }
-});
-
-// GET /api/stocks/sectors/list
-router.get('/sectors/list', async (req, res) => {
-  try {
-    const result = await query(`SELECT DISTINCT sector FROM stocks WHERE sector IS NOT NULL ORDER BY sector`);
-    res.json(result.rows.map(r => r.sector));
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch sectors' });
   }
 });
 

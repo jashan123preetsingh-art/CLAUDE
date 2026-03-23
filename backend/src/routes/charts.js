@@ -1,15 +1,41 @@
 const express = require('express');
 const router = express.Router();
-const { query } = require('../config/database');
-const { fetchHistoricalData } = require('../services/dataFetcher');
+const { fetchHistoricalData, fetchIntradayData } = require('../services/dataFetcher');
 
-// GET /api/charts/:symbol - Get chart data
+// GET /api/charts/:symbol - Chart data with support for 1H, 4H, 1D, 1W, 1M
 router.get('/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
     const { timeframe = '1D', period = '1y' } = req.query;
 
-    // Calculate date range
+    // For intraday timeframes (1H, 4H), use Yahoo chart API
+    if (timeframe === '1H' || timeframe === '4H') {
+      const interval = timeframe === '1H' ? '60m' : '60m'; // Yahoo doesn't have 4h natively
+      const range = period === '1m' ? '1mo' : period === '3m' ? '3mo' : period === '6m' ? '6mo' : '5d';
+      let candles = await fetchIntradayData(symbol, interval, range);
+
+      // For 4H, aggregate 1H candles into 4H
+      if (timeframe === '4H' && candles.length > 0) {
+        const aggregated = [];
+        for (let i = 0; i < candles.length; i += 4) {
+          const chunk = candles.slice(i, i + 4);
+          if (chunk.length === 0) continue;
+          aggregated.push({
+            time: chunk[0].time,
+            open: chunk[0].open,
+            high: Math.max(...chunk.map(c => c.high)),
+            low: Math.min(...chunk.map(c => c.low)),
+            close: chunk[chunk.length - 1].close,
+            volume: chunk.reduce((s, c) => s + (c.volume || 0), 0),
+          });
+        }
+        candles = aggregated;
+      }
+
+      return res.json({ symbol, timeframe, period, candles, count: candles.length, isIntraday: true });
+    }
+
+    // Daily, Weekly, Monthly
     const endDate = new Date();
     const startDate = new Date();
     switch (period) {
@@ -19,49 +45,17 @@ router.get('/:symbol', async (req, res) => {
       case '1y': startDate.setFullYear(startDate.getFullYear() - 1); break;
       case '3y': startDate.setFullYear(startDate.getFullYear() - 3); break;
       case '5y': startDate.setFullYear(startDate.getFullYear() - 5); break;
+      case '10y': startDate.setFullYear(startDate.getFullYear() - 10); break;
+      case 'max': startDate.setFullYear(2000); break;
       default: startDate.setFullYear(startDate.getFullYear() - 1);
     }
 
-    // Try DB first
-    const dbResult = await query(
-      `SELECT date, open, high, low, close, volume FROM historical_prices
-       WHERE stock_id = (SELECT id FROM stocks WHERE UPPER(symbol) = UPPER($1) LIMIT 1)
-       AND timeframe = $2 AND date >= $3 AND date <= $4
-       ORDER BY date ASC`,
-      [symbol, timeframe, startDate, endDate]
-    );
+    const interval = timeframe === '1W' ? '1wk' : timeframe === '1M' ? '1mo' : '1d';
+    const candles = await fetchHistoricalData(symbol, startDate, endDate, interval);
 
-    if (dbResult.rows.length > 10) {
-      return res.json({
-        symbol,
-        timeframe,
-        candles: dbResult.rows.map(r => ({
-          time: r.date,
-          open: parseFloat(r.open),
-          high: parseFloat(r.high),
-          low: parseFloat(r.low),
-          close: parseFloat(r.close),
-          volume: parseInt(r.volume),
-        })),
-      });
-    }
-
-    // Fallback to Yahoo Finance
-    const interval = timeframe === '1D' ? '1d' : timeframe === '1W' ? '1wk' : '1mo';
-    const historical = await fetchHistoricalData(symbol, startDate, endDate, interval);
-
-    const candles = historical.map(d => ({
-      time: d.date.toISOString().split('T')[0],
-      open: d.open,
-      high: d.high,
-      low: d.low,
-      close: d.close,
-      volume: d.volume,
-    }));
-
-    res.json({ symbol, timeframe, period, candles, source: 'yahoo' });
+    res.json({ symbol, timeframe, period, candles, count: candles.length, isIntraday: false });
   } catch (err) {
-    console.error('Chart data error:', err);
+    console.error('Chart error:', err.message);
     res.status(500).json({ error: 'Failed to fetch chart data' });
   }
 });

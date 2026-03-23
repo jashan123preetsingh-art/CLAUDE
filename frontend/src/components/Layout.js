@@ -4,7 +4,9 @@ import { motion } from 'framer-motion';
 import useStore from '../store/useStore';
 
 const NAV_ITEMS = [
-  { path: '/', label: 'Home', icon: '🏠' },
+  { path: '/', label: 'Dashboard', icon: '🏠' },
+  { path: '/heatmap', label: 'Heatmap', icon: '🗺️' },
+  { path: '/sectors', label: 'Sectors', icon: '📊' },
   { path: '/scanner', label: 'Scanner', icon: '📡' },
   { path: '/screener', label: 'Screener', icon: '🔍' },
   { path: '/charts', label: 'Charts', icon: '📈' },
@@ -31,12 +33,12 @@ export default function Layout({ children }) {
           {sidebarOpen && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col">
               <span className="text-sm font-bold text-white">StockPulse</span>
-              <span className="text-[10px] text-dark-500">NSE + BSE</span>
+              <span className="text-[10px] text-dark-500">NSE + BSE Live</span>
             </motion.div>
           )}
         </div>
 
-        {/* Nav Items */}
+        {/* Nav */}
         <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const isActive = location.pathname === item.path ||
@@ -69,9 +71,7 @@ export default function Layout({ children }) {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="min-h-screen">
-          {children}
-        </div>
+        <div className="min-h-screen">{children}</div>
       </main>
     </div>
   );

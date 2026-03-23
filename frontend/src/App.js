@@ -4,6 +4,8 @@ import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Heatmap = lazy(() => import('./pages/Heatmap'));
+const Sectors = lazy(() => import('./pages/Sectors'));
 const Scanner = lazy(() => import('./pages/Scanner'));
 const StockDetail = lazy(() => import('./pages/StockDetail'));
 const FiiDii = lazy(() => import('./pages/FiiDii'));
@@ -28,17 +30,16 @@ function App() {
       <Toaster
         position="top-right"
         toastOptions={{
-          style: {
-            background: '#1a1d23',
-            color: '#e1e3e5',
-            border: '1px solid #3d4048',
-          },
+          style: { background: '#1a1d23', color: '#e1e3e5', border: '1px solid #3d4048' },
         }}
       />
       <Layout>
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/heatmap" element={<Heatmap />} />
+            <Route path="/sectors" element={<Sectors />} />
+            <Route path="/sectors/:sector" element={<Sectors />} />
             <Route path="/scanner" element={<Scanner />} />
             <Route path="/scanner/:key" element={<Scanner />} />
             <Route path="/stock/:symbol" element={<StockDetail />} />
