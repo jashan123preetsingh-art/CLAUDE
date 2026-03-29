@@ -14,6 +14,7 @@ const OptionsChain = lazy(() => import('./pages/OptionsChain'));
 const Screener = lazy(() => import('./pages/Screener'));
 const Alerts = lazy(() => import('./pages/Alerts'));
 const Charts = lazy(() => import('./pages/Charts'));
+const CandlestickPatterns = lazy(() => import('./pages/CandlestickPatterns'));
 
 const Loading = () => (
   <div className="flex items-center justify-center h-screen bg-dark-950">
@@ -51,6 +52,7 @@ function App() {
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/charts" element={<Charts />} />
             <Route path="/charts/:symbol" element={<Charts />} />
+            <Route path="/patterns" element={<CandlestickPatterns />} />
           </Routes>
         </Suspense>
       </Layout>

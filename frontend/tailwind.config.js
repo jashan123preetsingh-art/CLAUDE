@@ -4,6 +4,24 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        terminal: {
+          bg: '#0a0e14',
+          header: '#0d1117',
+          sidebar: '#0d1117',
+          card: '#111720',
+          'card-hover': '#161d28',
+          border: '#1c2333',
+          'border-bright': '#2d3548',
+          text: '#8b949e',
+          muted: '#484f58',
+          green: '#00d68f',
+          red: '#ff4757',
+          cyan: '#39d2e3',
+          yellow: '#e3b341',
+          orange: '#f0883e',
+          blue: '#58a6ff',
+          purple: '#bc8cff',
+        },
         dark: {
           50: '#f6f6f7',
           100: '#e1e3e5',
@@ -19,22 +37,23 @@ module.exports = {
           950: '#080a0f',
         },
         accent: {
-          green: '#00d4aa',
+          green: '#00d68f',
           red: '#ff4757',
-          blue: '#4facfe',
-          purple: '#a855f7',
-          yellow: '#fbbf24',
-          orange: '#f97316',
+          blue: '#58a6ff',
+          purple: '#bc8cff',
+          yellow: '#e3b341',
+          orange: '#f0883e',
         },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'fade-in': 'fadeIn 0.3s ease-in-out',
-        'slide-up': 'slideUp 0.3s ease-out',
+        'fade-in': 'fadeIn 0.2s ease-out',
+        'slide-up': 'slideUp 0.2s ease-out',
+        'ticker': 'ticker 30s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -42,8 +61,12 @@ module.exports = {
           '100%': { opacity: '1' },
         },
         slideUp: {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '0%': { transform: 'translateY(8px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        ticker: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
         },
       },
     },

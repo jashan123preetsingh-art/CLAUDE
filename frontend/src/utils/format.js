@@ -1,27 +1,27 @@
 export function formatCurrency(value, compact = false) {
-  if (value == null || isNaN(value)) return '—';
+  if (value == null || isNaN(value)) return '---';
   if (compact) {
-    if (Math.abs(value) >= 1e7) return `₹${(value / 1e7).toFixed(2)} Cr`;
-    if (Math.abs(value) >= 1e5) return `₹${(value / 1e5).toFixed(2)} L`;
-    if (Math.abs(value) >= 1e3) return `₹${(value / 1e3).toFixed(1)}K`;
+    if (Math.abs(value) >= 1e7) return `${value < 0 ? '-' : ''}${String.fromCharCode(8377)}${(Math.abs(value) / 1e7).toFixed(2)} Cr`;
+    if (Math.abs(value) >= 1e5) return `${value < 0 ? '-' : ''}${String.fromCharCode(8377)}${(Math.abs(value) / 1e5).toFixed(2)} L`;
+    if (Math.abs(value) >= 1e3) return `${value < 0 ? '-' : ''}${String.fromCharCode(8377)}${(Math.abs(value) / 1e3).toFixed(1)}K`;
   }
-  return `₹${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+  return `${String.fromCharCode(8377)}${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 }
 
 export function formatNumber(value) {
-  if (value == null || isNaN(value)) return '—';
+  if (value == null || isNaN(value)) return '---';
   return Number(value).toLocaleString('en-IN');
 }
 
 export function formatPercent(value) {
-  if (value == null || isNaN(value)) return '—';
+  if (value == null || isNaN(value)) return '---';
   const num = Number(value);
   const sign = num >= 0 ? '+' : '';
   return `${sign}${num.toFixed(2)}%`;
 }
 
 export function formatVolume(value) {
-  if (!value) return '—';
+  if (!value) return '---';
   const num = Number(value);
   if (num >= 1e7) return `${(num / 1e7).toFixed(2)} Cr`;
   if (num >= 1e5) return `${(num / 1e5).toFixed(2)} L`;
@@ -30,23 +30,23 @@ export function formatVolume(value) {
 }
 
 export function formatMarketCap(value) {
-  if (!value) return '—';
+  if (!value) return '---';
   const crores = Number(value);
-  if (crores >= 100000) return `₹${(crores / 100000).toFixed(2)}L Cr`;
-  if (crores >= 1000) return `₹${(crores / 1000).toFixed(2)}K Cr`;
-  return `₹${crores.toFixed(0)} Cr`;
+  if (crores >= 100000) return `${String.fromCharCode(8377)}${(crores / 100000).toFixed(2)}L Cr`;
+  if (crores >= 1000) return `${String.fromCharCode(8377)}${(crores / 1000).toFixed(2)}K Cr`;
+  return `${String.fromCharCode(8377)}${crores.toFixed(0)} Cr`;
 }
 
 export function getChangeColor(value) {
-  if (value > 0) return 'text-accent-green';
-  if (value < 0) return 'text-accent-red';
-  return 'text-dark-400';
+  if (value > 0) return 'text-terminal-green';
+  if (value < 0) return 'text-terminal-red';
+  return 'text-terminal-muted';
 }
 
 export function getChangeBg(value) {
-  if (value > 0) return 'bg-accent-green/10 text-accent-green';
-  if (value < 0) return 'bg-accent-red/10 text-accent-red';
-  return 'bg-dark-700 text-dark-400';
+  if (value > 0) return 'bg-terminal-green/10 text-terminal-green';
+  if (value < 0) return 'bg-terminal-red/10 text-terminal-red';
+  return 'bg-terminal-card text-terminal-muted';
 }
 
 export function timeAgo(date) {
