@@ -67,7 +67,7 @@ body {
   }
 
   .scanner-card {
-    @apply glass-card-hover p-5 cursor-pointer group;
+    @apply glass-card-hover p-5 cursor-pointer;
   }
 
   .stat-value {

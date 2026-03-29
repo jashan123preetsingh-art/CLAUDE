@@ -132,7 +132,7 @@ function ScannerGrid({ scanners, onSelect }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.03 }}
           onClick={() => onSelect(scanner.key)}
-          className="scanner-card"
+          className="scanner-card group"
         >
           <div className="flex items-start justify-between mb-2">
             <h3 className="text-sm font-semibold text-white group-hover:text-accent-green transition-colors">
