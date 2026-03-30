@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndiaOptions AlgoBot - Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', 'SF Pro Display', -apple-system, sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a4a;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00ff88, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-running { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .status-stopped { background: rgba(255,68,68,0.2); color: #ff4444; }
+        .status-paper { background: rgba(255,200,0,0.2); color: #ffc800; }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            color: #888;
+        }
+
+        /* Metrics Cards Row */
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            padding: 16px 24px;
+        }
+
+        .metric-card {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .metric-sub {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .positive { color: #00ff88; }
+        .negative { color: #ff4444; }
+        .neutral { color: #ffc800; }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            padding: 0 24px 16px;
+        }
+
+        .panel {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #2a2a4a;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #aaa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-body { padding: 16px; }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            text-align: left;
+            padding: 8px 12px;
+            color: #888;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #2a2a4a;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #1e1e38;
+        }
+
+        tr:hover { background: rgba(255,255,255,0.02); }
+
+        .side-buy { color: #00ff88; }
+        .side-sell { color: #ff6b6b; }
+
+        /* Charts */
+        #pnl-chart { height: 300px; }
+
+        /* Greeks Bars */
+        .greek-bar-container {
+            margin-bottom: 16px;
+        }
+
+        .greek-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+
+        .greek-bar {
+            height: 24px;
+            background: #0f0f24;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .greek-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            position: absolute;
+        }
+
+        .greek-bar-center {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            height: 100%;
+            width: 1px;
+            background: #444;
+        }
+
+        /* Signals */
+        .signal-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #1e1e38;
+        }
+
+        .signal-name { font-size: 13px; }
+
+        .signal-bar {
+            width: 80px;
+            height: 6px;
+            background: #0f0f24;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .signal-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .signal-value {
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        /* Risk Gauges */
+        .risk-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #1e1e38;
+        }
+
+        .risk-label { font-size: 13px; color: #aaa; }
+        .risk-value { font-size: 14px; font-weight: 600; }
+
+        /* Bottom Grid */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            padding: 0 24px 24px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .metrics-row { grid-template-columns: repeat(3, 1fr); }
+            .main-grid { grid-template-columns: 1fr; }
+            .bottom-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a1a; }
+        ::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
+
+        .btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-start { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .btn-stop { background: rgba(255,68,68,0.2); color: #ff4444; }
+        .btn:hover { filter: brightness(1.3); }
+
+        .no-data {
+            text-align: center;
+            color: #555;
+            padding: 40px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">IndiaOptions AlgoBot</div>
+            <span id="status-badge" class="status-badge status-stopped">STOPPED</span>
+            <span id="mode-badge" class="status-badge status-paper">PAPER</span>
+        </div>
+        <div class="header-right">
+            <span id="uptime">Uptime: --</span>
+            <span id="clock"></span>
+            <button class="btn btn-start" onclick="startBot()">START</button>
+            <button class="btn btn-stop" onclick="stopBot()">STOP</button>
+        </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="metrics-row">
+        <div class="metric-card">
+            <div class="metric-label">Total P&L</div>
+            <div class="metric-value" id="total-pnl">₹0</div>
+            <div class="metric-sub" id="total-pnl-pct">0.00%</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Today P&L</div>
+            <div class="metric-value" id="daily-pnl">₹0</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Open Positions</div>
+            <div class="metric-value neutral" id="open-positions">0</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Capital</div>
+            <div class="metric-value" id="capital">₹10,00,000</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Margin Used</div>
+            <div class="metric-value neutral" id="margin-used">₹0</div>
+            <div class="metric-sub" id="margin-pct">0%</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Max Drawdown</div>
+            <div class="metric-value" id="drawdown">0.00%</div>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+        <!-- Positions Table -->
+        <div class="panel">
+            <div class="panel-header">
+                <span>Open Positions</span>
+                <span id="positions-count">0 positions</span>
+            </div>
+            <div class="panel-body" style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Strategy</th>
+                            <th>Name</th>
+                            <th>Side</th>
+                            <th>Qty</th>
+                            <th>Entry</th>
+                            <th>Current</th>
+                            <th>P&L</th>
+                            <th>Delta</th>
+                            <th>Theta</th>
+                        </tr>
+                    </thead>
+                    <tbody id="positions-tbody">
+                        <tr><td colspan="9" class="no-data">No open positions</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Portfolio Greeks -->
+        <div class="panel">
+            <div class="panel-header">Portfolio Greeks</div>
+            <div class="panel-body">
+                <div class="greek-bar-container">
+                    <div class="greek-label">
+                        <span>Delta</span>
+                        <span id="greek-delta-val">0.00</span>
+                    </div>
+                    <div class="greek-bar">
+                        <div class="greek-bar-center"></div>
+                        <div class="greek-bar-fill" id="greek-delta-bar"
+                             style="width: 50%; left: 50%; background: #00d4ff;"></div>
+                    </div>
+                </div>
+                <div class="greek-bar-container">
+                    <div class="greek-label">
+                        <span>Gamma</span>
+                        <span id="greek-gamma-val">0.00</span>
+                    </div>
+                    <div class="greek-bar">
+                        <div class="greek-bar-center"></div>
+                        <div class="greek-bar-fill" id="greek-gamma-bar"
+                             style="width: 50%; left: 50%; background: #ff9f43;"></div>
+                    </div>
+                </div>
+                <div class="greek-bar-container">
+                    <div class="greek-label">
+                        <span>Theta</span>
+                        <span id="greek-theta-val">0.00</span>
+                    </div>
+                    <div class="greek-bar">
+                        <div class="greek-bar-center"></div>
+                        <div class="greek-bar-fill" id="greek-theta-bar"
+                             style="width: 50%; left: 50%; background: #00ff88;"></div>
+                    </div>
+                </div>
+                <div class="greek-bar-container">
+                    <div class="greek-label">
+                        <span>Vega</span>
+                        <span id="greek-vega-val">0.00</span>
+                    </div>
+                    <div class="greek-bar">
+                        <div class="greek-bar-center"></div>
+                        <div class="greek-bar-fill" id="greek-vega-bar"
+                             style="width: 50%; left: 50%; background: #a855f7;"></div>
+                    </div>
+                </div>
+
+                <hr style="border-color: #2a2a4a; margin: 20px 0;">
+
+                <!-- Risk Metrics -->
+                <div style="margin-top: 8px;">
+                    <div class="panel-header" style="padding: 0 0 12px 0; border: none;">Risk Metrics</div>
+                    <div class="risk-item">
+                        <span class="risk-label">VaR (95%)</span>
+                        <span class="risk-value negative" id="risk-var">₹0</span>
+                    </div>
+                    <div class="risk-item">
+                        <span class="risk-label">Daily Loss Limit</span>
+                        <span class="risk-value" id="risk-daily-limit">5.0%</span>
+                    </div>
+                    <div class="risk-item">
+                        <span class="risk-label">Daily Loss Used</span>
+                        <span class="risk-value" id="risk-daily-used">0.0%</span>
+                    </div>
+                    <div class="risk-item">
+                        <span class="risk-label">Margin Utilization</span>
+                        <span class="risk-value" id="risk-margin-util">0.0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- P&L Chart -->
+    <div style="padding: 0 24px 16px;">
+        <div class="panel">
+            <div class="panel-header">Profit & Loss</div>
+            <div class="panel-body">
+                <div id="pnl-chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Grid -->
+    <div class="bottom-grid">
+        <!-- Recent Trades -->
+        <div class="panel">
+            <div class="panel-header">Recent Trades</div>
+            <div class="panel-body" style="max-height: 300px; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Strategy</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th>P&L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trades-tbody">
+                        <tr><td colspan="4" class="no-data">No trades yet</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Active Signals -->
+        <div class="panel">
+            <div class="panel-header">Market Signals</div>
+            <div class="panel-body" id="signals-container">
+                <div class="no-data">Loading signals...</div>
+            </div>
+        </div>
+
+        <!-- Strategy Status -->
+        <div class="panel">
+            <div class="panel-header">Strategy Status</div>
+            <div class="panel-body" id="strategy-container">
+                <div class="signal-item">
+                    <span class="signal-name">Iron Condor</span>
+                    <span class="positive">ACTIVE</span>
+                </div>
+                <div class="signal-item">
+                    <span class="signal-name">Short Straddle</span>
+                    <span class="positive">ACTIVE</span>
+                </div>
+                <div class="signal-item">
+                    <span class="signal-name">Bull Call Spread</span>
+                    <span class="positive">ACTIVE</span>
+                </div>
+                <div class="signal-item">
+                    <span class="signal-name">Iron Butterfly</span>
+                    <span style="color: #666;">DISABLED</span>
+                </div>
+                <div class="signal-item">
+                    <span class="signal-name">Jade Lizard</span>
+                    <span style="color: #666;">DISABLED</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── State ──
+        let pnlHistory = [];
+
+        // ── Socket.IO ──
+        const socket = io();
+        socket.on('connect', () => console.log('Dashboard connected'));
+        socket.on('portfolio_update', (data) => updateDashboard(data));
+
+        // ── API Fetch Helpers ──
+        async function fetchJSON(url) {
+            try {
+                const res = await fetch(url);
+                return await res.json();
+            } catch (e) {
+                console.error(`Fetch error: ${url}`, e);
+                return null;
+            }
+        }
+
+        // ── Update Functions ──
+        function updateDashboard(data) {
+            if (!data) return;
+            updatePnL(data);
+        }
+
+        function updatePnL(data) {
+            const totalPnl = data.total_pnl || 0;
+            const dailyPnl = data.daily_pnl || 0;
+            const capital = data.current_capital || 1000000;
+            const initialCap = data.initial_capital || 1000000;
+            const pnlPct = ((capital - initialCap) / initialCap * 100);
+
+            setTextAndColor('total-pnl', formatCurrency(totalPnl), totalPnl);
+            document.getElementById('total-pnl-pct').textContent = pnlPct.toFixed(2) + '%';
+            setTextAndColor('daily-pnl', formatCurrency(dailyPnl), dailyPnl);
+            document.getElementById('capital').textContent = formatCurrency(capital);
+            document.getElementById('open-positions').textContent = data.open_positions || 0;
+            document.getElementById('margin-used').textContent = formatCurrency(data.margin_used || 0);
+            document.getElementById('margin-pct').textContent = (data.margin_utilization_pct || 0).toFixed(1) + '%';
+
+            const dd = data.drawdown_pct || 0;
+            setTextAndColor('drawdown', dd.toFixed(2) + '%', -dd);
+        }
+
+        async function updatePositions() {
+            const data = await fetchJSON('/api/positions');
+            if (!data) return;
+
+            const tbody = document.getElementById('positions-tbody');
+            document.getElementById('positions-count').textContent = data.count + ' positions';
+
+            if (data.positions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="no-data">No open positions</td></tr>';
+                return;
+            }
+
+            let html = '';
+            data.positions.forEach(pos => {
+                pos.legs.forEach((leg, i) => {
+                    const pnlClass = leg.pnl >= 0 ? 'positive' : 'negative';
+                    const sideClass = leg.side === 'BUY' ? 'side-buy' : 'side-sell';
+                    html += `<tr>
+                        <td>${i === 0 ? pos.strategy : ''}</td>
+                        <td>${leg.symbol}</td>
+                        <td class="${sideClass}">${leg.side}</td>
+                        <td>${leg.qty}</td>
+                        <td>${(leg.entry_price || 0).toFixed(2)}</td>
+                        <td>${(leg.current_price || 0).toFixed(2)}</td>
+                        <td class="${pnlClass}">${formatCurrency(leg.pnl)}</td>
+                        <td>${(leg.delta || 0).toFixed(4)}</td>
+                        <td>${(leg.theta || 0).toFixed(2)}</td>
+                    </tr>`;
+                });
+            });
+            tbody.innerHTML = html;
+        }
+
+        async function updateGreeks() {
+            const data = await fetchJSON('/api/greeks');
+            if (!data) return;
+
+            updateGreekBar('delta', data.delta, 200);
+            updateGreekBar('gamma', data.gamma, 100);
+            updateGreekBar('theta', data.theta, 5000);
+            updateGreekBar('vega', data.vega, 10000);
+        }
+
+        function updateGreekBar(name, value, maxVal) {
+            document.getElementById(`greek-${name}-val`).textContent = value.toFixed(name === 'gamma' ? 4 : 2);
+            const bar = document.getElementById(`greek-${name}-bar`);
+            const pct = Math.min(Math.abs(value) / maxVal * 50, 50);
+
+            if (value >= 0) {
+                bar.style.left = '50%';
+                bar.style.width = pct + '%';
+            } else {
+                bar.style.left = (50 - pct) + '%';
+                bar.style.width = pct + '%';
+            }
+        }
+
+        async function updateSignals() {
+            const data = await fetchJSON('/api/signals');
+            if (!data) return;
+
+            const container = document.getElementById('signals-container');
+            let html = '';
+            data.signals.forEach(sig => {
+                const color = sig.direction === 'BULLISH' ? '#00ff88' :
+                              sig.direction === 'BEARISH' ? '#ff4444' : '#ffc800';
+                html += `<div class="signal-item">
+                    <span class="signal-name">${sig.name}</span>
+                    <div class="signal-bar">
+                        <div class="signal-bar-fill" style="width: ${sig.strength}%; background: ${color};"></div>
+                    </div>
+                    <span class="signal-value" style="color: ${color};">${sig.direction}</span>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        async function updateTrades() {
+            const data = await fetchJSON('/api/trades');
+            if (!data) return;
+
+            const tbody = document.getElementById('trades-tbody');
+            if (data.trades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="no-data">No trades yet</td></tr>';
+                return;
+            }
+
+            let html = '';
+            data.trades.slice(0, 20).forEach(t => {
+                const pnlClass = t.pnl >= 0 ? 'positive' : 'negative';
+                const entry = t.entry_time ? new Date(t.entry_time).toLocaleDateString() : '--';
+                const exit = t.exit_time ? new Date(t.exit_time).toLocaleDateString() : '--';
+                html += `<tr>
+                    <td>${t.strategy}</td>
+                    <td>${entry}</td>
+                    <td>${exit}</td>
+                    <td class="${pnlClass}">${formatCurrency(t.pnl)}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        async function updateRisk() {
+            const data = await fetchJSON('/api/risk');
+            if (!data) return;
+
+            document.getElementById('risk-var').textContent = formatCurrency(data.var_95);
+            document.getElementById('risk-daily-limit').textContent = data.daily_loss_limit.toFixed(1) + '%';
+            document.getElementById('risk-daily-used').textContent = data.daily_loss_used.toFixed(1) + '%';
+            document.getElementById('risk-margin-util').textContent = data.margin_utilization.toFixed(1) + '%';
+
+            const dailyUsedEl = document.getElementById('risk-daily-used');
+            dailyUsedEl.className = 'risk-value ' +
+                (data.daily_loss_used > data.daily_loss_limit * 0.8 ? 'negative' : 'positive');
+        }
+
+        async function updateStatus() {
+            const data = await fetchJSON('/api/status');
+            if (!data) return;
+
+            const badge = document.getElementById('status-badge');
+            badge.textContent = data.status.toUpperCase();
+            badge.className = 'status-badge ' +
+                (data.status === 'running' ? 'status-running' : 'status-stopped');
+
+            document.getElementById('mode-badge').textContent = data.mode.toUpperCase();
+            document.getElementById('uptime').textContent = 'Uptime: ' + data.uptime_display;
+        }
+
+        // ── P&L Chart ──
+        function initPnLChart() {
+            const layout = {
+                paper_bgcolor: '#1a1a2e',
+                plot_bgcolor: '#1a1a2e',
+                font: { color: '#888', size: 11 },
+                margin: { l: 60, r: 20, t: 10, b: 40 },
+                xaxis: {
+                    gridcolor: '#2a2a4a',
+                    type: 'category',
+                },
+                yaxis: {
+                    gridcolor: '#2a2a4a',
+                    title: 'P&L (₹)',
+                    tickformat: ',.0f',
+                },
+                showlegend: false,
+            };
+
+            const trace = {
+                x: ['No data'],
+                y: [0],
+                type: 'bar',
+                marker: { color: '#2a2a4a' },
+            };
+
+            Plotly.newPlot('pnl-chart', [trace], layout, {
+                responsive: true,
+                displayModeBar: false,
+            });
+        }
+
+        // ── Helpers ──
+        function formatCurrency(amount) {
+            const abs = Math.abs(amount);
+            let formatted;
+            if (abs >= 10000000) {
+                formatted = (amount / 10000000).toFixed(2) + ' Cr';
+            } else if (abs >= 100000) {
+                formatted = (amount / 100000).toFixed(2) + ' L';
+            } else {
+                formatted = amount.toLocaleString('en-IN', {
+                    maximumFractionDigits: 0
+                });
+            }
+            return '₹' + formatted;
+        }
+
+        function setTextAndColor(id, text, value) {
+            const el = document.getElementById(id);
+            el.textContent = text;
+            el.className = 'metric-value ' +
+                (value > 0 ? 'positive' : value < 0 ? 'negative' : '');
+        }
+
+        // ── Bot Controls ──
+        async function startBot() {
+            await fetch('/api/bot/start', { method: 'POST' });
+            updateStatus();
+        }
+
+        async function stopBot() {
+            await fetch('/api/bot/stop', { method: 'POST' });
+            updateStatus();
+        }
+
+        // ── Clock ──
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent =
+                now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
+        }
+
+        // ── Init ──
+        async function refreshAll() {
+            const pnlData = await fetchJSON('/api/pnl');
+            if (pnlData) updatePnL(pnlData);
+
+            await Promise.all([
+                updateStatus(),
+                updatePositions(),
+                updateGreeks(),
+                updateSignals(),
+                updateTrades(),
+                updateRisk(),
+            ]);
+        }
+
+        initPnLChart();
+        updateClock();
+        refreshAll();
+
+        // Auto-refresh
+        setInterval(refreshAll, 5000);
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>
