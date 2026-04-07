@@ -3,9 +3,9 @@ module.exports = {
   settings: {
     companyName: 'Veltrix AI',
     tagline: 'AI-Powered Growth Agency',
-    phone: '+91 82890 94569',
+    phone: '+91 82909 4569',
     email: 'veltrixaiservices@gmail.com',
-    whatsappNumber: '918289094569',
+    whatsappNumber: '91829094569',
     location: 'Punjab, India',
     startingPrice: '$25',
     heroTitle: 'AI That Builds, Designs & Grows Your Business',
