@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veltrix AI | AI-Powered Growth Agency</title>
+<meta name="description" content="Veltrix AI — AI Animation, Full-Stack Dev, Finance, Content, Marketing. 10 premium AI services starting $25.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--blue:#0052FF;--green:#00c978;--dark:#0a0a0f;--card:#111118;--border:#1e1e2a;--muted:#6b7280;--sub:#9ca3af}
+body{font-family:'Inter',sans-serif;background:var(--dark);color:#fff;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.w{max-width:1100px;margin:0 auto;padding:0 24px}
+.btn{display:inline-block;padding:12px 28px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:.2s}
+.btn:hover{opacity:.9;transform:translateY(-1px)}
+.btn-o{background:transparent;border:1px solid #333;color:#fff}
+.btn-o:hover{border-color:#555}
+.tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--blue);margin-bottom:10px}
+.section{padding:80px 0}
+.section-alt{background:#08080d}
+.grid{display:grid;gap:16px}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:99;padding:16px 0;background:rgba(10,10,15,.85);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.04)}
+nav .w{display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:20px;font-weight:900;letter-spacing:-.5px}
+.logo span{color:var(--blue)}
+nav .links{display:flex;gap:24px;align-items:center}
+nav .links a{font-size:13px;color:var(--sub);font-weight:500;transition:.2s}
+nav .links a:hover{color:#fff}
+
+/* HERO */
+.hero{padding:160px 0 100px;text-align:center}
+.hero h1{font-size:clamp(36px,5.5vw,64px);font-weight:900;line-height:1.05;letter-spacing:-2px;margin-bottom:20px}
+.hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--blue),#00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:18px;color:var(--sub);max-width:560px;margin:0 auto 32px;line-height:1.7}
+.hero .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.hero-stats{display:flex;justify-content:center;gap:48px;margin-top:48px;flex-wrap:wrap}
+.hero-stats div{text-align:center}
+.hero-stats strong{display:block;font-size:28px;font-weight:800;color:#fff}
+.hero-stats small{font-size:12px;color:var(--muted)}
+
+/* SERVICES */
+.svc-grid{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.svc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;transition:.3s}
+.svc:hover{border-color:#333;transform:translateY(-4px)}
+.svc-icon{font-size:28px;margin-bottom:12px;display:block}
+.svc h3{font-size:17px;font-weight:700;margin-bottom:6px}
+.svc p{font-size:13px;color:var(--sub);line-height:1.7;margin-bottom:12px}
+.svc-chips{display:flex;flex-wrap:wrap;gap:4px}
+.svc-chips span{font-size:10px;padding:3px 8px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:100px;color:var(--muted)}
+.svc-price{margin-top:12px;font-size:12px;color:var(--blue);font-weight:600}
+
+/* PACKAGES */
+.pkg-grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.pkg{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:32px;position:relative}
+.pkg.pop{border-color:var(--blue);box-shadow:0 0 40px rgba(0,82,255,.1)}
+.pkg-badge{position:absolute;top:-10px;right:20px;background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:4px 12px;border-radius:100px}
+.pkg h3{font-size:20px;font-weight:800;margin-bottom:4px}
+.pkg .price{font-size:36px;font-weight:900;margin:16px 0 4px}
+.pkg .price span{font-size:14px;font-weight:500;color:var(--muted)}
+.pkg .billing{font-size:12px;color:var(--muted);margin-bottom:20px}
+.pkg ul{list-style:none;margin-bottom:24px}
+.pkg li{font-size:13px;color:var(--sub);padding:6px 0;display:flex;align-items:center;gap:8px}
+.pkg li::before{content:'✓';color:var(--green);font-weight:700;font-size:12px}
+
+/* CASE STUDIES */
+.case-grid{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.case{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px}
+.case .cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--blue);margin-bottom:8px}
+.case h3{font-size:15px;font-weight:700;margin-bottom:8px;line-height:1.4}
+.case p{font-size:13px;color:var(--sub);line-height:1.7;margin-bottom:16px}
+.case-metrics{display:flex;gap:20px}
+.case-metrics div strong{display:block;font-size:20px;font-weight:800;color:var(--green)}
+.case-metrics div small{font-size:10px;color:var(--muted)}
+
+/* TESTIMONIALS */
+.test-grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.tst{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px}
+.tst .stars{color:#f59e0b;font-size:12px;margin-bottom:10px;letter-spacing:2px}
+.tst q{display:block;font-size:14px;color:#d1d5db;line-height:1.7;margin-bottom:14px}
+.tst .who{display:flex;align-items:center;gap:10px}
+.tst .av{width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+.tst .nm{font-size:13px;font-weight:600}
+.tst .rl{font-size:11px;color:var(--muted)}
+
+/* PROCESS */
+.proc-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.proc{text-align:center;padding:24px}
+.proc .num{font-size:48px;font-weight:900;color:rgba(255,255,255,.06);margin-bottom:8px}
+.proc h4{font-size:15px;font-weight:700;margin-bottom:6px}
+.proc p{font-size:12px;color:var(--muted);line-height:1.6}
+
+/* FAQ */
+.faq{max-width:680px;margin:0 auto}
+.fq{border-bottom:1px solid var(--border);padding:18px 0;cursor:pointer}
+.fq summary{font-size:15px;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.fq summary::after{content:'+';font-size:20px;color:var(--muted)}
+.fq[open] summary::after{content:'−'}
+.fq .ans{padding:12px 0 4px;font-size:13px;color:var(--sub);line-height:1.7}
+
+/* CTA */
+.cta{text-align:center;padding:100px 0;background:linear-gradient(180deg,var(--dark),#060610)}
+.cta h2{font-size:clamp(28px,4vw,44px);font-weight:900;letter-spacing:-1.5px;margin-bottom:14px}
+.cta p{font-size:16px;color:var(--sub);max-width:440px;margin:0 auto 28px;line-height:1.7}
+
+/* CONTACT */
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px}
+.contact-info h3{font-size:22px;font-weight:800;margin-bottom:8px}
+.contact-info>p{font-size:14px;color:var(--sub);line-height:1.7;margin-bottom:24px}
+.ci{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.ci .ic{width:36px;height:36px;border-radius:8px;background:rgba(0,82,255,.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ci .lb{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600}
+.ci .vl{font-size:13px;font-weight:500}
+form label{display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:#d1d5db}
+form input,form select,form textarea{width:100%;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:#fff;font-family:inherit;font-size:14px;outline:none;margin-bottom:12px;transition:.2s}
+form input:focus,form select:focus,form textarea:focus{border-color:var(--blue)}
+form textarea{min-height:80px;resize:vertical}
+form select{cursor:pointer}
+.form-btn{width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+.form-note{text-align:center;font-size:11px;color:var(--muted);margin-top:8px}
+
+/* NEWSLETTER */
+.nl-row{display:flex;gap:8px;max-width:400px;margin:0 auto}
+.nl-row input{flex:1;margin:0}
+.nl-row button{white-space:nowrap;margin:0}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:40px 0 24px}
+footer .w{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+footer small{font-size:12px;color:var(--muted)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#000;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;opacity:0;transform:translateY(20px);transition:.3s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+
+/* MARQUEE */
+.marquee{padding:16px 0;background:#08080d;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden}
+.mq-track{display:flex;gap:0;animation:mq 30s linear infinite;width:max-content}
+@keyframes mq{to{transform:translateX(-50%)}}
+.mq-i{padding:0 24px;font-size:13px;font-weight:700;color:rgba(255,255,255,.12);white-space:nowrap;display:flex;align-items:center;gap:8px}
+.mq-i::before{content:'';width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.1)}
+
+/* WHO WE HELP */
+.who-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.who-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:32px;text-align:center;transition:.3s}
+.who-card:hover{transform:translateY(-4px);border-color:#333}
+.who-card.pop{border-color:var(--blue);box-shadow:0 0 30px rgba(0,82,255,.08)}
+.who-em{font-size:36px;display:block;margin-bottom:14px}
+.who-card h3{font-size:17px;font-weight:700;margin-bottom:6px}
+.who-card p{font-size:13px;color:var(--sub);line-height:1.7}
+
+/* STATS BAR */
+.stats-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:48px}
+.stat-item{text-align:center;padding:24px 12px;background:var(--card);border:1px solid var(--border);border-radius:12px;transition:.3s}
+.stat-item:hover{transform:translateY(-3px);border-color:#333}
+.stat-val{font-size:32px;font-weight:900;margin-bottom:2px}
+.stat-val.bl{color:var(--blue)}.stat-val.gn{color:var(--green)}.stat-val.wh{color:#fff}.stat-val.vl{color:#7c3aed}
+.stat-lbl{font-size:11px;color:var(--muted)}
+
+/* WHATSAPP FLOAT */
+.wa-float{position:fixed;bottom:24px;right:24px;z-index:98;width:56px;height:56px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 4px 20px rgba(37,211,102,.3);cursor:pointer;transition:.3s;text-decoration:none}
+.wa-float:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(37,211,102,.4)}
+
+/* MOBILE MENU */
+.hamburger{display:none;background:none;border:none;color:#fff;font-size:24px;cursor:pointer}
+.mob-menu{display:none;position:fixed;top:56px;left:0;right:0;background:rgba(10,10,15,.98);backdrop-filter:blur(16px);padding:24px;border-bottom:1px solid var(--border);z-index:98;flex-direction:column;gap:16px}
+.mob-menu.open{display:flex}
+.mob-menu a{font-size:16px;color:var(--sub);font-weight:500;padding:8px 0}
+.mob-menu a:hover{color:#fff}
+
+/* SCROLL REVEAL */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.reveal.vis{opacity:1;transform:none}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  nav .links{display:none}
+  .hamburger{display:block}
+  .hero{padding:120px 0 60px}
+  .contact-grid{grid-template-columns:1fr}
+  .hero-stats{gap:24px}
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+  .wa-float{bottom:16px;right:16px;width:48px;height:48px;font-size:24px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav><div class="w">
+  <div class="logo">Veltrix<span>AI</span></div>
+  <div class="links">
+    <a href="#services">Services</a>
+    <a href="#cases">Results</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#reviews">Reviews</a>
+    <a href="#faq">FAQ</a>
+    <a href="#contact" class="btn" style="padding:8px 20px;font-size:13px">Get Started</a>
+  </div>
+  <button class="hamburger" onclick="document.getElementById('mob').classList.toggle('open')">☰</button>
+</div></nav>
+<div class="mob-menu" id="mob">
+  <a href="#services" onclick="closeMob()">Services</a>
+  <a href="#cases" onclick="closeMob()">Results</a>
+  <a href="#pricing" onclick="closeMob()">Pricing</a>
+  <a href="#reviews" onclick="closeMob()">Reviews</a>
+  <a href="#faq" onclick="closeMob()">FAQ</a>
+  <a href="#contact" onclick="closeMob()">Get Started →</a>
+</div>
+
+<!-- HERO -->
+<section class="hero"><div class="w">
+  <div class="tag">AI-POWERED GROWTH AGENCY</div>
+  <h1>We Build, Design &<br><em>Grow Your Business</em><br>With AI</h1>
+  <p>AI animation, full-stack development, finance automation, content, marketing — 10 premium services starting from $25.</p>
+  <div class="btns">
+    <a href="#contact" class="btn">Start Your Project →</a>
+    <a href="#services" class="btn btn-o">Explore Services</a>
+  </div>
+  <div class="hero-stats" id="hero-stats"></div>
+</div></section>
+
+<!-- MARQUEE -->
+<section class="marquee"><div class="mq-track" id="mqt"></div></section>
+
+<!-- SERVICES -->
+<section class="section section-alt" id="services"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">Our Services</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">10 Premium AI Services</h2>
+    <p style="color:var(--sub);margin-top:8px">Everything you need to launch, grow, and scale.</p>
+  </div>
+  <div class="grid svc-grid reveal" id="svc-grid"></div>
+</div></section>
+
+<!-- WHO WE HELP -->
+<section class="section"><div class="w">
+  <div style="text-align:center;margin-bottom:48px" class="reveal">
+    <div class="tag">Who We Help</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">From Zero to Scale</h2>
+    <p style="color:var(--sub);margin-top:8px">No matter where you are, we get you to the next level.</p>
+  </div>
+  <div class="grid who-grid">
+    <div class="who-card reveal"><span class="who-em">🏁</span><h3>Zero-Stage Startups</h3><p>No brand, no presence? We build everything from scratch — identity, content, first customers.</p></div>
+    <div class="who-card pop reveal"><span class="who-em">🚀</span><h3>Growing Businesses</h3><p>Need more customers? We handle marketing, ads, lead gen, automation, and content at scale.</p></div>
+    <div class="who-card reveal"><span class="who-em">🌍</span><h3>Scaling Brands</h3><p>Ready to dominate? Full AI growth engine — apps, automation, multi-platform content, and analytics.</p></div>
+  </div>
+  <div class="stats-bar reveal">
+    <div class="stat-item"><div class="stat-val bl">10x</div><div class="stat-lbl">Faster Delivery</div></div>
+    <div class="stat-item"><div class="stat-val gn">127+</div><div class="stat-lbl">Projects Done</div></div>
+    <div class="stat-item"><div class="stat-val wh">10</div><div class="stat-lbl">AI Services</div></div>
+    <div class="stat-item"><div class="stat-val vl">14+</div><div class="stat-lbl">Countries</div></div>
+    <div class="stat-item"><div class="stat-val bl">98%</div><div class="stat-lbl">Retention Rate</div></div>
+  </div>
+</div></section>
+
+<!-- CASE STUDIES -->
+<section class="section section-alt" id="cases"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">Case Studies</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">Real Results for Real Businesses</h2>
+  </div>
+  <div class="grid case-grid reveal" id="case-grid"></div>
+</div></section>
+
+<!-- PRICING -->
+<section class="section section-alt" id="pricing"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">Pricing</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">Simple, Honest Pricing</h2>
+    <p style="color:var(--sub);margin-top:8px">No hidden fees. No contracts. Cancel anytime.</p>
+  </div>
+  <div class="grid pkg-grid reveal" id="pkg-grid"></div>
+</div></section>
+
+<!-- PROCESS -->
+<section class="section"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">How It Works</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">4 Steps to Results</h2>
+  </div>
+  <div class="grid proc-grid">
+    <div class="proc"><div class="num">01</div><h4>Discovery Call</h4><p>15-minute call. We learn your business, goals, and audience.</p></div>
+    <div class="proc"><div class="num">02</div><h4>AI Strategy</h4><p>We research your market and create a custom plan.</p></div>
+    <div class="proc"><div class="num">03</div><h4>Rapid Execution</h4><p>AI-powered delivery at 10x speed. Human quality reviewed.</p></div>
+    <div class="proc"><div class="num">04</div><h4>Launch & Grow</h4><p>We launch, track data, and optimize for growth.</p></div>
+  </div>
+</div></section>
+
+<!-- TESTIMONIALS -->
+<section class="section section-alt" id="reviews"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">Reviews</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">What Clients Say</h2>
+  </div>
+  <div class="grid test-grid reveal" id="test-grid"></div>
+</div></section>
+
+<!-- FAQ -->
+<section class="section" id="faq"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">FAQ</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">Common Questions</h2>
+  </div>
+  <div class="faq">
+    <details class="fq"><summary>What does Veltrix AI do?</summary><div class="ans">We're a full-service AI agency — animation, full-stack development, finance automation, content, branding, marketing, lead gen, podcasts, and more. 10 services covering everything from launch to scale.</div></details>
+    <details class="fq"><summary>Is the work done by AI or humans?</summary><div class="ans">Both. AI handles the heavy lifting for speed. Every deliverable is reviewed and refined by our team. You get AI speed with human quality control.</div></details>
+    <details class="fq"><summary>How fast do you deliver?</summary><div class="ans">Most work ships in 24-72 hours. Full-stack projects take 1-3 weeks. Much faster than traditional agencies.</div></details>
+    <details class="fq"><summary>Do you work outside India?</summary><div class="ans">Yes. We're based in Punjab, India but serve clients globally — US, UK, UAE, Canada, Australia. All work happens over WhatsApp, Zoom, and chat.</div></details>
+    <details class="fq"><summary>What are your prices?</summary><div class="ans">Services start from $25. Every project is custom-quoted. No hidden fees, no contracts. Message us for a free quote.</div></details>
+    <details class="fq"><summary>Can you build full apps and SaaS?</summary><div class="ans">Absolutely. We build complete web apps, SaaS platforms, AI agents, mobile apps, APIs, and dashboards. Full-stack from design to deployment.</div></details>
+  </div>
+</div></section>
+
+<!-- CTA -->
+<section class="cta">
+  <h2>Stop Guessing.<br>Start Growing With AI.</h2>
+  <p>Get a free quote. No commitment, no pressure.</p>
+  <a href="#contact" class="btn" style="padding:14px 36px;font-size:16px">Get Started Free →</a>
+  <div style="margin-top:32px">
+    <p style="font-size:13px;color:var(--sub);margin-bottom:12px">Subscribe for weekly AI growth tips</p>
+    <div class="nl-row">
+      <input type="email" id="nl-email" placeholder="your@email.com" style="margin:0">
+      <button class="btn" onclick="subNL()" style="margin:0">Subscribe</button>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="section section-alt" id="contact"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">Contact</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">Let's Build Something Great</h2>
+  </div>
+  <div class="contact-grid">
+    <div class="contact-info">
+      <h3>Ready to start?</h3>
+      <p>Fill the form or message us directly. We reply within hours.</p>
+      <div class="ci"><div class="ic">💬</div><div><div class="lb">WhatsApp</div><div class="vl">+91 82909 4569</div></div></div>
+      <div class="ci"><div class="ic">📧</div><div><div class="lb">Email</div><div class="vl" id="eml"></div></div></div>
+      <div class="ci"><div class="ic">📍</div><div><div class="lb">Location</div><div class="vl">Punjab, India · Global Clients</div></div></div>
+      <div class="ci"><div class="ic">⏱</div><div><div class="lb">Hours</div><div class="vl">Mon–Sat, 9AM–8PM IST</div></div></div>
+    </div>
+    <form id="cf" onsubmit="submitContact(event)">
+      <label>Name *</label>
+      <input type="text" id="c-name" required placeholder="Full name">
+      <label>Email *</label>
+      <input type="email" id="c-email" required placeholder="you@company.com">
+      <label>Phone</label>
+      <input type="tel" id="c-phone" placeholder="+91 XXXXX XXXXX">
+      <label>Service</label>
+      <select id="c-service"><option value="">Select a service...</option></select>
+      <label>Budget</label>
+      <select id="c-budget"><option value="">Select budget...</option><option>Under $100</option><option>$100–$500</option><option>$500–$2,000</option><option>$2,000+</option><option>Not sure yet</option></select>
+      <label>Project Details</label>
+      <textarea id="c-msg" placeholder="Tell us what you need..."></textarea>
+      <button type="submit" class="form-btn">Send Message →</button>
+      <div class="form-note">We'll reply within 12 hours</div>
+    </form>
+  </div>
+</div></section>
+
+<!-- WHATSAPP FLOAT -->
+<a class="wa-float" href="https://wa.me/91829094569?text=Hi%20Veltrix%20AI!%20I%27m%20interested%20in%20your%20services." target="_blank" rel="noopener">💬</a>
+
+<!-- FOOTER -->
+<footer><div class="w">
+  <div class="logo" style="font-size:16px">Veltrix<span style="color:var(--blue)">AI</span></div>
+  <small>© 2026 Veltrix AI. All rights reserved. Punjab, India · Serving Globally</small>
+</div></footer>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';
+const WA = '91829094569';
+
+document.getElementById('eml').textContent = 'veltrixaiservices' + '@' + 'gmail.com';
+
+function toast(msg, dur) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur || 3000);
+}
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  return r.json();
+}
+
+// Load services
+api('/api/services').then(d => {
+  const g = document.getElementById('svc-grid');
+  const sel = document.getElementById('c-service');
+  d.items.forEach(s => {
+    g.innerHTML += `<div class="svc">
+      <span class="svc-icon">${s.icon}</span>
+      <h3>${s.name}</h3>
+      <p>${s.description}</p>
+      <div class="svc-chips">${(s.tools||[]).slice(0,5).map(t=>'<span>'+t+'</span>').join('')}</div>
+      <div class="svc-price">From $${s.startingAt} · ${s.deliveryDays} days</div>
+    </div>`;
+    sel.innerHTML += `<option value="${s.slug}">${s.name}</option>`;
+  });
+});
+
+// Load packages
+api('/api/packages').then(d => {
+  const g = document.getElementById('pkg-grid');
+  d.items.forEach(p => {
+    g.innerHTML += `<div class="pkg ${p.popular?'pop':''}">
+      ${p.popular?'<div class="pkg-badge">POPULAR</div>':''}
+      <h3>${p.name}</h3>
+      <p style="font-size:13px;color:var(--sub)">${p.tagline}</p>
+      <div class="price">${p.priceLabel} <span>/${p.billing}</span></div>
+      <ul>${p.features.map(f=>'<li>'+f+'</li>').join('')}</ul>
+      <a href="#contact" class="btn" style="width:100%;text-align:center;display:block">${p.cta}</a>
+    </div>`;
+  });
+});
+
+// Load case studies
+api('/api/case-studies').then(d => {
+  const g = document.getElementById('case-grid');
+  d.items.forEach(c => {
+    g.innerHTML += `<div class="case">
+      <div class="cat">${c.category}</div>
+      <h3>${c.title}</h3>
+      <p>${c.summary}</p>
+      <div class="case-metrics">${c.metrics.map(m=>'<div><strong>'+m.value+'</strong><small>'+m.label+'</small></div>').join('')}</div>
+    </div>`;
+  });
+});
+
+// Load testimonials
+api('/api/testimonials').then(d => {
+  const g = document.getElementById('test-grid');
+  d.items.forEach(t => {
+    g.innerHTML += `<div class="tst">
+      <div class="stars">★★★★★</div>
+      <q>${t.quote}</q>
+      <div class="who"><div class="av">${t.initials}</div><div><div class="nm">${t.name}</div><div class="rl">${t.role}</div></div></div>
+    </div>`;
+  });
+});
+
+// Load stats
+api('/api/stats/public').then(d => {
+  document.getElementById('hero-stats').innerHTML = `
+    <div><strong>${d.totalProjects}+</strong><small>Projects Done</small></div>
+    <div><strong>${d.countriesServed}+</strong><small>Countries</small></div>
+    <div><strong>${d.servicesOffered}</strong><small>Services</small></div>
+    <div><strong>${d.clientRetention}%</strong><small>Retention</small></div>
+  `;
+});
+
+// Contact form
+async function submitContact(e) {
+  e.preventDefault();
+  try {
+    const body = {
+      name: document.getElementById('c-name').value,
+      email: document.getElementById('c-email').value,
+      phone: document.getElementById('c-phone').value,
+      service: document.getElementById('c-service').value,
+      budget: document.getElementById('c-budget').value,
+      message: document.getElementById('c-msg').value,
+    };
+    const r = await api('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (r.success) {
+      toast('Message sent! We will reply within 12 hours.');
+      document.getElementById('cf').reset();
+    } else {
+      toast(r.error || 'Something went wrong');
+    }
+  } catch (err) {
+    toast('Network error. Try WhatsApp instead.');
+  }
+}
+
+// Newsletter
+async function subNL() {
+  const email = document.getElementById('nl-email').value;
+  if (!email) return;
+  try {
+    const r = await api('/api/newsletter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    toast(r.success ? 'Subscribed!' : (r.error || 'Error'));
+    if (r.success) document.getElementById('nl-email').value = '';
+  } catch (e) {
+    toast('Network error');
+  }
+}
+
+// Mobile menu
+function closeMob() { document.getElementById('mob').classList.remove('open'); }
+
+// Marquee
+const tools = ['Claude','ChatGPT','Midjourney','Runway ML','After Effects','Next.js','React','Figma','ElevenLabs','Canva Pro','Zapier','Stripe','Vercel','AWS','Python','Node.js','Adobe Premiere','DaVinci','Pika Labs'];
+const mqt = document.getElementById('mqt');
+let mh = '';
+for (let r = 0; r < 3; r++) tools.forEach(t => mh += '<div class="mq-i">' + t + '</div>');
+mqt.innerHTML = mh;
+
+// Scroll reveal
+const revealObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
+}, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+// Re-observe after dynamic content loads
+setTimeout(() => {
+  document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+}, 1500);
+
+// Analytics
+api('/api/analytics/track', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ event: 'page_view', page: location.pathname })
+}).catch(() => {});
+</script>
+</body>
+</html>
