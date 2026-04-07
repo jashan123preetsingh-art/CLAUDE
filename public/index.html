@@ -4,754 +4,433 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Veltrix AI | AI-Powered Growth Agency</title>
-<meta name="description" content="Veltrix AI - AI-Powered Growth Agency. We help zero-stage startups and small businesses grow with AI. Brand building, lead generation, content, marketing, automation — starting from just $25.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="description" content="Veltrix AI — AI Animation, Full-Stack Dev, Finance, Content, Marketing. 10 premium AI services starting $25.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:#ffffff;
-  --bg2:#f8f9fb;
-  --bg3:#f1f3f7;
-  --border:#e5e7ee;
-  --border2:#d4d8e3;
-  --muted:#9aa1b4;
-  --sub:#6b7385;
-  --body:#3b3f51;
-  --head:#12141d;
-  --blue:#0052FF;
-  --blue2:#0045d6;
-  --blue-l:rgba(0,82,255,.06);
-  --blue-m:rgba(0,82,255,.12);
-  --green:#00c978;
-  --green-l:rgba(0,201,120,.07);
-  --violet:#7c3aed;
-  --orange:#f97316;
-  --ff:'Outfit',sans-serif;
-  --fd:'Syne',sans-serif;
-  --fm:'IBM Plex Mono',monospace;
-  --ease:cubic-bezier(.4,0,.2,1);
-  --bounce:cubic-bezier(.16,1,.3,1);
-}
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth;overflow-x:hidden}
-body{font-family:var(--ff);color:var(--body);background:var(--bg);-webkit-font-smoothing:antialiased}
-::selection{background:var(--blue);color:#fff}
-img{max-width:100%}
-.w{max-width:1140px;margin:0 auto;padding:0 32px}
-/* ANIMATIONS */
-.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
-.reveal.vis{opacity:1;transform:none}
-.reveal.d1{transition-delay:.1s}.reveal.d2{transition-delay:.2s}.reveal.d3{transition-delay:.3s}.reveal.d4{transition-delay:.4s}
-/* ========== NAV ========== */
-.nav{position:fixed;top:0;left:0;right:0;z-index:999;height:68px;display:flex;align-items:center;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);border-bottom:1px solid transparent;transition:border-color .3s,box-shadow .3s}
-.nav.scrolled{border-color:var(--border);box-shadow:0 1px 12px rgba(0,0,0,.04)}
-.nav-c{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:1140px;margin:0 auto;padding:0 32px}
-.logo{display:flex;align-items:center;gap:9px;cursor:pointer}
-.logo-i{width:34px;height:34px;background:linear-gradient(135deg,var(--blue),#4a8bff);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:800;font-size:16px;color:#fff}
-.logo-t{font-family:var(--fd);font-weight:800;font-size:20px;color:var(--head);letter-spacing:-.3px}
-.logo-t b{color:var(--blue)}
-.nav-r{display:flex;align-items:center;gap:6px}
-.nav-l{font-size:13.5px;font-weight:500;color:var(--sub);padding:8px 16px;border-radius:8px;border:none;background:none;cursor:pointer;font-family:var(--ff);transition:.2s}
-.nav-l:hover{color:var(--head);background:var(--bg2)}
-.nav-b{font-size:13px;font-weight:600;color:#fff;padding:9px 22px;border-radius:100px;border:none;background:var(--head);cursor:pointer;font-family:var(--ff);transition:all .25s var(--bounce)}
-.nav-b:hover{background:var(--blue);transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,82,255,.18)}
-/* ========== HERO ========== */
-.hero{padding:150px 0 110px;position:relative;overflow:hidden}
-.hero-bg{position:absolute;top:-120px;right:-180px;width:650px;height:650px;border-radius:50%;background:radial-gradient(circle,rgba(0,82,255,.06),transparent 70%);pointer-events:none}
-.hero-bg2{position:absolute;bottom:-80px;left:-120px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(0,201,120,.04),transparent 70%);pointer-events:none}
-.hero-row{display:flex;align-items:center;gap:64px}
-.hero-left{flex:1.15;position:relative;z-index:1}
-.hero-right{flex:.85;position:relative;display:flex;justify-content:center}
-.hero-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 14px 5px 7px;background:var(--blue-l);border:1px solid var(--blue-m);border-radius:100px;font-family:var(--fm);font-size:11px;font-weight:600;color:var(--blue);margin-bottom:24px;letter-spacing:.3px}
-.hero-dot{width:7px;height:7px;border-radius:50%;background:var(--blue);animation:pul 2s infinite}
-@keyframes pul{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
-.hero h1{font-family:var(--fd);font-size:56px;font-weight:800;color:var(--head);line-height:1.06;letter-spacing:-2.5px;margin-bottom:20px}
-.hero h1 .grd{background:linear-gradient(135deg,var(--blue),#4a8bff,#00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero-p{font-size:18px;line-height:1.75;color:var(--sub);max-width:460px;margin-bottom:32px}
-.hero-btns{display:flex;gap:10px;margin-bottom:32px}
-.btn1{padding:14px 32px;background:var(--blue);color:#fff;border:none;border-radius:100px;font-size:15px;font-weight:600;font-family:var(--ff);cursor:pointer;transition:all .3s var(--bounce);box-shadow:0 4px 18px rgba(0,82,255,.18)}
-.btn1:hover{background:var(--blue2);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,82,255,.25)}
-.btn2{padding:14px 26px;background:none;color:var(--head);border:1.5px solid var(--border);border-radius:100px;font-size:15px;font-weight:600;font-family:var(--ff);cursor:pointer;transition:.25s}
-.btn2:hover{border-color:var(--border2);background:var(--bg2)}
-.hero-social{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
-.faces{display:flex}.face{width:30px;height:30px;border-radius:50%;border:2px solid #fff;margin-left:-7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:var(--fd)}
-.face:first-child{margin-left:0}
-.f1{background:#dbeafe;color:#2563eb}.f2{background:#d1fae5;color:#059669}.f3{background:#fce7f3;color:#db2777}.f4{background:#fef3c7;color:#d97706}
-/* Hero orb */
-.orb-wrap{width:360px;height:360px;position:relative}
-.orb{width:100%;height:100%;border-radius:50%;background:linear-gradient(145deg,#f5f7fb,#eef1f8);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;position:relative}
-.orb::before{content:'';position:absolute;inset:-22px;border-radius:50%;border:1px dashed rgba(0,0,0,.06);animation:ro 40s linear infinite}
-@keyframes ro{to{transform:rotate(360deg)}}
-.orb-t{text-align:center;z-index:1}
-.orb-n{font-family:var(--fd);font-size:60px;font-weight:800;background:linear-gradient(135deg,var(--blue),#00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.orb-lb{font-size:13px;color:var(--muted);margin-top:2px}
-.fl{position:absolute;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:11px;box-shadow:0 4px 16px rgba(0,0,0,.05);font-size:12px;font-weight:600;color:var(--body);display:flex;align-items:center;gap:7px;white-space:nowrap;z-index:2;animation:bob 4.5s ease-in-out infinite}
-@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-.fl:nth-child(2){top:2%;left:-14%;animation-delay:0s}
-.fl:nth-child(3){top:30%;right:-18%;animation-delay:.6s}
-.fl:nth-child(4){bottom:22%;left:-10%;animation-delay:1.2s}
-.fl:nth-child(5){bottom:-2%;right:-6%;animation-delay:1.8s}
-.fl:nth-child(6){top:-7%;right:6%;animation-delay:.3s}
-.fl-i{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
-.fl-i.a{background:var(--blue-l)}.fl-i.b{background:var(--green-l)}.fl-i.c{background:rgba(124,58,237,.07)}.fl-i.d{background:rgba(249,115,22,.07)}.fl-i.e{background:rgba(244,63,94,.07)}
-/* ========== MARQUEE ========== */
-.marquee{padding:18px 0;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden}
-.mq-track{display:flex;gap:0;animation:mq 35s linear infinite;width:max-content}
-@keyframes mq{to{transform:translateX(-50%)}}
-.mq-i{padding:0 28px;font-family:var(--fd);font-size:14px;font-weight:700;color:var(--border2);white-space:nowrap;display:flex;align-items:center;gap:8px}
-.mq-i::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--border)}
-/* ========== SECTION ========== */
-.sec{padding:110px 0}
-.sec-alt{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.sec-dark{background:var(--head);color:#fff;border:none}
-.tag{font-family:var(--fm);font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:14px}
-.tag-c{text-align:center}
-.tag-w{color:#6ea8ff}
-.sh{font-family:var(--fd);font-size:42px;font-weight:800;color:var(--head);letter-spacing:-1.8px;line-height:1.1;margin-bottom:12px}
-.sh-c{text-align:center}
-.sh-w{color:#fff}
-.sd{font-size:17px;color:var(--sub);line-height:1.7;max-width:540px;margin-bottom:48px}
-.sd-c{text-align:center;margin-left:auto;margin-right:auto}
-.sd-w{color:rgba(255,255,255,.5)}
-/* ========== SERVICES ========== */
-.sv-g{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.sv{padding:28px 24px;border:1px solid var(--border);border-radius:16px;background:#fff;transition:all .4s var(--bounce);position:relative;overflow:hidden}
-.sv::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0;transform:scaleX(0);transform-origin:left;transition:transform .4s var(--bounce)}
-.sv:hover{border-color:var(--border2);transform:translateY(-6px);box-shadow:0 16px 48px rgba(0,0,0,.06)}
-.sv:hover::before{transform:scaleX(1)}
-.sv:nth-child(1)::before,.sv:nth-child(2)::before,.sv:nth-child(3)::before{background:var(--blue)}
-.sv:nth-child(4)::before,.sv:nth-child(5)::before,.sv:nth-child(6)::before{background:var(--green)}
-.sv:nth-child(7)::before,.sv:nth-child(8)::before,.sv:nth-child(9)::before{background:var(--violet)}
-.sv-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px;background:var(--bg2);border:1px solid var(--border)}
-.sv-n{font-family:var(--fd);font-size:16px;font-weight:700;color:var(--head);margin-bottom:6px}
-.sv-d{font-size:13px;color:var(--sub);line-height:1.7;margin-bottom:12px}
-.chips{display:flex;gap:4px;flex-wrap:wrap}
-.chip{font-family:var(--fm);font-size:9.5px;font-weight:600;padding:3px 8px;border-radius:100px;background:var(--bg2);color:var(--sub);border:1px solid var(--border);letter-spacing:.2px}
-/* ========== RESULTS ========== */
-.res-g{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
-.res{padding:28px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.03);transition:all .3s var(--bounce)}
-.res:hover{border-color:rgba(255,255,255,.14);transform:translateY(-4px);background:rgba(255,255,255,.05)}
-.res-tag{font-family:var(--fm);font-size:10px;font-weight:600;color:#6ea8ff;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.res-tag::before{content:'';width:5px;height:5px;border-radius:50%;background:#6ea8ff}
-.res-t{font-size:16px;font-weight:600;color:#fff;margin-bottom:8px;line-height:1.4}
-.res-d{font-size:13px;color:rgba(255,255,255,.45);line-height:1.65;margin-bottom:16px}
-.res-nums{display:flex;gap:20px}
-.res-num{text-align:center}
-.res-nv{font-family:var(--fm);font-size:22px;font-weight:700;color:var(--green)}
-.res-nl{font-size:10px;color:rgba(255,255,255,.3);margin-top:2px}
-/* ========== WHO WE HELP ========== */
-.who-g{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
-.who{padding:32px 26px;border:1px solid var(--border);border-radius:18px;background:#fff;text-align:center;transition:all .35s var(--bounce)}
-.who:hover{transform:translateY(-5px);box-shadow:0 12px 40px rgba(0,0,0,.05)}
-.who.pop{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue),0 12px 40px rgba(0,82,255,.06)}
-.who-em{font-size:38px;margin-bottom:16px;display:block}
-.who-t{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--head);margin-bottom:8px}
-.who-d{font-size:13px;color:var(--sub);line-height:1.7}
-/* ========== PRICING BAR ========== */
-.price-bar{margin-top:40px;padding:36px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap}
-.pb-item{text-align:center}
-.pb-v{font-family:var(--fd);font-size:46px;font-weight:800;letter-spacing:-2px}
-.pb-v.bl{color:var(--blue)}.pb-v.gn{color:var(--green)}.pb-v.dk{color:var(--head)}
-.pb-l{font-size:13px;color:var(--muted);margin-top:2px}
-.pb-sep{width:1px;height:48px;background:var(--border)}
-.price-cta{text-align:center;margin-top:32px}
-.price-cta p{font-size:15px;color:var(--sub);line-height:1.7;max-width:500px;margin:0 auto 20px}
-/* ========== EXTRA SERVICES ========== */
-.extras{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:28px}
-.extra{padding:18px 14px;border:1px solid var(--border);border-radius:12px;text-align:center;background:#fff;transition:all .3s var(--bounce)}
-.extra:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.04)}
-.extra-em{font-size:20px;margin-bottom:6px;display:block}
-.extra-t{font-size:12px;font-weight:600;color:var(--body)}
-/* ========== STATS ========== */
-.stats-g{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
-.st{text-align:center;padding:28px 14px;border:1px solid var(--border);border-radius:14px;background:#fff;transition:all .3s var(--bounce)}
-.st:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.04)}
-.st-v{font-family:var(--fd);font-size:36px;font-weight:800;letter-spacing:-1px;margin-bottom:3px}
-.st-v.bl{color:var(--blue)}.st-v.gn{color:var(--green)}.st-v.dk{color:var(--head)}.st-v.vl{color:var(--violet)}
-.st-l{font-size:12px;color:var(--muted);font-weight:500}
-/* ========== TESTIMONIALS ========== */
-.t-g{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:48px}
-.tc{padding:28px;background:#fff;border:1px solid var(--border);border-radius:16px;transition:all .3s var(--bounce)}
-.tc:hover{box-shadow:0 10px 36px rgba(0,0,0,.05);transform:translateY(-4px)}
-.tc-s{color:#f59e0b;font-size:13px;letter-spacing:1.5px;margin-bottom:12px}
-.tc-q{font-size:14px;line-height:1.75;color:var(--body);margin-bottom:16px}
-.tc-a{display:flex;align-items:center;gap:10px}
-.tc-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:800;font-size:12px}
-.tc-av.a{background:#dbeafe;color:#2563eb}.tc-av.b{background:#d1fae5;color:#059669}.tc-av.c{background:#fce7f3;color:#db2777}.tc-av.d{background:#fef3c7;color:#d97706}.tc-av.e{background:#ede9fe;color:#7c3aed}
-.tc-nm{font-size:13px;font-weight:600;color:var(--head)}.tc-rl{font-size:11px;color:var(--muted)}
-/* ========== PROCESS ========== */
-.proc-g{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:48px}
-.proc{text-align:center;padding:24px 16px}
-.proc-n{font-family:var(--fd);font-size:48px;font-weight:800;color:var(--bg3);margin-bottom:12px;transition:color .3s}
-.proc:hover .proc-n{color:var(--blue-m)}
-.proc-t{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--head);margin-bottom:6px}
-.proc-d{font-size:12.5px;color:var(--sub);line-height:1.6}
-/* ========== FAQ ========== */
-.faq-list{max-width:700px;margin:48px auto 0}
+:root{--blue:#0052FF;--green:#00c978;--dark:#0a0a0f;--card:#111118;--border:#1e1e2a;--muted:#6b7280;--sub:#9ca3af}
+body{font-family:'Inter',sans-serif;background:var(--dark);color:#fff;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.w{max-width:1100px;margin:0 auto;padding:0 24px}
+.btn{display:inline-block;padding:12px 28px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:.2s}
+.btn:hover{opacity:.9;transform:translateY(-1px)}
+.btn-o{background:transparent;border:1px solid #333;color:#fff}
+.btn-o:hover{border-color:#555}
+.tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--blue);margin-bottom:10px}
+.section{padding:80px 0}
+.section-alt{background:#08080d}
+.grid{display:grid;gap:16px}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:99;padding:16px 0;background:rgba(10,10,15,.85);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.04)}
+nav .w{display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:20px;font-weight:900;letter-spacing:-.5px}
+.logo span{color:var(--blue)}
+nav .links{display:flex;gap:24px;align-items:center}
+nav .links a{font-size:13px;color:var(--sub);font-weight:500;transition:.2s}
+nav .links a:hover{color:#fff}
+
+/* HERO */
+.hero{padding:160px 0 100px;text-align:center}
+.hero h1{font-size:clamp(36px,5.5vw,64px);font-weight:900;line-height:1.05;letter-spacing:-2px;margin-bottom:20px}
+.hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--blue),#00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:18px;color:var(--sub);max-width:560px;margin:0 auto 32px;line-height:1.7}
+.hero .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.hero-stats{display:flex;justify-content:center;gap:48px;margin-top:48px;flex-wrap:wrap}
+.hero-stats div{text-align:center}
+.hero-stats strong{display:block;font-size:28px;font-weight:800;color:#fff}
+.hero-stats small{font-size:12px;color:var(--muted)}
+
+/* SERVICES */
+.svc-grid{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.svc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;transition:.3s}
+.svc:hover{border-color:#333;transform:translateY(-4px)}
+.svc-icon{font-size:28px;margin-bottom:12px;display:block}
+.svc h3{font-size:17px;font-weight:700;margin-bottom:6px}
+.svc p{font-size:13px;color:var(--sub);line-height:1.7;margin-bottom:12px}
+.svc-chips{display:flex;flex-wrap:wrap;gap:4px}
+.svc-chips span{font-size:10px;padding:3px 8px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:100px;color:var(--muted)}
+.svc-price{margin-top:12px;font-size:12px;color:var(--blue);font-weight:600}
+
+/* PACKAGES */
+.pkg-grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.pkg{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:32px;position:relative}
+.pkg.pop{border-color:var(--blue);box-shadow:0 0 40px rgba(0,82,255,.1)}
+.pkg-badge{position:absolute;top:-10px;right:20px;background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:4px 12px;border-radius:100px}
+.pkg h3{font-size:20px;font-weight:800;margin-bottom:4px}
+.pkg .price{font-size:36px;font-weight:900;margin:16px 0 4px}
+.pkg .price span{font-size:14px;font-weight:500;color:var(--muted)}
+.pkg .billing{font-size:12px;color:var(--muted);margin-bottom:20px}
+.pkg ul{list-style:none;margin-bottom:24px}
+.pkg li{font-size:13px;color:var(--sub);padding:6px 0;display:flex;align-items:center;gap:8px}
+.pkg li::before{content:'✓';color:var(--green);font-weight:700;font-size:12px}
+
+/* CASE STUDIES */
+.case-grid{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.case{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px}
+.case .cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--blue);margin-bottom:8px}
+.case h3{font-size:15px;font-weight:700;margin-bottom:8px;line-height:1.4}
+.case p{font-size:13px;color:var(--sub);line-height:1.7;margin-bottom:16px}
+.case-metrics{display:flex;gap:20px}
+.case-metrics div strong{display:block;font-size:20px;font-weight:800;color:var(--green)}
+.case-metrics div small{font-size:10px;color:var(--muted)}
+
+/* TESTIMONIALS */
+.test-grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.tst{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px}
+.tst .stars{color:#f59e0b;font-size:12px;margin-bottom:10px;letter-spacing:2px}
+.tst q{display:block;font-size:14px;color:#d1d5db;line-height:1.7;margin-bottom:14px}
+.tst .who{display:flex;align-items:center;gap:10px}
+.tst .av{width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+.tst .nm{font-size:13px;font-weight:600}
+.tst .rl{font-size:11px;color:var(--muted)}
+
+/* PROCESS */
+.proc-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.proc{text-align:center;padding:24px}
+.proc .num{font-size:48px;font-weight:900;color:rgba(255,255,255,.06);margin-bottom:8px}
+.proc h4{font-size:15px;font-weight:700;margin-bottom:6px}
+.proc p{font-size:12px;color:var(--muted);line-height:1.6}
+
+/* FAQ */
+.faq{max-width:680px;margin:0 auto}
 .fq{border-bottom:1px solid var(--border);padding:18px 0;cursor:pointer}
-.fq-q{display:flex;justify-content:space-between;align-items:center;font-family:var(--fd);font-size:16px;font-weight:600;color:var(--head);transition:color .2s;letter-spacing:-.2px}
-.fq-q:hover{color:var(--blue)}
-.fq-ic{font-size:20px;color:var(--muted);transition:transform .3s}
-.fq.open .fq-ic{transform:rotate(45deg);color:var(--blue)}
-.fq-a{max-height:0;overflow:hidden;transition:max-height .4s var(--ease)}
-.fq-a-in{padding:12px 0 4px;font-size:14px;color:var(--sub);line-height:1.7}
-.fq.open .fq-a{max-height:300px}
-/* ========== CTA ========== */
-.cta-wrap{padding:110px 0;background:var(--head);text-align:center;position:relative;overflow:hidden}
-.cta-wrap::before{content:'';position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(0,82,255,.1),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
-.cta-in{position:relative;z-index:1}
-.cta-in h2{font-family:var(--fd);font-size:44px;font-weight:800;color:#fff;letter-spacing:-1.8px;margin-bottom:14px}
-.cta-in p{font-size:17px;color:rgba(255,255,255,.5);max-width:480px;margin:0 auto 28px;line-height:1.7}
-.cta-btn{padding:16px 38px;background:var(--blue);color:#fff;border:none;border-radius:100px;font-size:16px;font-weight:700;font-family:var(--ff);cursor:pointer;transition:all .3s var(--bounce);box-shadow:0 4px 20px rgba(0,82,255,.25)}
-.cta-btn:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(0,82,255,.4)}
-.cta-nt{font-size:12px;color:rgba(255,255,255,.28);margin-top:12px;font-family:var(--fm)}
-/* ========== CONTACT ========== */
-.contact-g{display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:48px}
-.ci h3{font-family:var(--fd);font-size:24px;font-weight:800;color:var(--head);margin-bottom:12px;letter-spacing:-.3px}
-.ci>p{font-size:15px;color:var(--sub);line-height:1.7;margin-bottom:24px}
-.cd{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)}
-.cd:last-child{border:none}
-.cd-i{width:40px;height:40px;border-radius:10px;background:var(--blue-l);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.cd-lb{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600}
-.cd-vl{font-size:14px;color:var(--body);font-weight:500}
-.fg{margin-bottom:13px}
-.flb{display:block;font-size:12.5px;font-weight:600;color:var(--body);margin-bottom:4px}
-.fin{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--ff);font-size:14px;color:var(--head);background:#fff;outline:0;transition:.2s}
-.fin:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
-.fta2{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--ff);font-size:14px;color:var(--head);background:#fff;outline:0;resize:vertical;min-height:100px;transition:.2s}
-.fta2:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
-.fsel2{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--ff);font-size:14px;color:var(--head);background:#fff;outline:0;appearance:none;cursor:pointer;transition:.2s}
-.fsel2:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
-.fsub{width:100%;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:100px;font-family:var(--ff);font-size:15px;font-weight:700;cursor:pointer;transition:all .3s var(--bounce);margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(0,82,255,.15)}
-.fsub:hover{background:var(--blue2);transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,82,255,.25)}
-.fsub-note{text-align:center;margin-top:8px;font-size:11.5px;color:var(--muted)}
-/* ========== FLOATING WHATSAPP ========== */
-.wa-float{position:fixed;bottom:28px;right:28px;z-index:900;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
-.wa-bubble{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px 18px;font-size:13px;color:var(--body);box-shadow:0 6px 24px rgba(0,0,0,.08);max-width:220px;animation:fadeSlide .5s var(--bounce);position:relative}
-.wa-bubble::after{content:'';position:absolute;bottom:-6px;right:24px;width:12px;height:12px;background:#fff;border-right:1px solid var(--border);border-bottom:1px solid var(--border);transform:rotate(45deg)}
-@keyframes fadeSlide{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.wa-btn{width:60px;height:60px;border-radius:50%;background:#25D366;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 4px 20px rgba(37,211,102,.35);transition:all .3s var(--bounce);color:#fff}
-.wa-btn:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(37,211,102,.45)}
-.wa-close{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.fq summary{font-size:15px;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.fq summary::after{content:'+';font-size:20px;color:var(--muted)}
+.fq[open] summary::after{content:'−'}
+.fq .ans{padding:12px 0 4px;font-size:13px;color:var(--sub);line-height:1.7}
 
-/* ========== WAITLIST SECTION ========== */
-.wl-sec{padding:100px 0;background:linear-gradient(135deg,var(--head) 0%,#1a1d2e 100%);position:relative;overflow:hidden}
-.wl-sec::before{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,82,255,.12),transparent 70%);top:-200px;right:-100px}
-.wl-inner{max-width:620px;margin:0 auto;text-align:center;position:relative;z-index:1}
-.wl-inner .tag{color:#6ea8ff}.wl-inner .sh{color:#fff;margin-bottom:8px}
-.wl-inner .sd{color:rgba(255,255,255,.5);margin-bottom:24px}
-.wl-counter{font-family:var(--fm);font-size:14px;color:var(--green);margin-bottom:28px;display:flex;align-items:center;justify-content:center;gap:8px}
-.wl-counter::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--green);animation:pul 2s infinite}
-.wl-form{display:flex;gap:10px;margin-bottom:12px}
-.wl-form input{flex:1;padding:15px 18px;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.06);color:#fff;font-family:var(--ff);font-size:15px;outline:none;transition:.2s}
-.wl-form input::placeholder{color:rgba(255,255,255,.3)}
-.wl-form input:focus{border-color:var(--blue);background:rgba(255,255,255,.1)}
-.wl-form button{padding:15px 32px;background:var(--blue);color:#fff;border:none;border-radius:12px;font-family:var(--ff);font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .3s var(--bounce)}
-.wl-form button:hover{background:var(--blue2);transform:translateY(-1px)}
-.wl-perks{display:flex;justify-content:center;gap:24px;margin-top:20px;flex-wrap:wrap}
-.wl-perk{font-size:12px;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:5px}
-.wl-perk::before{content:'✓';color:var(--green);font-weight:700}
-.wl-note{font-size:11px;color:rgba(255,255,255,.25);margin-top:6px}
+/* CTA */
+.cta{text-align:center;padding:100px 0;background:linear-gradient(180deg,var(--dark),#060610)}
+.cta h2{font-size:clamp(28px,4vw,44px);font-weight:900;letter-spacing:-1.5px;margin-bottom:14px}
+.cta p{font-size:16px;color:var(--sub);max-width:440px;margin:0 auto 28px;line-height:1.7}
 
-/* ========== FEATURED IN / TRUST ========== */
-.trust-sec{padding:60px 0;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.trust-label{text-align:center;font-family:var(--fm);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:28px}
-.trust-logos{display:flex;align-items:center;justify-content:center;gap:40px;flex-wrap:wrap;opacity:.45}
-.trust-logo{font-family:var(--fd);font-size:20px;font-weight:800;color:var(--head);letter-spacing:-.5px;transition:opacity .3s}
-.trust-logos:hover .trust-logo{opacity:.3}
-.trust-logos .trust-logo:hover{opacity:1}
-.trust-badges{display:flex;justify-content:center;gap:16px;margin-top:28px;flex-wrap:wrap}
-.trust-badge{display:flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:100px;font-size:12px;font-weight:600;color:var(--body)}
-.trust-badge span{font-size:16px}
+/* CONTACT */
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px}
+.contact-info h3{font-size:22px;font-weight:800;margin-bottom:8px}
+.contact-info>p{font-size:14px;color:var(--sub);line-height:1.7;margin-bottom:24px}
+.ci{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.ci .ic{width:36px;height:36px;border-radius:8px;background:rgba(0,82,255,.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ci .lb{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600}
+.ci .vl{font-size:13px;font-weight:500}
+form label{display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:#d1d5db}
+form input,form select,form textarea{width:100%;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:#fff;font-family:inherit;font-size:14px;outline:none;margin-bottom:12px;transition:.2s}
+form input:focus,form select:focus,form textarea:focus{border-color:var(--blue)}
+form textarea{min-height:80px;resize:vertical}
+form select{cursor:pointer}
+.form-btn{width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+.form-note{text-align:center;font-size:11px;color:var(--muted);margin-top:8px}
 
-/* ========== ROI CALCULATOR ========== */
-.roi-sec{padding:110px 0}
-.roi-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:48px;align-items:start}
-.roi-form{background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px}
-.roi-form h3{font-family:var(--fd);font-size:22px;font-weight:800;color:var(--head);margin-bottom:20px}
-.roi-field{margin-bottom:20px}
-.roi-field label{display:block;font-size:13px;font-weight:600;color:var(--sub);margin-bottom:6px}
-.roi-field input[type=range]{width:100%;accent-color:var(--blue);height:6px}
-.roi-field .range-val{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px}
-.roi-field .cur-val{font-family:var(--fm);font-size:18px;font-weight:700;color:var(--blue);margin-top:4px}
-.roi-result{background:linear-gradient(135deg,var(--head),#1a1d2e);border-radius:20px;padding:40px;color:#fff;position:relative;overflow:hidden}
-.roi-result::before{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(0,82,255,.15),transparent 70%);top:-100px;right:-80px}
-.roi-result h3{font-family:var(--fd);font-size:22px;font-weight:800;margin-bottom:28px;position:relative}
-.roi-row{display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.08);position:relative}
-.roi-row:last-child{border:none}
-.roi-label{font-size:14px;color:rgba(255,255,255,.5)}
-.roi-val{font-family:var(--fm);font-size:16px;font-weight:700}
-.roi-val.green{color:var(--green)}.roi-val.blue{color:#6ea8ff}
-.roi-total{margin-top:20px;padding:20px;background:rgba(0,201,120,.1);border:1px solid rgba(0,201,120,.2);border-radius:14px;text-align:center;position:relative}
-.roi-total-label{font-size:12px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px}
-.roi-total-val{font-family:var(--fd);font-size:42px;font-weight:800;color:var(--green);letter-spacing:-1px}
+/* NEWSLETTER */
+.nl-row{display:flex;gap:8px;max-width:400px;margin:0 auto}
+.nl-row input{flex:1;margin:0}
+.nl-row button{white-space:nowrap;margin:0}
 
-/* ========== COMPARISON ========== */
-.comp-sec{padding:110px 0;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.comp-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:0;margin-top:48px;max-width:800px;margin-left:auto;margin-right:auto}
-.comp-col{padding:36px 32px;background:#fff;border:1px solid var(--border)}
-.comp-col:first-child{border-radius:20px 0 0 20px;border-right:none}
-.comp-col:last-child{border-radius:0 20px 20px 0;border-left:none;background:linear-gradient(135deg,rgba(0,82,255,.03),rgba(0,201,120,.03));border-color:var(--blue)}
-.comp-vs{display:flex;align-items:center;justify-content:center;padding:0;width:48px}
-.comp-vs span{background:var(--head);color:#fff;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:12px;font-weight:800;z-index:1}
-.comp-title{font-family:var(--fd);font-size:18px;font-weight:800;color:var(--head);margin-bottom:20px;display:flex;align-items:center;gap:8px}
-.comp-title span{font-size:20px}
-.comp-item{padding:10px 0;font-size:13.5px;color:var(--sub);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
-.comp-item:last-child{border:none}
-.comp-item .x{color:var(--red);font-weight:700}.comp-item .ck{color:var(--green);font-weight:700}
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:40px 0 24px}
+footer .w{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+footer small{font-size:12px;color:var(--muted)}
 
-/* ========== NEWSLETTER TOAST ========== */
-.nl-popup{position:fixed;bottom:28px;left:28px;width:360px;background:#fff;border:1px solid var(--border);border-radius:18px;padding:28px;box-shadow:0 12px 48px rgba(0,0,0,.1);z-index:800;transform:translateY(120%);transition:transform .5s var(--bounce);display:none}
-.nl-popup.show{transform:translateY(0);display:block}
-.nl-popup h4{font-family:var(--fd);font-size:17px;font-weight:800;color:var(--head);margin-bottom:6px}
-.nl-popup p{font-size:13px;color:var(--sub);margin-bottom:14px;line-height:1.6}
-.nl-popup form{display:flex;gap:8px}
-.nl-popup input{flex:1;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:var(--ff);outline:none}
-.nl-popup input:focus{border-color:var(--blue)}
-.nl-popup button[type=submit]{padding:11px 18px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-weight:700;font-family:var(--ff);cursor:pointer;font-size:13px}
-.nl-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer}
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#000;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;opacity:0;transform:translateY(20px);transition:.3s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
 
-/* ========== FOOTER ========== */
-.foot{padding:56px 0 28px;border-top:1px solid var(--border)}
-.foot-top{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px}
-.foot-brand p{font-size:13px;color:var(--sub);line-height:1.7;margin-top:12px;max-width:260px}
-.fc-t{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--head);margin-bottom:12px}
-.fc-ls{display:flex;flex-direction:column;gap:7px}
-.fc-lk{font-size:13px;color:var(--sub);cursor:pointer;background:none;border:none;font-family:var(--ff);text-align:left;transition:color .2s}
-.fc-lk:hover{color:var(--blue)}
-.foot-bot{display:flex;justify-content:space-between;align-items:center;padding-top:20px;border-top:1px solid var(--border)}
-.foot-cp{font-size:12px;color:var(--muted)}
-/* ========== MOBILE MENU ========== */
-.mob-toggle{display:none;background:none;border:none;cursor:pointer;padding:4px;flex-direction:column;gap:5px}
-.mob-toggle span{width:22px;height:2px;background:var(--head);border-radius:2px;transition:all .3s}
-.mob-menu{display:none;position:fixed;top:68px;left:0;right:0;background:rgba(255,255,255,.98);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:16px 24px;z-index:998;flex-direction:column;gap:4px}
-.mob-menu.active{display:flex}
-.mob-menu button{width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-family:var(--ff);font-size:15px;font-weight:500;color:var(--body);border-radius:10px;cursor:pointer;transition:.2s}
-.mob-menu button:hover{background:var(--bg2);color:var(--head)}
-/* ========== RESPONSIVE ========== */
-@media(max-width:1024px){.sv-g{grid-template-columns:repeat(2,1fr)}.proc-g{grid-template-columns:repeat(2,1fr)}.stats-g{grid-template-columns:repeat(3,1fr)}.extras{grid-template-columns:repeat(2,1fr)}.foot-top{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){.w{padding:0 20px}.nav-c{padding:0 20px}.nav-r{display:none}.mob-toggle{display:flex}.hero{padding:116px 0 72px}.hero-row{flex-direction:column;gap:40px}.hero h1{font-size:38px}.hero-right{display:none}.sv-g{grid-template-columns:1fr}.res-g{grid-template-columns:1fr}.who-g{grid-template-columns:1fr}.stats-g{grid-template-columns:repeat(2,1fr)}.t-g{grid-template-columns:1fr}.contact-g{grid-template-columns:1fr}.cta-in h2{font-size:32px}.foot-top{grid-template-columns:1fr}.foot-bot{flex-direction:column;gap:10px;text-align:center}.price-bar{flex-direction:column;gap:20px}.pb-sep{width:60px;height:1px}.proc-g{grid-template-columns:1fr 1fr}.sh{font-size:32px}.extras{grid-template-columns:1fr 1fr}.wl-form{flex-direction:column}.roi-grid{grid-template-columns:1fr}.comp-grid{grid-template-columns:1fr;max-width:400px}.comp-col:first-child{border-radius:20px 20px 0 0;border-right:1px solid var(--border);border-bottom:none}.comp-col:last-child{border-radius:0 0 20px 20px;border-left:1px solid var(--border)}.comp-vs{width:100%;padding:0;height:48px}.nl-popup{left:12px;right:12px;width:auto}.trust-logos{gap:20px}.trust-logo{font-size:16px}}
+/* RESPONSIVE */
+@media(max-width:768px){
+  nav .links{display:none}
+  .hero{padding:120px 0 60px}
+  .contact-grid{grid-template-columns:1fr}
+  .hero-stats{gap:24px}
+}
 </style>
 </head>
 <body>
+
 <!-- NAV -->
-<div class="nav" id="nb"><div class="nav-c">
-  <div class="logo" onclick="goTop()"><div class="logo-i">V</div><div class="logo-t">Veltrix<b>AI</b></div></div>
-  <div class="nav-r">
-    <button class="nav-l" onclick="go('svc')">Services</button>
-    <button class="nav-l" onclick="go('results')">Results</button>
-    <button class="nav-l" onclick="go('pricing')">Pricing</button>
-    <button class="nav-l" onclick="go('reviews')">Reviews</button>
-    <button class="nav-l" onclick="go('faq')">FAQ</button>
-    <button class="nav-l" onclick="go('waitlist')">Waitlist</button>
-    <button class="nav-b" onclick="go('contact')">Get Started</button>
+<nav><div class="w">
+  <div class="logo">Veltrix<span>AI</span></div>
+  <div class="links">
+    <a href="#services">Services</a>
+    <a href="#cases">Results</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#reviews">Reviews</a>
+    <a href="#faq">FAQ</a>
+    <a href="#contact" class="btn" style="padding:8px 20px;font-size:13px">Get Started</a>
   </div>
-  <button class="mob-toggle" onclick="document.getElementById('mobMenu').classList.toggle('active')" aria-label="Menu">
-    <span></span><span></span><span></span>
-  </button>
-</div></div>
-<!-- Mobile Menu -->
-<div class="mob-menu" id="mobMenu">
-  <button onclick="go('svc');this.parentElement.classList.remove('active')">Services</button>
-  <button onclick="go('results');this.parentElement.classList.remove('active')">Results</button>
-  <button onclick="go('pricing');this.parentElement.classList.remove('active')">Pricing</button>
-  <button onclick="go('reviews');this.parentElement.classList.remove('active')">Reviews</button>
-  <button onclick="go('faq');this.parentElement.classList.remove('active')">FAQ</button>
-  <button onclick="go('waitlist');this.parentElement.classList.remove('active')">Waitlist</button>
-  <button onclick="go('contact');this.parentElement.classList.remove('active')">Get Started</button>
-</div>
+</div></nav>
+
 <!-- HERO -->
-<section class="hero">
-  <div class="hero-bg"></div><div class="hero-bg2"></div>
-  <div class="w"><div class="hero-row">
-    <div class="hero-left reveal">
-      <div class="hero-pill"><span class="hero-dot"></span>AI-POWERED GROWTH AGENCY</div>
-      <h1>Your Business.<br><span class="grd">Our AI Army.</span><br>10x Results.</h1>
-      <p class="hero-p">We help zero-stage startups and small businesses grow with AI. Brand building, lead generation, content, marketing, automation &#8212; starting from just $25.</p>
-      <div class="hero-btns"><button class="btn1" onclick="go('contact')">Start Your Project &#8594;</button><button class="btn2" onclick="go('svc')">Explore Services</button></div>
-      <div class="hero-social"><div class="faces"><div class="face f1">R</div><div class="face f2">A</div><div class="face f3">N</div><div class="face f4">P</div></div>Trusted by 50+ businesses worldwide</div>
-    </div>
-    <div class="hero-right reveal d2">
-      <div class="orb-wrap">
-        <div class="orb"><div class="orb-t"><div class="orb-n">9</div><div class="orb-lb">Premium Services</div></div></div>
-        <div class="fl"><div class="fl-i a">&#128241;</div>Social Media</div>
-        <div class="fl"><div class="fl-i b">&#9997;&#65039;</div>Content</div>
-        <div class="fl"><div class="fl-i c">&#127908;</div>Podcasts</div>
-        <div class="fl"><div class="fl-i d">&#128202;</div>Pitch Decks</div>
-        <div class="fl"><div class="fl-i e">&#127912;</div>Branding</div>
-      </div>
-    </div>
-  </div></div>
-</section>
-<!-- MARQUEE -->
-<section class="marquee"><div class="mq-track" id="mqt"></div></section>
-<!-- TRUST / FEATURED IN -->
-<section class="trust-sec">
-  <div class="w">
-    <div class="trust-label">Trusted Tools We Use &amp; Integrate</div>
-    <div class="trust-logos">
-      <div class="trust-logo">OpenAI</div>
-      <div class="trust-logo">Claude</div>
-      <div class="trust-logo">Canva</div>
-      <div class="trust-logo">Zapier</div>
-      <div class="trust-logo">HubSpot</div>
-      <div class="trust-logo">Notion</div>
-      <div class="trust-logo">Figma</div>
-      <div class="trust-logo">Stripe</div>
-    </div>
-    <div class="trust-badges">
-      <div class="trust-badge"><span>&#9889;</span>24hr Delivery</div>
-      <div class="trust-badge"><span>&#128274;</span>100% Secure</div>
-      <div class="trust-badge"><span>&#127760;</span>Global Clients</div>
-      <div class="trust-badge"><span>&#128176;</span>Money-Back Guarantee</div>
-      <div class="trust-badge"><span>&#9733;</span>4.9/5 Rating</div>
-    </div>
+<section class="hero"><div class="w">
+  <div class="tag">AI-POWERED GROWTH AGENCY</div>
+  <h1>We Build, Design &<br><em>Grow Your Business</em><br>With AI</h1>
+  <p>AI animation, full-stack development, finance automation, content, marketing — 10 premium services starting from $25.</p>
+  <div class="btns">
+    <a href="#contact" class="btn">Start Your Project →</a>
+    <a href="#services" class="btn btn-o">Explore Services</a>
   </div>
-</section>
+  <div class="hero-stats" id="hero-stats"></div>
+</div></section>
+
 <!-- SERVICES -->
-<section class="sec" id="svc"><div class="w">
-  <div class="tag tag-c reveal">Our Services</div>
-  <div class="sh sh-c reveal">Everything you need to<br>grow with AI</div>
-  <div class="sd sd-c reveal">Whether you are starting from zero or scaling an existing business, we build the systems that bring you customers. Starting from just $25.</div>
-  <div class="sv-g">
-    <div class="sv reveal"><div class="sv-icon">&#128241;</div><div class="sv-n">Social Media Management</div><div class="sv-d">Full Instagram, LinkedIn, Twitter, Facebook management. Content, design, scheduling, community, and growth.</div><div class="chips"><span class="chip">Reels</span><span class="chip">Carousels</span><span class="chip">Stories</span><span class="chip">Growth</span></div></div>
-    <div class="sv reveal d1"><div class="sv-icon">&#9997;&#65039;</div><div class="sv-n">Content Creation &amp; Writing</div><div class="sv-d">Blogs, newsletters, LinkedIn ghostwriting, email sequences, website copy, SEO content, and product descriptions.</div><div class="chips"><span class="chip">Blogs</span><span class="chip">Email</span><span class="chip">SEO</span><span class="chip">Ghostwriting</span></div></div>
-    <div class="sv reveal d2"><div class="sv-icon">&#127908;</div><div class="sv-n">AI Podcast Production</div><div class="sv-d">Turn blogs, courses, or documents into professional podcast episodes. Script to finished audio &#8212; no recording needed.</div><div class="chips"><span class="chip">NotebookLM</span><span class="chip">ElevenLabs</span><span class="chip">Show Notes</span></div></div>
-    <div class="sv reveal"><div class="sv-icon">&#128202;</div><div class="sv-n">Pitch Decks &amp; Docs</div><div class="sv-d">Investor-ready decks, one-pagers, business plans, market research, and financial models. Built to close deals.</div><div class="chips"><span class="chip">Decks</span><span class="chip">Reports</span><span class="chip">Analysis</span></div></div>
-    <div class="sv reveal d1"><div class="sv-icon">&#127912;</div><div class="sv-n">Brand Identity &amp; Design</div><div class="sv-d">Complete brand system &#8212; logo, colors, typography, social templates, business cards, and brand guidelines.</div><div class="chips"><span class="chip">Logo</span><span class="chip">Brand Kit</span><span class="chip">Templates</span></div></div>
-    <div class="sv reveal d2"><div class="sv-icon">&#128227;</div><div class="sv-n">Digital Marketing &amp; Ads</div><div class="sv-d">Meta Ads, Google Ads, funnels, landing pages, A/B testing, conversion optimization, and performance reporting.</div><div class="chips"><span class="chip">Meta Ads</span><span class="chip">Google Ads</span><span class="chip">Funnels</span></div></div>
-    <div class="sv reveal"><div class="sv-icon">&#9889;</div><div class="sv-n">Lead Generation Systems</div><div class="sv-d">Complete lead capture funnels, WhatsApp automation, AI chatbots, CRM setup, and sales pipeline systems.</div><div class="chips"><span class="chip">Funnels</span><span class="chip">WhatsApp</span><span class="chip">Chatbots</span><span class="chip">CRM</span></div></div>
-    <div class="sv reveal d1"><div class="sv-icon">&#128200;</div><div class="sv-n">AI Automation &amp; Workflows</div><div class="sv-d">Custom automations for content pipelines, customer support, email flows, data analysis, and business operations.</div><div class="chips"><span class="chip">Zapier</span><span class="chip">Custom GPTs</span><span class="chip">Bots</span></div></div>
-    <div class="sv reveal d2"><div class="sv-icon">&#127891;</div><div class="sv-n">Content Repurposing</div><div class="sv-d">Turn YouTube videos, courses, or long content into blogs, podcasts, email courses, social clips, and ebooks.</div><div class="chips"><span class="chip">YouTube</span><span class="chip">Courses</span><span class="chip">Multi-format</span></div></div>
+<section class="section section-alt" id="services"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">Our Services</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">10 Premium AI Services</h2>
+    <p style="color:var(--sub);margin-top:8px">Everything you need to launch, grow, and scale.</p>
   </div>
+  <div class="grid svc-grid" id="svc-grid"></div>
 </div></section>
-<!-- RESULTS -->
-<section class="sec sec-dark" id="results"><div class="w">
-  <div class="tag tag-c tag-w reveal">Case Studies</div>
-  <div class="sh sh-c sh-w reveal">Real results for<br>real businesses</div>
-  <div class="sd sd-c sd-w reveal">What we have delivered for businesses just like yours.</div>
-  <div class="res-g">
-    <div class="res reveal"><div class="res-tag">FOOD BRAND</div><div class="res-t">An Amritsar-based food brand: 200 to 5,000+ followers in 60 days</div><div class="res-d">Complete social media overhaul. Daily reels, food photography, local hashtag strategy, and influencer collaboration.</div><div class="res-nums"><div class="res-num"><div class="res-nv">2,400%</div><div class="res-nl">Growth</div></div><div class="res-num"><div class="res-nv">340%</div><div class="res-nl">Reach</div></div></div></div>
-    <div class="res reveal d1"><div class="res-tag">FINTECH</div><div class="res-t">A fintech startup: Pitch deck that closed a 1.2 Cr seed round</div><div class="res-d">Market research, competitive analysis, financial modeling, and investor-grade deck. Delivered in 3 days.</div><div class="res-nums"><div class="res-num"><div class="res-nv">1.2 Cr</div><div class="res-nl">Raised</div></div><div class="res-num"><div class="res-nv">3 Days</div><div class="res-nl">Delivery</div></div></div></div>
-    <div class="res reveal d2"><div class="res-tag">EDUCATION</div><div class="res-t">An online educator: 8 podcast episodes from course material</div><div class="res-d">Transformed course content into professional podcast series. AI-generated audio with show notes and distribution.</div><div class="res-nums"><div class="res-num"><div class="res-nv">8 Eps</div><div class="res-nl">Produced</div></div><div class="res-num"><div class="res-nv">12K+</div><div class="res-nl">Listens</div></div></div></div>
+
+<!-- CASE STUDIES -->
+<section class="section" id="cases"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">Case Studies</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">Real Results for Real Businesses</h2>
   </div>
+  <div class="grid case-grid" id="case-grid"></div>
 </div></section>
-<!-- WHO WE HELP + PRICING -->
-<section class="sec" id="pricing"><div class="w">
-  <div class="tag tag-c reveal">Who We Help</div>
-  <div class="sh sh-c reveal">From zero to scale &#8212;<br>we serve every stage</div>
-  <div class="sd sd-c reveal">No matter where you are in your business journey, we have the AI-powered services to get you to the next level.</div>
-  <div class="who-g">
-    <div class="who reveal"><span class="who-em">&#127937;</span><div class="who-t">Zero-Stage Businesses</div><div class="who-d">Just starting? No brand, no social media, no presence? We build everything from scratch &#8212; brand, content, first customers.</div></div>
-    <div class="who pop reveal d1"><span class="who-em">&#128640;</span><div class="who-t">Small-Scale Businesses</div><div class="who-d">Already running but need growth? We handle marketing, content, ads, lead generation, and customer acquisition.</div></div>
-    <div class="who reveal d2"><span class="who-em">&#127758;</span><div class="who-t">Growing Brands</div><div class="who-d">Ready to dominate? Complete AI growth systems &#8212; automation, lead funnels, multi-platform content, and full marketing engines.</div></div>
+
+<!-- PRICING -->
+<section class="section section-alt" id="pricing"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">Pricing</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">Simple, Honest Pricing</h2>
+    <p style="color:var(--sub);margin-top:8px">No hidden fees. No contracts. Cancel anytime.</p>
   </div>
-  <div class="price-bar reveal">
-    <div class="pb-item"><div class="pb-v bl">$25</div><div class="pb-l">Starting from</div></div>
-    <div class="pb-sep"></div>
-    <div class="pb-item"><div class="pb-v gn">24hr</div><div class="pb-l">Fast delivery</div></div>
-    <div class="pb-sep"></div>
-    <div class="pb-item"><div class="pb-v dk">0</div><div class="pb-l">Hidden fees</div></div>
-  </div>
-  <div class="price-cta reveal">
-    <p>Every project is custom-priced based on your needs. Tell us what you want and we give you an honest quote within hours.</p>
-    <button class="btn1" onclick="go('contact')">Get a Free Quote &#8594;</button>
-  </div>
-  <div class="extras reveal">
-    <div class="extra"><span class="extra-em">&#9889;</span><div class="extra-t">Lead Generation</div></div>
-    <div class="extra"><span class="extra-em">&#128200;</span><div class="extra-t">Sales Funnels</div></div>
-    <div class="extra"><span class="extra-em">&#129302;</span><div class="extra-t">AI Chatbots</div></div>
-    <div class="extra"><span class="extra-em">&#128172;</span><div class="extra-t">WhatsApp Automation</div></div>
-  </div>
+  <div class="grid pkg-grid" id="pkg-grid"></div>
 </div></section>
+
 <!-- PROCESS -->
-<section class="sec sec-alt"><div class="w">
-  <div class="tag tag-c reveal">How It Works</div>
-  <div class="sh sh-c reveal">From idea to results<br>in 4 simple steps</div>
-  <div class="proc-g">
-    <div class="proc reveal"><div class="proc-n">01</div><div class="proc-t">Free Discovery Call</div><div class="proc-d">15-minute call. We learn your business, goals, audience. Zero commitment.</div></div>
-    <div class="proc reveal d1"><div class="proc-n">02</div><div class="proc-t">AI Strategy</div><div class="proc-d">We research your market and competitors. You approve the plan before work begins.</div></div>
-    <div class="proc reveal d2"><div class="proc-n">03</div><div class="proc-t">Rapid Execution</div><div class="proc-d">Our AI stack delivers at 10x speed. Every deliverable is human-reviewed for quality.</div></div>
-    <div class="proc reveal d3"><div class="proc-n">04</div><div class="proc-t">Launch &amp; Grow</div><div class="proc-d">We launch, track data, and optimize. Monthly reports with clear ROI metrics.</div></div>
+<section class="section"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">How It Works</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">4 Steps to Results</h2>
+  </div>
+  <div class="grid proc-grid">
+    <div class="proc"><div class="num">01</div><h4>Discovery Call</h4><p>15-minute call. We learn your business, goals, and audience.</p></div>
+    <div class="proc"><div class="num">02</div><h4>AI Strategy</h4><p>We research your market and create a custom plan.</p></div>
+    <div class="proc"><div class="num">03</div><h4>Rapid Execution</h4><p>AI-powered delivery at 10x speed. Human quality reviewed.</p></div>
+    <div class="proc"><div class="num">04</div><h4>Launch & Grow</h4><p>We launch, track data, and optimize for growth.</p></div>
   </div>
 </div></section>
-<!-- STATS -->
-<section class="sec"><div class="w">
-  <div class="stats-g">
-    <div class="st reveal"><div class="st-v bl">10x</div><div class="st-l">Faster Delivery</div></div>
-    <div class="st reveal d1"><div class="st-v gn">50+</div><div class="st-l">Projects Done</div></div>
-    <div class="st reveal d2"><div class="st-v dk">9</div><div class="st-l">Core Services</div></div>
-    <div class="st reveal d3"><div class="st-v vl">10+</div><div class="st-l">AI Tools</div></div>
-    <div class="st reveal d4"><div class="st-v bl">98%</div><div class="st-l">Retention</div></div>
-  </div>
-</div></section>
+
 <!-- TESTIMONIALS -->
-<section class="sec sec-alt" id="reviews"><div class="w">
-  <div class="tag tag-c reveal">Reviews</div>
-  <div class="sh sh-c reveal">What clients say</div>
-  <div class="t-g">
-    <div class="tc reveal"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"Veltrix AI completely transformed our social media. We went from 200 followers to 5,000 in 2 months. Their content quality is insane for the price."</div><div class="tc-a"><div class="tc-av a">RK</div><div><div class="tc-nm">Rajveer K.</div><div class="tc-rl">Food Brand Owner</div></div></div></div>
-    <div class="tc reveal d1"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"They built our pitch deck in 3 days. We raised 1.2 Cr in our seed round. Better than agencies charging 10x more."</div><div class="tc-a"><div class="tc-av b">AS</div><div><div class="tc-nm">Arjun S.</div><div class="tc-rl">Fintech Co-Founder</div></div></div></div>
-    <div class="tc reveal d2"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"The AI podcast service blew my mind. Sent course material and got 8 pro episodes back. Students love the new format."</div><div class="tc-a"><div class="tc-av c">NM</div><div><div class="tc-nm">Neha M.</div><div class="tc-rl">Online Educator</div></div></div></div>
-    <div class="tc reveal"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"Complete brand identity in 48 hours. Logo, templates, business cards &#8212; premium quality at a fraction of normal agency costs."</div><div class="tc-a"><div class="tc-av d">PJ</div><div><div class="tc-nm">Priya J.</div><div class="tc-rl">Skincare Brand Founder</div></div></div></div>
-    <div class="tc reveal d1"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"Our ad ROAS went from 1.8x to 4.7x in one month. The AI-powered copy and targeting is leagues ahead of what we had."</div><div class="tc-a"><div class="tc-av e">VK</div><div><div class="tc-nm">Vikram K.</div><div class="tc-rl">Logistics CEO</div></div></div></div>
-    <div class="tc reveal d2"><div class="tc-s">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="tc-q">"They handle everything &#8212; content, emails, social, course repurposing. Freed up 20+ hours per week. I just focus on coaching."</div><div class="tc-a"><div class="tc-av a">GS</div><div><div class="tc-nm">Dr. Gurpreet S.</div><div class="tc-rl">Business Coach</div></div></div></div>
+<section class="section section-alt" id="reviews"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">Reviews</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">What Clients Say</h2>
   </div>
+  <div class="grid test-grid" id="test-grid"></div>
 </div></section>
-<!-- COMPARISON: TRADITIONAL VS VELTRIX -->
-<section class="comp-sec"><div class="w">
-  <div class="tag tag-c reveal">Why Us</div>
-  <div class="sh sh-c reveal">Traditional Agency vs<br>Veltrix AI</div>
-  <div class="sd sd-c reveal">See why 50+ businesses chose us over traditional agencies.</div>
-  <div class="comp-grid">
-    <div class="comp-col">
-      <div class="comp-title"><span>&#127970;</span>Traditional Agency</div>
-      <div class="comp-item"><span class="x">&#10007;</span> $3,000 - $15,000/month</div>
-      <div class="comp-item"><span class="x">&#10007;</span> 2-4 weeks delivery</div>
-      <div class="comp-item"><span class="x">&#10007;</span> Long-term contracts</div>
-      <div class="comp-item"><span class="x">&#10007;</span> Limited revisions</div>
-      <div class="comp-item"><span class="x">&#10007;</span> 9-5 availability only</div>
-      <div class="comp-item"><span class="x">&#10007;</span> Generic templates</div>
-      <div class="comp-item"><span class="x">&#10007;</span> Slow communication</div>
-    </div>
-    <div class="comp-vs"><span>VS</span></div>
-    <div class="comp-col">
-      <div class="comp-title"><span>&#9889;</span>Veltrix AI</div>
-      <div class="comp-item"><span class="ck">&#10003;</span> Starting from just $25</div>
-      <div class="comp-item"><span class="ck">&#10003;</span> 24-72 hour delivery</div>
-      <div class="comp-item"><span class="ck">&#10003;</span> No contracts, cancel anytime</div>
-      <div class="comp-item"><span class="ck">&#10003;</span> Unlimited revisions</div>
-      <div class="comp-item"><span class="ck">&#10003;</span> Available via WhatsApp 24/7</div>
-      <div class="comp-item"><span class="ck">&#10003;</span> Custom AI-powered work</div>
-      <div class="comp-item"><span class="ck">&#10003;</span> Instant WhatsApp replies</div>
-    </div>
-  </div>
-</div></section>
-<!-- ROI CALCULATOR -->
-<section class="sec" id="roi"><div class="w">
-  <div class="tag tag-c reveal">ROI Calculator</div>
-  <div class="sh sh-c reveal">See how much you<br>can save with AI</div>
-  <div class="sd sd-c reveal">Drag the sliders to estimate your potential savings with Veltrix AI.</div>
-  <div class="roi-grid">
-    <div class="roi-form reveal">
-      <h3>Your Current Costs</h3>
-      <div class="roi-field">
-        <label>Monthly marketing spend ($)</label>
-        <div class="cur-val" id="rv-spend">$2,000</div>
-        <input type="range" min="500" max="20000" step="500" value="2000" id="r-spend" oninput="calcROI()">
-        <div class="range-val"><span>$500</span><span>$20,000</span></div>
-      </div>
-      <div class="roi-field">
-        <label>Hours spent on content/week</label>
-        <div class="cur-val" id="rv-hours">20 hrs</div>
-        <input type="range" min="5" max="80" step="5" value="20" id="r-hours" oninput="calcROI()">
-        <div class="range-val"><span>5 hrs</span><span>80 hrs</span></div>
-      </div>
-      <div class="roi-field">
-        <label>Team members on marketing</label>
-        <div class="cur-val" id="rv-team">2</div>
-        <input type="range" min="1" max="10" step="1" value="2" id="r-team" oninput="calcROI()">
-        <div class="range-val"><span>1</span><span>10</span></div>
-      </div>
-    </div>
-    <div class="roi-result reveal d1">
-      <h3>With Veltrix AI</h3>
-      <div class="roi-row"><span class="roi-label">Your current cost</span><span class="roi-val" id="roi-current">$2,000/mo</span></div>
-      <div class="roi-row"><span class="roi-label">Veltrix AI cost</span><span class="roi-val blue" id="roi-veltrix">$200/mo</span></div>
-      <div class="roi-row"><span class="roi-label">Hours saved/month</span><span class="roi-val green" id="roi-hours">80 hrs</span></div>
-      <div class="roi-row"><span class="roi-label">Team members freed up</span><span class="roi-val" id="roi-team">1.5</span></div>
-      <div class="roi-total">
-        <div class="roi-total-label">Your Monthly Savings</div>
-        <div class="roi-total-val" id="roi-savings">$1,800</div>
-      </div>
-    </div>
-  </div>
-</div></section>
+
 <!-- FAQ -->
-<section class="sec" id="faq"><div class="w">
-  <div class="tag tag-c reveal">FAQ</div>
-  <div class="sh sh-c reveal">Common questions</div>
-  <div class="faq-list">
-    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">What does Veltrix AI do?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">We are a full-service AI-powered agency handling social media, content, podcasts, pitch decks, brand design, ads, lead generation, automation, and research. We serve zero-stage startups, small businesses, and growing brands.</div></div></div>
-    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">Is the work done by AI or humans?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">Both. AI does the heavy lifting for speed. Every deliverable is reviewed and refined by our team. You get AI speed with human quality control.</div></div></div>
-    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">How fast do you deliver?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">Most work is ready in 24-72 hours. Social content is batched weekly. Pitch decks take 2-3 days. Brand identity 3-5 days. Much faster than traditional agencies.</div></div></div>
-    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">Do you work outside India?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">Yes. We are based in Punjab, India but serve clients globally &#8212; India, US, UK, UAE, Canada, Australia. All work happens over WhatsApp, Zoom, and chat.</div></div></div>
-    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">What are your prices?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">Services start from just $25. Every project is custom-quoted based on your needs. No hidden fees, no contracts. Message us on WhatsApp for a free quote.</div></div></div>
-    <div class="fq" onclick="this.classList.toggle('open')"><div class="fq-q">Can you build lead generation systems?<span class="fq-ic">+</span></div><div class="fq-a"><div class="fq-a-in">Absolutely. We build complete lead funnels, WhatsApp automation, AI chatbots, CRM setups, and sales pipelines. Everything you need to capture and convert leads on autopilot.</div></div></div>
+<section class="section" id="faq"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">FAQ</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">Common Questions</h2>
+  </div>
+  <div class="faq">
+    <details class="fq"><summary>What does Veltrix AI do?</summary><div class="ans">We're a full-service AI agency — animation, full-stack development, finance automation, content, branding, marketing, lead gen, podcasts, and more. 10 services covering everything from launch to scale.</div></details>
+    <details class="fq"><summary>Is the work done by AI or humans?</summary><div class="ans">Both. AI handles the heavy lifting for speed. Every deliverable is reviewed and refined by our team. You get AI speed with human quality control.</div></details>
+    <details class="fq"><summary>How fast do you deliver?</summary><div class="ans">Most work ships in 24-72 hours. Full-stack projects take 1-3 weeks. Much faster than traditional agencies.</div></details>
+    <details class="fq"><summary>Do you work outside India?</summary><div class="ans">Yes. We're based in Punjab, India but serve clients globally — US, UK, UAE, Canada, Australia. All work happens over WhatsApp, Zoom, and chat.</div></details>
+    <details class="fq"><summary>What are your prices?</summary><div class="ans">Services start from $25. Every project is custom-quoted. No hidden fees, no contracts. Message us for a free quote.</div></details>
+    <details class="fq"><summary>Can you build full apps and SaaS?</summary><div class="ans">Absolutely. We build complete web apps, SaaS platforms, AI agents, mobile apps, APIs, and dashboards. Full-stack from design to deployment.</div></details>
   </div>
 </div></section>
-<!-- WAITLIST -->
-<section class="wl-sec" id="waitlist"><div class="w">
-  <div class="wl-inner">
-    <div class="tag tag-c tag-w reveal">Join the Waitlist</div>
-    <div class="sh sh-c sh-w reveal">Get early access &amp;<br>20% off your first project</div>
-    <div class="sd sd-c sd-w reveal">We take on limited clients each month. Join the waitlist to secure your spot.</div>
-    <div class="wl-counter"><span id="wlCount">0</span> people already joined</div>
-    <form class="wl-form" id="wlForm" onsubmit="joinWaitlist(event)">
-      <input type="text" name="name" placeholder="Your name" required>
-      <input type="email" name="email" placeholder="Your email" required>
-      <button type="submit">Join Waitlist &#8594;</button>
-    </form>
-    <div class="wl-perks">
-      <div class="wl-perk">No spam</div>
-      <div class="wl-perk">Early access</div>
-      <div class="wl-perk">20% launch discount</div>
-      <div class="wl-perk">Priority support</div>
-    </div>
-    <div class="wl-note">Unsubscribe anytime. No credit card required.</div>
-  </div>
-</div></section>
+
 <!-- CTA -->
-<section class="cta-wrap"><div class="w"><div class="cta-in">
-  <h2 class="reveal">Stop guessing.<br>Start growing with AI.</h2>
-  <p class="reveal d1">Get a free quote on WhatsApp. No commitment, no pressure. Just honest advice on how AI can grow your business.</p>
-  <button class="cta-btn reveal d2" onclick="go('contact')">Message Us on WhatsApp &#8594;</button>
-  <div class="cta-nt reveal d3">Free consultation. Reply within hours.</div>
-</div></div></section>
-<!-- CONTACT -->
-<section class="sec" id="contact"><div class="w">
-  <div class="tag reveal">Get In Touch</div>
-  <div class="sh reveal">Let's grow your<br>business together</div>
-  <div class="contact-g">
-    <div class="ci reveal">
-      <h3>Ready to start?</h3>
-      <p>Fill the form and it opens WhatsApp directly. Or message us anytime &#8212; we reply fast.</p>
-      <div class="cd"><div class="cd-i">&#128172;</div><div><div class="cd-lb">WhatsApp</div><div class="cd-vl">+91 82890 94569</div></div></div>
-      <div class="cd"><div class="cd-i">&#128231;</div><div><div class="cd-lb">Email</div><div class="cd-vl" id="eml"></div></div></div>
-      <div class="cd"><div class="cd-i">&#128205;</div><div><div class="cd-lb">Location</div><div class="cd-vl">Punjab, India &#183; Global Clients</div></div></div>
-      <div class="cd"><div class="cd-i">&#9201;</div><div><div class="cd-lb">Hours</div><div class="cd-vl">Mon - Sat, 9AM - 8PM IST</div></div></div>
+<section class="cta">
+  <h2>Stop Guessing.<br>Start Growing With AI.</h2>
+  <p>Get a free quote. No commitment, no pressure.</p>
+  <a href="#contact" class="btn" style="padding:14px 36px;font-size:16px">Get Started Free →</a>
+  <div style="margin-top:32px">
+    <p style="font-size:13px;color:var(--sub);margin-bottom:12px">Subscribe for weekly AI growth tips</p>
+    <div class="nl-row">
+      <input type="email" id="nl-email" placeholder="your@email.com" style="margin:0">
+      <button class="btn" onclick="subNL()" style="margin:0">Subscribe</button>
     </div>
-    <form id="wf" class="reveal d1" onsubmit="sendWA(event)">
-      <div class="fg"><label class="flb">Your Name</label><input class="fin" type="text" id="wn" placeholder="Full name" required></div>
-      <div class="fg"><label class="flb">Phone / WhatsApp</label><input class="fin" type="tel" id="wp" placeholder="+91 XXXXX XXXXX"></div>
-      <div class="fg"><label class="flb">Service You Need</label><select class="fsel2" id="ws" required><option value="" disabled selected>Select a service</option><option>Social Media Management</option><option>Content Creation</option><option>AI Podcast Production</option><option>Pitch Decks</option><option>Brand Identity</option><option>Digital Marketing / Ads</option><option>Lead Generation System</option><option>AI Automation</option><option>Content Repurposing</option><option>Full Growth Package</option></select></div>
-      <div class="fg"><label class="flb">Budget</label><select class="fsel2" id="wb"><option value="" disabled selected>Select budget</option><option>Under $50</option><option>$50 - $200</option><option>$200 - $500</option><option>$500+</option><option>One-time project</option><option>Not sure yet</option></select></div>
-      <div class="fg"><label class="flb">Project Details</label><textarea class="fta2" id="wm" placeholder="Tell us what you need..."></textarea></div>
-      <button type="submit" class="fsub">Send via WhatsApp &#128172;</button>
-      <div class="fsub-note">Opens WhatsApp with your inquiry</div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="section section-alt" id="contact"><div class="w">
+  <div style="text-align:center;margin-bottom:48px">
+    <div class="tag">Contact</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">Let's Build Something Great</h2>
+  </div>
+  <div class="contact-grid">
+    <div class="contact-info">
+      <h3>Ready to start?</h3>
+      <p>Fill the form or message us directly. We reply within hours.</p>
+      <div class="ci"><div class="ic">💬</div><div><div class="lb">WhatsApp</div><div class="vl">+91 82890 94569</div></div></div>
+      <div class="ci"><div class="ic">📧</div><div><div class="lb">Email</div><div class="vl" id="eml"></div></div></div>
+      <div class="ci"><div class="ic">📍</div><div><div class="lb">Location</div><div class="vl">Punjab, India · Global Clients</div></div></div>
+      <div class="ci"><div class="ic">⏱</div><div><div class="lb">Hours</div><div class="vl">Mon–Sat, 9AM–8PM IST</div></div></div>
+    </div>
+    <form id="cf" onsubmit="submitContact(event)">
+      <label>Name *</label>
+      <input type="text" id="c-name" required placeholder="Full name">
+      <label>Email *</label>
+      <input type="email" id="c-email" required placeholder="you@company.com">
+      <label>Phone</label>
+      <input type="tel" id="c-phone" placeholder="+91 XXXXX XXXXX">
+      <label>Service</label>
+      <select id="c-service"><option value="">Select a service...</option></select>
+      <label>Budget</label>
+      <select id="c-budget"><option value="">Select budget...</option><option>Under $100</option><option>$100–$500</option><option>$500–$2,000</option><option>$2,000+</option><option>Not sure yet</option></select>
+      <label>Project Details</label>
+      <textarea id="c-msg" placeholder="Tell us what you need..."></textarea>
+      <button type="submit" class="form-btn">Send Message →</button>
+      <div class="form-note">We'll reply within 12 hours</div>
     </form>
   </div>
 </div></section>
+
 <!-- FOOTER -->
-<div class="foot"><div class="w">
-  <div class="foot-top">
-    <div class="foot-brand">
-      <div class="logo" onclick="goTop()"><div class="logo-i" style="width:28px;height:28px;font-size:13px;border-radius:7px">V</div><div class="logo-t" style="font-size:17px">Veltrix<b>AI</b></div></div>
-      <p>AI-powered growth agency for startups and small businesses. We build the systems that bring you customers.</p>
-    </div>
-    <div><div class="fc-t">Services</div><div class="fc-ls"><button class="fc-lk" onclick="go('svc')">Social Media</button><button class="fc-lk" onclick="go('svc')">Content Writing</button><button class="fc-lk" onclick="go('svc')">AI Podcasts</button><button class="fc-lk" onclick="go('svc')">Brand Design</button><button class="fc-lk" onclick="go('svc')">Lead Generation</button></div></div>
-    <div><div class="fc-t">More</div><div class="fc-ls"><button class="fc-lk" onclick="go('svc')">Pitch Decks</button><button class="fc-lk" onclick="go('svc')">Digital Ads</button><button class="fc-lk" onclick="go('svc')">AI Automation</button><button class="fc-lk" onclick="go('svc')">Repurposing</button></div></div>
-    <div><div class="fc-t">Company</div><div class="fc-ls"><button class="fc-lk" onclick="go('results')">Case Studies</button><button class="fc-lk" onclick="go('pricing')">Pricing</button><button class="fc-lk" onclick="go('faq')">FAQ</button><button class="fc-lk" onclick="go('contact')">Contact</button></div></div>
-  </div>
-  <div class="foot-bot"><div class="foot-cp">&#169; 2026 Veltrix AI. All rights reserved.</div><div class="foot-cp">Punjab, India &#183; Serving Globally</div></div>
-<!-- Floating WhatsApp Button -->
-<div class="wa-float" id="waFloat">
-  <div class="wa-bubble" id="waBubble" style="display:none">
-    Hey! &#128075; Need help with AI growth? Message us on WhatsApp!
-    <button class="wa-close" onclick="document.getElementById('waBubble').style.display='none'">&#10005;</button>
-  </div>
-  <button class="wa-btn" onclick="window.open('https://wa.me/918289094569?text=Hi!%20I%20want%20to%20know%20about%20Veltrix%20AI%20services','_blank')" title="Chat on WhatsApp">&#128172;</button>
-</div>
+<footer><div class="w">
+  <div class="logo" style="font-size:16px">Veltrix<span style="color:var(--blue)">AI</span></div>
+  <small>© 2026 Veltrix AI. All rights reserved. Punjab, India · Serving Globally</small>
+</div></footer>
 
-<!-- Newsletter Popup -->
-<div class="nl-popup" id="nlPopup">
-  <button class="nl-close" onclick="document.getElementById('nlPopup').classList.remove('show')">&#10005;</button>
-  <h4>&#127873; Get a Free AI Growth Audit</h4>
-  <p>Drop your email and we'll send you a free AI growth analysis for your business within 24 hours.</p>
-  <form onsubmit="nlSignup(event)">
-    <input type="email" placeholder="Your email" id="nlEmail" required>
-    <button type="submit">Get Audit</button>
-  </form>
-</div>
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
-</div></div>
 <script>
-document.getElementById('eml').textContent='veltrixaiservices'+'@'+'gmail.com';
-function go(id){var e=document.getElementById(id);if(e)window.scrollTo({top:e.getBoundingClientRect().top+window.pageYOffset-76,behavior:'smooth'})}
-function goTop(){window.scrollTo({top:0,behavior:'smooth'})}
-window.addEventListener('scroll',function(){document.getElementById('nb').classList.toggle('scrolled',window.scrollY>30)});
-// Scroll reveal
-var obs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('vis')})},{threshold:.08,rootMargin:'0px 0px -40px 0px'});
-document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el)});
-// Marquee
-var tools=['Claude Pro','ChatGPT Pro','Gemini Pro','Canva Pro','NotebookLM','Adobe Creative','Midjourney','OpenClaw','ElevenLabs','Zapier AI','Perplexity','Notion AI','Figma AI','Runway ML','Descript'];
-var mt=document.getElementById('mqt');var h='';
-for(var r=0;r<3;r++)for(var i=0;i<tools.length;i++)h+='<div class="mq-i">'+tools[i]+'</div>';
-mt.innerHTML=h;
-// WhatsApp
-function sendWA(e){
+const API = '';
+const WA = '918289094569';
+
+document.getElementById('eml').textContent = 'veltrixaiservices' + '@' + 'gmail.com';
+
+function toast(msg, dur) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur || 3000);
+}
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  return r.json();
+}
+
+// Load services
+api('/api/services').then(d => {
+  const g = document.getElementById('svc-grid');
+  const sel = document.getElementById('c-service');
+  d.items.forEach(s => {
+    g.innerHTML += `<div class="svc">
+      <span class="svc-icon">${s.icon}</span>
+      <h3>${s.name}</h3>
+      <p>${s.description}</p>
+      <div class="svc-chips">${(s.tools||[]).slice(0,5).map(t=>'<span>'+t+'</span>').join('')}</div>
+      <div class="svc-price">From $${s.startingAt} · ${s.deliveryDays} days</div>
+    </div>`;
+    sel.innerHTML += `<option value="${s.slug}">${s.name}</option>`;
+  });
+});
+
+// Load packages
+api('/api/packages').then(d => {
+  const g = document.getElementById('pkg-grid');
+  d.items.forEach(p => {
+    g.innerHTML += `<div class="pkg ${p.popular?'pop':''}">
+      ${p.popular?'<div class="pkg-badge">POPULAR</div>':''}
+      <h3>${p.name}</h3>
+      <p style="font-size:13px;color:var(--sub)">${p.tagline}</p>
+      <div class="price">${p.priceLabel} <span>/${p.billing}</span></div>
+      <ul>${p.features.map(f=>'<li>'+f+'</li>').join('')}</ul>
+      <a href="#contact" class="btn" style="width:100%;text-align:center;display:block">${p.cta}</a>
+    </div>`;
+  });
+});
+
+// Load case studies
+api('/api/case-studies').then(d => {
+  const g = document.getElementById('case-grid');
+  d.items.forEach(c => {
+    g.innerHTML += `<div class="case">
+      <div class="cat">${c.category}</div>
+      <h3>${c.title}</h3>
+      <p>${c.summary}</p>
+      <div class="case-metrics">${c.metrics.map(m=>'<div><strong>'+m.value+'</strong><small>'+m.label+'</small></div>').join('')}</div>
+    </div>`;
+  });
+});
+
+// Load testimonials
+api('/api/testimonials').then(d => {
+  const g = document.getElementById('test-grid');
+  d.items.forEach(t => {
+    g.innerHTML += `<div class="tst">
+      <div class="stars">★★★★★</div>
+      <q>${t.quote}</q>
+      <div class="who"><div class="av">${t.initials}</div><div><div class="nm">${t.name}</div><div class="rl">${t.role}</div></div></div>
+    </div>`;
+  });
+});
+
+// Load stats
+api('/api/stats/public').then(d => {
+  document.getElementById('hero-stats').innerHTML = `
+    <div><strong>${d.totalProjects}+</strong><small>Projects Done</small></div>
+    <div><strong>${d.countriesServed}+</strong><small>Countries</small></div>
+    <div><strong>${d.servicesOffered}</strong><small>Services</small></div>
+    <div><strong>${d.clientRetention}%</strong><small>Retention</small></div>
+  `;
+});
+
+// Contact form
+async function submitContact(e) {
   e.preventDefault();
-  var n=document.getElementById('wn').value;
-  var p=document.getElementById('wp').value||'Not provided';
-  var s=document.getElementById('ws').value;
-  var b=document.getElementById('wb').value||'Not selected';
-  var m=document.getElementById('wm').value||'No details';
-  var t='*NEW INQUIRY - VELTRIX AI*%0A%0A';
-  t+='*Name:* '+encodeURIComponent(n)+'%0A';
-  t+='*Phone:* '+encodeURIComponent(p)+'%0A';
-  t+='*Service:* '+encodeURIComponent(s)+'%0A';
-  t+='*Budget:* '+encodeURIComponent(b)+'%0A%0A';
-  t+='*Details:*%0A'+encodeURIComponent(m)+'%0A%0A';
-  t+='_via VeltrixAI.com_';
-  window.open('https://api.whatsapp.com/send?phone=918289094569&text='+t,'_blank');
-  document.getElementById('wf').reset();
-}
-// Waitlist
-function joinWaitlist(e){
-  e.preventDefault();
-  var f=e.target;
-  fetch('/api/waitlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value})})
-    .then(function(r){return r.json()})
-    .then(function(d){
-      if(d.success){f.reset();alert('You are on the waitlist! Position #'+d.position+'. We will reach out soon!');loadWLCount();}
-      else alert(d.error||'Something went wrong');
-    }).catch(function(){alert('Error. Please try again.')});
-}
-function loadWLCount(){
-  fetch('/api/waitlist/count').then(function(r){return r.json()}).then(function(d){
-    var el=document.getElementById('wlCount');if(el)el.textContent=d.count||0;
-  }).catch(function(){});
-}
-loadWLCount();
-// Newsletter popup
-function nlSignup(e){
-  e.preventDefault();
-  var em=document.getElementById('nlEmail').value;
-  fetch('/api/waitlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Newsletter',email:em,service:'free-audit'})})
-    .then(function(r){return r.json()})
-    .then(function(d){
-      document.getElementById('nlPopup').classList.remove('show');
-      alert(d.success?'Check your inbox! We will send your free AI audit within 24 hours.':d.error);
-    }).catch(function(){});
-}
-// Show newsletter popup after 15s
-setTimeout(function(){
-  if(!sessionStorage.getItem('nl_closed')){
-    document.getElementById('nlPopup').classList.add('show');
-    sessionStorage.setItem('nl_closed','1');
+  try {
+    const body = {
+      name: document.getElementById('c-name').value,
+      email: document.getElementById('c-email').value,
+      phone: document.getElementById('c-phone').value,
+      service: document.getElementById('c-service').value,
+      budget: document.getElementById('c-budget').value,
+      message: document.getElementById('c-msg').value,
+    };
+    const r = await api('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (r.success) {
+      toast('Message sent! We will reply within 12 hours.');
+      document.getElementById('cf').reset();
+    } else {
+      toast(r.error || 'Something went wrong');
+    }
+  } catch (err) {
+    toast('Network error. Try WhatsApp instead.');
   }
-},15000);
-// Show WhatsApp bubble after 5s
-setTimeout(function(){document.getElementById('waBubble').style.display='block'},5000);
-// ROI Calculator
-function calcROI(){
-  var spend=parseInt(document.getElementById('r-spend').value);
-  var hours=parseInt(document.getElementById('r-hours').value);
-  var team=parseInt(document.getElementById('r-team').value);
-  document.getElementById('rv-spend').textContent='$'+spend.toLocaleString();
-  document.getElementById('rv-hours').textContent=hours+' hrs';
-  document.getElementById('rv-team').textContent=team;
-  var vCost=Math.round(spend*0.1);if(vCost<50)vCost=50;
-  var savedHours=Math.round(hours*0.8)*4;
-  var freedTeam=Math.round(team*0.7*10)/10;
-  var savings=spend-vCost;
-  document.getElementById('roi-current').textContent='$'+spend.toLocaleString()+'/mo';
-  document.getElementById('roi-veltrix').textContent='$'+vCost.toLocaleString()+'/mo';
-  document.getElementById('roi-hours').textContent=savedHours+' hrs';
-  document.getElementById('roi-team').textContent=freedTeam;
-  document.getElementById('roi-savings').textContent='$'+savings.toLocaleString();
 }
-calcROI();
+
+// Newsletter
+async function subNL() {
+  const email = document.getElementById('nl-email').value;
+  if (!email) return;
+  try {
+    const r = await api('/api/newsletter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    toast(r.success ? 'Subscribed!' : (r.error || 'Error'));
+    if (r.success) document.getElementById('nl-email').value = '';
+  } catch (e) {
+    toast('Network error');
+  }
+}
+
+// Analytics
+api('/api/analytics/track', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ event: 'page_view', page: location.pathname })
+}).catch(() => {});
 </script>
 </body>
 </html>
