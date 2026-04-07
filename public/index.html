@@ -135,12 +135,54 @@ footer small{font-size:12px;color:var(--muted)}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#000;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;opacity:0;transform:translateY(20px);transition:.3s;pointer-events:none}
 .toast.show{opacity:1;transform:none}
 
+/* MARQUEE */
+.marquee{padding:16px 0;background:#08080d;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden}
+.mq-track{display:flex;gap:0;animation:mq 30s linear infinite;width:max-content}
+@keyframes mq{to{transform:translateX(-50%)}}
+.mq-i{padding:0 24px;font-size:13px;font-weight:700;color:rgba(255,255,255,.12);white-space:nowrap;display:flex;align-items:center;gap:8px}
+.mq-i::before{content:'';width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.1)}
+
+/* WHO WE HELP */
+.who-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.who-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:32px;text-align:center;transition:.3s}
+.who-card:hover{transform:translateY(-4px);border-color:#333}
+.who-card.pop{border-color:var(--blue);box-shadow:0 0 30px rgba(0,82,255,.08)}
+.who-em{font-size:36px;display:block;margin-bottom:14px}
+.who-card h3{font-size:17px;font-weight:700;margin-bottom:6px}
+.who-card p{font-size:13px;color:var(--sub);line-height:1.7}
+
+/* STATS BAR */
+.stats-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:48px}
+.stat-item{text-align:center;padding:24px 12px;background:var(--card);border:1px solid var(--border);border-radius:12px;transition:.3s}
+.stat-item:hover{transform:translateY(-3px);border-color:#333}
+.stat-val{font-size:32px;font-weight:900;margin-bottom:2px}
+.stat-val.bl{color:var(--blue)}.stat-val.gn{color:var(--green)}.stat-val.wh{color:#fff}.stat-val.vl{color:#7c3aed}
+.stat-lbl{font-size:11px;color:var(--muted)}
+
+/* WHATSAPP FLOAT */
+.wa-float{position:fixed;bottom:24px;right:24px;z-index:98;width:56px;height:56px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 4px 20px rgba(37,211,102,.3);cursor:pointer;transition:.3s;text-decoration:none}
+.wa-float:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(37,211,102,.4)}
+
+/* MOBILE MENU */
+.hamburger{display:none;background:none;border:none;color:#fff;font-size:24px;cursor:pointer}
+.mob-menu{display:none;position:fixed;top:56px;left:0;right:0;background:rgba(10,10,15,.98);backdrop-filter:blur(16px);padding:24px;border-bottom:1px solid var(--border);z-index:98;flex-direction:column;gap:16px}
+.mob-menu.open{display:flex}
+.mob-menu a{font-size:16px;color:var(--sub);font-weight:500;padding:8px 0}
+.mob-menu a:hover{color:#fff}
+
+/* SCROLL REVEAL */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.reveal.vis{opacity:1;transform:none}
+
 /* RESPONSIVE */
 @media(max-width:768px){
   nav .links{display:none}
+  .hamburger{display:block}
   .hero{padding:120px 0 60px}
   .contact-grid{grid-template-columns:1fr}
   .hero-stats{gap:24px}
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+  .wa-float{bottom:16px;right:16px;width:48px;height:48px;font-size:24px}
 }
 </style>
 </head>
@@ -157,7 +199,16 @@ footer small{font-size:12px;color:var(--muted)}
     <a href="#faq">FAQ</a>
     <a href="#contact" class="btn" style="padding:8px 20px;font-size:13px">Get Started</a>
   </div>
+  <button class="hamburger" onclick="document.getElementById('mob').classList.toggle('open')">☰</button>
 </div></nav>
+<div class="mob-menu" id="mob">
+  <a href="#services" onclick="closeMob()">Services</a>
+  <a href="#cases" onclick="closeMob()">Results</a>
+  <a href="#pricing" onclick="closeMob()">Pricing</a>
+  <a href="#reviews" onclick="closeMob()">Reviews</a>
+  <a href="#faq" onclick="closeMob()">FAQ</a>
+  <a href="#contact" onclick="closeMob()">Get Started →</a>
+</div>
 
 <!-- HERO -->
 <section class="hero"><div class="w">
@@ -171,6 +222,9 @@ footer small{font-size:12px;color:var(--muted)}
   <div class="hero-stats" id="hero-stats"></div>
 </div></section>
 
+<!-- MARQUEE -->
+<section class="marquee"><div class="mq-track" id="mqt"></div></section>
+
 <!-- SERVICES -->
 <section class="section section-alt" id="services"><div class="w">
   <div style="text-align:center;margin-bottom:48px">
@@ -178,16 +232,37 @@ footer small{font-size:12px;color:var(--muted)}
     <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">10 Premium AI Services</h2>
     <p style="color:var(--sub);margin-top:8px">Everything you need to launch, grow, and scale.</p>
   </div>
-  <div class="grid svc-grid" id="svc-grid"></div>
+  <div class="grid svc-grid reveal" id="svc-grid"></div>
+</div></section>
+
+<!-- WHO WE HELP -->
+<section class="section"><div class="w">
+  <div style="text-align:center;margin-bottom:48px" class="reveal">
+    <div class="tag">Who We Help</div>
+    <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">From Zero to Scale</h2>
+    <p style="color:var(--sub);margin-top:8px">No matter where you are, we get you to the next level.</p>
+  </div>
+  <div class="grid who-grid">
+    <div class="who-card reveal"><span class="who-em">🏁</span><h3>Zero-Stage Startups</h3><p>No brand, no presence? We build everything from scratch — identity, content, first customers.</p></div>
+    <div class="who-card pop reveal"><span class="who-em">🚀</span><h3>Growing Businesses</h3><p>Need more customers? We handle marketing, ads, lead gen, automation, and content at scale.</p></div>
+    <div class="who-card reveal"><span class="who-em">🌍</span><h3>Scaling Brands</h3><p>Ready to dominate? Full AI growth engine — apps, automation, multi-platform content, and analytics.</p></div>
+  </div>
+  <div class="stats-bar reveal">
+    <div class="stat-item"><div class="stat-val bl">10x</div><div class="stat-lbl">Faster Delivery</div></div>
+    <div class="stat-item"><div class="stat-val gn">127+</div><div class="stat-lbl">Projects Done</div></div>
+    <div class="stat-item"><div class="stat-val wh">10</div><div class="stat-lbl">AI Services</div></div>
+    <div class="stat-item"><div class="stat-val vl">14+</div><div class="stat-lbl">Countries</div></div>
+    <div class="stat-item"><div class="stat-val bl">98%</div><div class="stat-lbl">Retention Rate</div></div>
+  </div>
 </div></section>
 
 <!-- CASE STUDIES -->
-<section class="section" id="cases"><div class="w">
+<section class="section section-alt" id="cases"><div class="w">
   <div style="text-align:center;margin-bottom:48px">
     <div class="tag">Case Studies</div>
     <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">Real Results for Real Businesses</h2>
   </div>
-  <div class="grid case-grid" id="case-grid"></div>
+  <div class="grid case-grid reveal" id="case-grid"></div>
 </div></section>
 
 <!-- PRICING -->
@@ -197,7 +272,7 @@ footer small{font-size:12px;color:var(--muted)}
     <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">Simple, Honest Pricing</h2>
     <p style="color:var(--sub);margin-top:8px">No hidden fees. No contracts. Cancel anytime.</p>
   </div>
-  <div class="grid pkg-grid" id="pkg-grid"></div>
+  <div class="grid pkg-grid reveal" id="pkg-grid"></div>
 </div></section>
 
 <!-- PROCESS -->
@@ -220,7 +295,7 @@ footer small{font-size:12px;color:var(--muted)}
     <div class="tag">Reviews</div>
     <h2 style="font-size:clamp(24px,3.5vw,38px);font-weight:900;letter-spacing:-1px">What Clients Say</h2>
   </div>
-  <div class="grid test-grid" id="test-grid"></div>
+  <div class="grid test-grid reveal" id="test-grid"></div>
 </div></section>
 
 <!-- FAQ -->
@@ -286,6 +361,9 @@ footer small{font-size:12px;color:var(--muted)}
     </form>
   </div>
 </div></section>
+
+<!-- WHATSAPP FLOAT -->
+<a class="wa-float" href="https://wa.me/918289094569?text=Hi%20Veltrix%20AI!%20I%27m%20interested%20in%20your%20services." target="_blank" rel="noopener">💬</a>
 
 <!-- FOOTER -->
 <footer><div class="w">
@@ -424,6 +502,27 @@ async function subNL() {
     toast('Network error');
   }
 }
+
+// Mobile menu
+function closeMob() { document.getElementById('mob').classList.remove('open'); }
+
+// Marquee
+const tools = ['Claude','ChatGPT','Midjourney','Runway ML','After Effects','Next.js','React','Figma','ElevenLabs','Canva Pro','Zapier','Stripe','Vercel','AWS','Python','Node.js','Adobe Premiere','DaVinci','Pika Labs'];
+const mqt = document.getElementById('mqt');
+let mh = '';
+for (let r = 0; r < 3; r++) tools.forEach(t => mh += '<div class="mq-i">' + t + '</div>');
+mqt.innerHTML = mh;
+
+// Scroll reveal
+const revealObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
+}, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+// Re-observe after dynamic content loads
+setTimeout(() => {
+  document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+}, 1500);
 
 // Analytics
 api('/api/analytics/track', {
