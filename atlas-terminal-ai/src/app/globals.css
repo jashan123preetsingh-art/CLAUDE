@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@theme {
+  --color-atlas-bg: #0a0e17;
+  --color-atlas-surface: #111827;
+  --color-atlas-card: #1a2035;
+  --color-atlas-border: #1e293b;
+  --color-atlas-accent: #3b82f6;
+  --color-atlas-green: #22c55e;
+  --color-atlas-red: #ef4444;
+  --color-atlas-yellow: #eab308;
+  --color-atlas-purple: #a855f7;
+  --color-atlas-cyan: #06b6d4;
+  --color-atlas-muted: #64748b;
+  --color-atlas-text: #e2e8f0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-atlas-bg);
+  color: var(--color-atlas-text);
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-atlas-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-atlas-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-atlas-muted);
+}
+
+/* Glow effects */
+.glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+.glow-green {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+}
+
+.glow-red {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+}
+
+/* Terminal-style blinking cursor */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-blink::after {
+  content: "█";
+  animation: blink 1s infinite;
+  color: var(--color-atlas-accent);
+}
+
+/* Pulse animation for live indicators */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.pulse-live {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Grid background pattern */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Glass morphism */
+.glass {
+  background: rgba(17, 24, 39, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 41, 59, 0.5);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Sparkline mini chart */
+.sparkline-up {
+  filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.4));
+}
+
+.sparkline-down {
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.4));
+}
