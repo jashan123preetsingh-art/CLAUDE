@@ -284,8 +284,9 @@ pressureColor = pressure > 0.05 ? cBull : pressure < -0.05 ? cBear : cTextDim
 //  is distributed across the price bins it overlaps (proportional to overlap),
 //  which is far more accurate than dumping volume into a single bin.
 // ============================================================================
-// Determine the working range length
-sessLen = ta.barssince(newDay) + 1
+// Determine the working range length (nz guards the first bars before any
+// session change has occurred, when ta.barssince() is still na)
+sessLen = nz(ta.barssince(newDay), bar_index) + 1
 rangeLen = vpMode == "Session" ? math.min(sessLen, 1440) : vpMode == "Manual Bars" ? vpLookback : vpLookback
 rangeLen := math.max(rangeLen, 10)
 
@@ -592,9 +593,9 @@ flowColor  = buyersPct >= 60 ? cBull : buyersPct <= 40 ? cBear : cTextDim
 
 // ---- Multi-Timeframe POC (approximate; lookback capped for performance) ----
 int mtfCap = 1000
-dPocLen = math.min(ta.barssince(newDay) + 1, mtfCap)
-wPocLen = math.min(ta.barssince(newWeek) + 1, mtfCap)
-mPocLen = math.min(ta.barssince(newMonth) + 1, mtfCap)
+dPocLen = math.max(math.min(nz(ta.barssince(newDay),   bar_index) + 1, mtfCap), 1)
+wPocLen = math.max(math.min(nz(ta.barssince(newWeek),  bar_index) + 1, mtfCap), 1)
+mPocLen = math.max(math.min(nz(ta.barssince(newMonth), bar_index) + 1, mtfCap), 1)
 dPocTop = ta.highest(high, dPocLen)
 dPocBot = ta.lowest(low,  dPocLen)
 wPocTop = ta.highest(high, wPocLen)
