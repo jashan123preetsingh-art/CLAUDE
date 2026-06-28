@@ -191,7 +191,7 @@ f_color(_x, _y) =>
 f_detect(_x, _y) =>
     int  _i = 0
     bool _found = false
-    bool _isBull = na
+    bool _isBull = false
     while not _found and _i < array.size(_x)
         [t_, b_] = f_getBox(_x, _i)
         if low < t_ and high > b_
