@@ -28,7 +28,7 @@
 //  ============================================================================
 //@version=6
 
-indicator("Volume Flow Pro X AI", shorttitle="VF Pro X AI", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500)
+indicator("Volume Flow Pro X AI", shorttitle="VF Pro X AI", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500, max_bars_back=1500)
 
 // ============================================================================
 //  THEME & COLOR SYSTEM  (M18 / M20)
@@ -124,6 +124,36 @@ dashPos  = input.string("Top Right", "Position", options=["Top Right", "Top Left
 dashSize = input.string("Normal", "Size", options=["Tiny", "Small", "Normal", "Large"], group=grpDash)
 
 // ============================================================================
+//  MULTI-TIMEFRAME POC & RANKED KEY LEVELS  (inputs)
+// ============================================================================
+grpMTF = "◈  Multi-Timeframe & Key Levels"
+showMTFpoc   = input.bool(true,  "Multi-Timeframe POC (Daily / Weekly / Monthly)", group=grpMTF, tooltip="Where institutions traded most across higher timeframes. Approximated from intraday bars, capped for performance.")
+showKeyPanel = input.bool(true,  "Ranked Key Levels panel (top 5)", group=grpMTF)
+keyPos       = input.string("Middle Right", "Key Levels Position", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left", "Middle Right", "Middle Left"], group=grpMTF)
+
+// ============================================================================
+//  SESSION INTELLIGENCE  (inputs)
+// ============================================================================
+grpSess = "◈  Session Intelligence"
+showSession  = input.bool(true,  "Session Intelligence (ADR / IB / active session)", group=grpSess)
+sessTz       = input.string("America/New_York", "Session Timezone", options=["America/New_York", "Europe/London", "Asia/Kolkata", "Asia/Tokyo", "Asia/Shanghai", "UTC", "Australia/Sydney"], group=grpSess, tooltip="The timezone the session ranges below are expressed in.")
+asiaSess     = input.session("1800-0300", "Asia Session",     group=grpSess)
+londonSess   = input.session("0300-0930", "London Session",   group=grpSess)
+nySess       = input.session("0930-1600", "New York Session", group=grpSess)
+adrLen       = input.int(14, "ADR Length (days)", minval=3, maxval=60, group=grpSess)
+ibMinutes    = input.int(60, "Initial Balance (minutes)", minval=5, maxval=240, group=grpSess)
+
+// ============================================================================
+//  AUCTION MARKET THEORY & MORNING BRIEF  (inputs)
+// ============================================================================
+grpAuction = "◈  Auction Market Theory"
+showAuction = input.bool(true, "Auction shape / Day-Type analysis", group=grpAuction)
+
+grpBrief = "◈  AI Morning Brief"
+showBrief = input.bool(true, "AI Morning Brief panel", group=grpBrief)
+briefPos  = input.string("Bottom Left", "Brief Position", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left", "Middle Right", "Middle Left"], group=grpBrief)
+
+// ============================================================================
 //  HELPERS
 // ============================================================================
 f_tblPos(p) =>
@@ -133,6 +163,7 @@ f_tblPos(p) =>
         "Bottom Right"  => position.bottom_right
         "Bottom Left"   => position.bottom_left
         "Middle Right"  => position.middle_right
+        "Middle Left"   => position.middle_left
         => position.top_right
 
 f_txtSize(s) =>
@@ -145,6 +176,9 @@ f_txtSize(s) =>
 
 // Round to symbol tick for clean display
 f_px(x) => str.tostring(math.round_to_mintick(x))
+
+// Star strength rating (1-5) for ranked key levels
+f_stars(s) => s >= 5 ? "★★★★★" : s == 4 ? "★★★★" : s == 3 ? "★★★" : s == 2 ? "★★" : "★"
 
 // ============================================================================
 //  M3 / M4 — VWAP SUITE (manual, full control over slope + bands, no repaint)
@@ -272,6 +306,11 @@ var float hvn2 = na
 var float lvn1 = na
 var float lvn2 = na
 
+// Auction Market Theory outputs (computed inside the profile engine on last bar)
+var string auctionShape = "—"
+var bool   poorHigh = false
+var bool   poorLow  = false
+
 f_clearDrawings() =>
     if array.size(vpBoxes) > 0
         for b in vpBoxes
@@ -285,6 +324,43 @@ f_clearDrawings() =>
         for la in vpLabels
             label.delete(la)
         array.clear(vpLabels)
+
+// Standalone POC calculator over a bar lookback (for Multi-Timeframe POC).
+// Runs only on the last bar; top/bot are pre-computed series passed in so the
+// stateful ta.* calls stay on every bar. Lookback is capped by the caller.
+f_pocBin(topP, botP, lb, bins) =>
+    float poc = na
+    if topP > botP and lb >= 2
+        float bs = (topP - botP) / bins
+        arr = array.new_float(bins, 0.0)
+        for i = 0 to lb - 1
+            float bh = high[i]
+            float bl = low[i]
+            float bv = nz(volume[i])
+            float br = bh - bl
+            if br <= 0
+                idx = math.min(math.max(int((close[i] - botP) / bs), 0), bins - 1)
+                array.set(arr, idx, array.get(arr, idx) + bv)
+            else
+                lo = math.min(math.max(int((bl - botP) / bs), 0), bins - 1)
+                hi = math.min(math.max(int((bh - botP) / bs), 0), bins - 1)
+                for j = lo to hi
+                    float bb = botP + j * bs
+                    float bt = bb + bs
+                    float ov = math.min(bh, bt) - math.max(bl, bb)
+                    if ov > 0
+                        array.set(arr, j, array.get(arr, j) + bv * ov / br)
+        float mx = array.max(arr)
+        int pidx = array.indexof(arr, mx)
+        poc := botP + (pidx + 0.5) * bs
+    poc
+
+// Push a ranked key-level candidate into the working arrays (skips na prices)
+f_addLvl(parr, narr, sarr, p, n, s) =>
+    if not na(p)
+        array.push(parr, p)
+        array.push(narr, n)
+        array.push(sarr, s)
 
 // Draw a horizontal level line + right-aligned label (global so it is reusable)
 f_level(price, col, txt, styl, lx, rx) =>
@@ -380,6 +456,12 @@ if barstate.islast
                     lvn2 := price
                     lvn2v := v
 
+        // ---- Auction Market Theory: profile shape, poor highs/lows, single prints ----
+        float pocLoc = vpBins > 1 ? pocIdx / float(vpBins - 1) : 0.5
+        auctionShape := pocLoc > 0.66 ? "P-shape (Accum.)" : pocLoc < 0.34 ? "b-shape (Distrib.)" : "D-shape (Balanced)"
+        poorHigh := array.get(binVol, vpBins - 1) > avgV * 0.7
+        poorLow  := array.get(binVol, 0) > avgV * 0.7
+
         // ---- DRAW the profile (M1 display) ----
         if showProfile
             int profW = math.max(int(vpWidthPct / 100.0 * rangeLen), 3)
@@ -419,12 +501,11 @@ if barstate.islast
 // ============================================================================
 [pdh, pdl, pdc] = request.security(syminfo.tickerid, "D", [high[1], low[1], close[1]], lookahead=barmerge.lookahead_on)
 
-// Opening range = first 30 minutes of the session (configurable concept; uses session start)
+// Initial Balance = first N minutes of the session (the auction's opening range)
 var float orH = na
 var float orL = na
 var int   orBars = 0
-orMinutes = 30
-barsPerOR = math.max(int(orMinutes / math.max(timeframe.in_seconds() / 60, 1)), 1)
+barsPerOR = math.max(int(ibMinutes / math.max(timeframe.in_seconds() / 60, 1)), 1)
 if newDay
     orH := high
     orL := low
@@ -460,6 +541,7 @@ if barstate.islast and showKeyLvls
     if not na(orH)
         lnORH := line.new(lx1, orH, lx2, orH, color=color.new(cVah, 55), style=line.style_solid, xloc=xloc.bar_index)
         lnORL := line.new(lx1, orL, lx2, orL, color=color.new(cVal, 55), style=line.style_solid, xloc=xloc.bar_index)
+        array.push(vpLabels, label.new(lx2, orH, "IB H", xloc=xloc.bar_index, style=label.style_label_left, color=color.new(cVah, 90), textcolor=cVah, size=size.tiny))
 
 // Support / Resistance pivots (M9)
 var line lnSup = na
@@ -496,6 +578,63 @@ biasScore += pressure > 0.05 ? 1 : pressure < -0.05 ? -1 : 0
 
 marketBias = biasScore >= 3.5 ? "Strong Bullish" : biasScore >= 1.5 ? "Bullish" : biasScore <= -3.5 ? "Strong Bearish" : biasScore <= -1.5 ? "Bearish" : "Neutral"
 biasColor = biasScore >= 1.5 ? cBull : biasScore <= -1.5 ? cBear : cTextDim
+
+// ============================================================================
+//  PRO ENGINES — MTF POC · Session Intelligence · Auction Day-Type · Flow %
+// ============================================================================
+// ---- Day type (Auction Market Theory, M12-ext) ----
+dayType = trendStr > 2 and (trendUp or trendDn) ? "Trend Day" : marketState == "Expansion" ? "Expansion Day" : (inValueArea and volState != "High Volatility") ? "Balanced Day" : marketState == "Compression" ? "Compression" : "Normal Day"
+
+// ---- Buyers vs Sellers participation (M14 — delta approximation from bar location) ----
+buyersPct  = math.round(math.max(0, math.min(100, ta.ema(buyP, 14) * 100)))
+sellersPct = 100 - buyersPct
+flowTxt    = buyersPct >= 60 ? "Buyers Dominating" : buyersPct <= 40 ? "Sellers Dominating" : "Balanced Flow"
+flowColor  = buyersPct >= 60 ? cBull : buyersPct <= 40 ? cBear : cTextDim
+
+// ---- Multi-Timeframe POC (approximate; lookback capped for performance) ----
+int mtfCap = 1000
+dPocLen = math.min(ta.barssince(newDay) + 1, mtfCap)
+wPocLen = math.min(ta.barssince(newWeek) + 1, mtfCap)
+mPocLen = math.min(ta.barssince(newMonth) + 1, mtfCap)
+dPocTop = ta.highest(high, dPocLen)
+dPocBot = ta.lowest(low,  dPocLen)
+wPocTop = ta.highest(high, wPocLen)
+wPocBot = ta.lowest(low,  wPocLen)
+mPocTop = ta.highest(high, mPocLen)
+mPocBot = ta.lowest(low,  mPocLen)
+var float dPOC = na
+var float wPOC = na
+var float mPOC = na
+if barstate.islast and showMTFpoc
+    dPOC := f_pocBin(dPocTop, dPocBot, dPocLen, vpBins)
+    wPOC := f_pocBin(wPocTop, wPocBot, wPocLen, vpBins)
+    mPOC := f_pocBin(mPocTop, mPocBot, mPocLen, vpBins)
+
+// ---- Session Intelligence: active session, ADR, today's range, expected range ----
+inAsia   = not na(time(timeframe.period, asiaSess, sessTz))
+inLondon = not na(time(timeframe.period, londonSess, sessTz))
+inNY     = not na(time(timeframe.period, nySess, sessTz))
+activeSession = inNY ? "New York" : inLondon ? "London" : inAsia ? "Asia" : "Off-Hours"
+var float volAsia   = 0.0
+var float volLondon = 0.0
+var float volNY     = 0.0
+if newDay
+    volAsia   := 0.0
+    volLondon := 0.0
+    volNY     := 0.0
+volAsia   += inAsia ? nz(volume) : 0.0
+volLondon += inLondon ? nz(volume) : 0.0
+volNY     += inNY ? nz(volume) : 0.0
+bestSession = volNY >= volLondon and volNY >= volAsia ? "New York" : volLondon >= volAsia ? "London" : "Asia"
+
+adr          = request.security(syminfo.tickerid, "D", ta.sma(high - low, adrLen)[1], lookahead=barmerge.lookahead_on)
+todayH       = request.security(syminfo.tickerid, "D", high)
+todayL       = request.security(syminfo.tickerid, "D", low)
+dayOpen      = request.security(syminfo.tickerid, "D", open)
+todayRange   = todayH - todayL
+rangeUsedPct = not na(adr) and adr > 0 ? math.round(todayRange / adr * 100) : na
+expLow       = not na(adr) ? dayOpen - adr / 2 : na
+expHigh      = not na(adr) ? dayOpen + adr / 2 : na
 
 // ============================================================================
 //  M13 — TRADE QUALITY ENGINE (0-100)
@@ -581,39 +720,86 @@ f_row(tbl, sz, row, k, v, vcol) =>
     table.cell(tbl, 0, row, k, text_color=cTextDim, text_size=sz, text_halign=text.align_left)
     table.cell(tbl, 1, row, v, text_color=vcol, text_size=sz, text_halign=text.align_right)
 
+// Auction display (shape + any poor-high/low warning), color-coded by lean
+auctionCol  = str.startswith(auctionShape, "P") ? cBull : str.startswith(auctionShape, "b") ? cBear : cTextDim
+auctionDisp = auctionShape + (poorHigh ? "  ⚠PH" : "") + (poorLow ? "  ⚠PL" : "")
+
 var table dash = na
 if barstate.islast and showDash
     if not na(dash)
         table.delete(dash)
     sz = f_txtSize(dashSize)
-    dash := table.new(f_tblPos(dashPos), 2, 22, bgcolor=cPanelBg, frame_color=cFrame, frame_width=1, border_color=cGrid, border_width=1)
+    int nRows = 5 + 4 + 6 + 5 + 3 + (showMTFpoc ? 4 : 0) + (showSession ? 3 : 0)
+    dash := table.new(f_tblPos(dashPos), 2, nRows, bgcolor=cPanelBg, frame_color=cFrame, frame_width=1, border_color=cGrid, border_width=0)
+    int r = 0
 
-    f_hdr(dash, sz, 0, "◆  VOLUME FLOW PRO X AI")
-    f_row(dash, sz, 1,  "Market Bias",   marketBias, biasColor)
-    f_row(dash, sz, 2,  "Market State",  marketState, marketStateColor)
-    f_row(dash, sz, 3,  "Trend",         trendUp ? "Bullish" : trendDn ? "Bearish" : "Neutral", trendUp ? cBull : trendDn ? cBear : cTextDim)
-    f_row(dash, sz, 4,  "VWAP Dir",      vwapDir, vwapDColor)
+    f_hdr(dash, sz, r, "◆  VOLUME FLOW PRO X AI")
+    r += 1
+    f_row(dash, sz, r, "Market Bias", marketBias, biasColor)
+    r += 1
+    f_row(dash, sz, r, "Day Type", dayType, marketStateColor)
+    r += 1
+    f_row(dash, sz, r, "Auction", auctionDisp, auctionCol)
+    r += 1
+    f_row(dash, sz, r, "Trend", trendUp ? "Bullish" : trendDn ? "Bearish" : "Neutral", trendUp ? cBull : trendDn ? cBear : cTextDim)
+    r += 1
 
-    f_hdr(dash, sz, 5, "◆  VWAP")
-    f_row(dash, sz, 6,  "Price",         f_px(close), cText)
-    f_row(dash, sz, 7,  "Daily VWAP",    f_px(vwapD) + (close>vwapD?"  ▲":"  ▼"), close>vwapD?cBull:cBear)
-    f_row(dash, sz, 8,  "Weekly VWAP",   na(vwapW)?"—":f_px(vwapW), cTextDim)
+    f_hdr(dash, sz, r, "◆  VWAP")
+    r += 1
+    f_row(dash, sz, r, "Price", f_px(close), cText)
+    r += 1
+    f_row(dash, sz, r, "Daily VWAP", f_px(vwapD) + (close > vwapD ? "  ▲" : "  ▼"), close > vwapD ? cBull : cBear)
+    r += 1
+    f_row(dash, sz, r, "Weekly VWAP", na(vwapW) ? "—" : f_px(vwapW), cTextDim)
+    r += 1
 
-    f_hdr(dash, sz, 9, "◆  VOLUME PROFILE")
-    f_row(dash, sz, 10, "POC",           na(pocPrice)?"—":f_px(pocPrice), cPoc)
-    f_row(dash, sz, 11, "VAH",           na(vahPrice)?"—":f_px(vahPrice), cVah)
-    f_row(dash, sz, 12, "VAL",           na(valPrice)?"—":f_px(valPrice), cVal)
-    f_row(dash, sz, 13, "Nearest HVN",   na(hvn1)?"—":f_px(hvn1), cHvn)
-    f_row(dash, sz, 14, "Nearest LVN",   na(lvn1)?"—":f_px(lvn1), cLvn)
+    f_hdr(dash, sz, r, "◆  VOLUME PROFILE")
+    r += 1
+    f_row(dash, sz, r, "POC", na(pocPrice) ? "—" : f_px(pocPrice), cPoc)
+    r += 1
+    f_row(dash, sz, r, "VAH", na(vahPrice) ? "—" : f_px(vahPrice), cVah)
+    r += 1
+    f_row(dash, sz, r, "VAL", na(valPrice) ? "—" : f_px(valPrice), cVal)
+    r += 1
+    f_row(dash, sz, r, "Nearest HVN", na(hvn1) ? "—" : f_px(hvn1), cHvn)
+    r += 1
+    f_row(dash, sz, r, "Nearest LVN", na(lvn1) ? "—" : f_px(lvn1), cLvn)
+    r += 1
 
-    f_hdr(dash, sz, 15, "◆  FLOW")
-    f_row(dash, sz, 16, "Volume",        volRating, volRColor)
-    f_row(dash, sz, 17, "Pressure",      pressureTxt, pressureColor)
-    f_row(dash, sz, 18, "Market Quality",mktQText, mktQ>=65?cBull:mktQ>=45?cText:cBear)
+    if showMTFpoc
+        f_hdr(dash, sz, r, "◆  MULTI-TIMEFRAME POC")
+        r += 1
+        f_row(dash, sz, r, "Daily POC", na(dPOC) ? "—" : f_px(dPOC), cPoc)
+        r += 1
+        f_row(dash, sz, r, "Weekly POC", na(wPOC) ? "—" : f_px(wPOC), cPoc)
+        r += 1
+        f_row(dash, sz, r, "Monthly POC", na(mPOC) ? "—" : f_px(mPOC), cPoc)
+        r += 1
 
-    f_hdr(dash, sz, 19, "◆  AI TRADE PLAN")
-    f_row(dash, sz, 20, "Status",        planStatus, planColor)
-    f_row(dash, sz, 21, "Score / Grade", str.tostring(math.round(tradeScore)) + "  " + gradeTxt, tradeScore>=70?cBull:tradeScore>=55?cText:cTextDim)
+    f_hdr(dash, sz, r, "◆  FLOW")
+    r += 1
+    f_row(dash, sz, r, "Volume", volRating, volRColor)
+    r += 1
+    f_row(dash, sz, r, "Buyers / Sellers", str.tostring(buyersPct) + "% / " + str.tostring(sellersPct) + "%", flowColor)
+    r += 1
+    f_row(dash, sz, r, "Pressure", pressureTxt, pressureColor)
+    r += 1
+    f_row(dash, sz, r, "Market Quality", mktQText, mktQ >= 65 ? cBull : mktQ >= 45 ? cText : cBear)
+    r += 1
+
+    if showSession
+        f_hdr(dash, sz, r, "◆  SESSION")
+        r += 1
+        f_row(dash, sz, r, "Active", activeSession, cText)
+        r += 1
+        f_row(dash, sz, r, "ADR / Used", (na(adr) ? "—" : f_px(adr)) + (na(rangeUsedPct) ? "" : "  " + str.tostring(rangeUsedPct) + "%"), na(rangeUsedPct) ? cTextDim : rangeUsedPct >= 100 ? cBear : cText)
+        r += 1
+
+    f_hdr(dash, sz, r, "◆  AI TRADE PLAN")
+    r += 1
+    f_row(dash, sz, r, "Status", planStatus, planColor)
+    r += 1
+    f_row(dash, sz, r, "Confidence", str.tostring(math.round(tradeScore)) + "%  " + gradeTxt, tradeScore >= 70 ? cBull : tradeScore >= 55 ? cText : cTextDim)
 
 // ---- On-chart plan tag (M14, minimal — status + score + reasons only) ----
 var label planLbl = na
@@ -622,6 +808,77 @@ if barstate.islast and showPlanLbl and planStatus != "WAIT"
     string body = planStatus + "   (" + str.tostring(math.round(tradeScore)) + " / " + gradeTxt + ")\n"
     body += "──────────────\n" + f_reasons()
     planLbl := label.new(bar_index, low - atr14*1.2, body, xloc=xloc.bar_index, style=label.style_label_up, color=color.new(planColor, 12), textcolor=color.white, size=size.small, textalign=text.align_left)
+
+// ============================================================================
+//  AI MORNING BRIEF  (institutional pre-trade plan, M21)
+// ============================================================================
+var table brief = na
+if barstate.islast and showBrief
+    if not na(brief)
+        table.delete(brief)
+    bsz = f_txtSize(dashSize)
+    brief := table.new(f_tblPos(briefPos), 2, 9, bgcolor=cPanelBg, frame_color=cFrame, frame_width=1, border_color=cGrid, border_width=0)
+    f_hdr(brief, bsz, 0, "◆  AI MORNING BRIEF")
+    f_row(brief, bsz, 1, "Bias", marketBias, biasColor)
+    f_row(brief, bsz, 2, "Day Type", dayType, marketStateColor)
+    f_row(brief, bsz, 3, "Preferred Buy", (na(valPrice) or na(pocPrice)) ? "—" : f_px(valPrice) + "–" + f_px(pocPrice), cBull)
+    f_row(brief, bsz, 4, "Preferred Sell", (na(pocPrice) or na(vahPrice)) ? "—" : f_px(pocPrice) + "–" + f_px(vahPrice), cBear)
+    f_row(brief, bsz, 5, "Expected Range", (na(expLow) or na(expHigh)) ? "—" : f_px(expLow) + "–" + f_px(expHigh), cText)
+    f_row(brief, bsz, 6, "Best Session", bestSession, cText)
+    f_row(brief, bsz, 7, "Plan", planStatus, planColor)
+    f_row(brief, bsz, 8, "Confidence", str.tostring(math.round(tradeScore)) + "%", tradeScore >= 70 ? cBull : cTextDim)
+
+// ============================================================================
+//  RANKED KEY LEVELS  (top 5 strongest, by strength then proximity)
+// ============================================================================
+var table keyT = na
+if barstate.islast and showKeyPanel
+    if not na(keyT)
+        table.delete(keyT)
+    ksz = f_txtSize(dashSize)
+    prices = array.new_float()
+    names  = array.new_string()
+    stars  = array.new_int()
+    f_addLvl(prices, names, stars, wPOC, "Weekly POC", 5)
+    f_addLvl(prices, names, stars, mPOC, "Monthly POC", 5)
+    f_addLvl(prices, names, stars, showVwapM ? vwapM : na, "Monthly VWAP", 5)
+    f_addLvl(prices, names, stars, vwapD, "Daily VWAP", 4)
+    f_addLvl(prices, names, stars, vwapW, "Weekly VWAP", 4)
+    f_addLvl(prices, names, stars, dPOC, "Daily POC", 4)
+    f_addLvl(prices, names, stars, vahPrice, "VAH", 3)
+    f_addLvl(prices, names, stars, valPrice, "VAL", 3)
+    f_addLvl(prices, names, stars, hvn1, "HVN", 3)
+    f_addLvl(prices, names, stars, pdh, "PDH", 3)
+    f_addLvl(prices, names, stars, pdl, "PDL", 3)
+    f_addLvl(prices, names, stars, lvn1, "LVN", 2)
+
+    int n = array.size(prices)
+    weights = array.new_float(n, -1e30)
+    for i = 0 to (n > 0 ? n - 1 : 0)
+        if i < n
+            float d = math.abs(close - array.get(prices, i)) / syminfo.mintick
+            array.set(weights, i, array.get(stars, i) * 100000.0 - d)
+    int showN = math.min(5, n)
+    keyT := table.new(f_tblPos(keyPos), 3, showN + 1, bgcolor=cPanelBg, frame_color=cFrame, frame_width=1, border_color=cGrid, border_width=0)
+    table.cell(keyT, 0, 0, "◆  KEY LEVELS", text_color=cText, text_size=ksz, text_halign=text.align_left, bgcolor=cPanelHdr)
+    table.cell(keyT, 1, 0, "", bgcolor=cPanelHdr)
+    table.cell(keyT, 2, 0, "", bgcolor=cPanelHdr)
+    for rank = 1 to showN
+        int best = -1
+        float bestW = -1e30
+        for i = 0 to n - 1
+            float w = array.get(weights, i)
+            if w > bestW
+                bestW := w
+                best := i
+        if best >= 0
+            float p  = array.get(prices, best)
+            string nm = array.get(names, best)
+            int st   = array.get(stars, best)
+            table.cell(keyT, 0, rank, nm, text_color=cTextDim, text_size=ksz, text_halign=text.align_left)
+            table.cell(keyT, 1, rank, f_stars(st), text_color=cPoc, text_size=ksz, text_halign=text.align_center)
+            table.cell(keyT, 2, rank, f_px(p), text_color=p >= close ? cRes : cSup, text_size=ksz, text_halign=text.align_right)
+            array.set(weights, best, -1e30)
 
 // ============================================================================
 //  M16 — SMART ALERTS

@@ -46,6 +46,17 @@ Works on any symbol/timeframe, but it is tuned for **intraday day trading**
 | M17 | **Clean Chart** | All drawings are recycled on the last bar; object count stays bounded |
 | M18 | **Customization** | Every color, module, opacity, position, size, and threshold is an input |
 
+### Pro upgrade (v2)
+
+| Feature | What it does |
+|---------|--------------|
+| **Multi-Timeframe POC** | Daily / Weekly / Monthly Point of Control so you instantly see where institutions traded across timeframes (approximated from intraday bars, lookback capped for performance) |
+| **Ranked Key Levels** | A dedicated panel showing only the **top 5** levels, ranked by strength (★ rating) then proximity — Weekly/Monthly POC & VWAP outrank intraday HVN/LVN. Prices colour as resistance (above) or support (below) |
+| **Session Intelligence** | Active session (Asia / London / New York), ADR(N), today's range, range-used %, Initial Balance (configurable minutes), and best (highest-volume) session of the day |
+| **Auction Market Theory** | Profile shape — **P-shape** (accumulation), **b-shape** (distribution), **D-shape** (balanced) — plus Poor High / Poor Low warnings and a Day-Type classifier (Trend / Balanced / Expansion / Compression / Normal) |
+| **Volume Delta Approximation** | Buyers % vs Sellers % and a "Buyers/Sellers Dominating" read, estimated from bar location × volume (Pine has no true bid/ask tape) |
+| **AI Morning Brief** | A pre-trade panel: bias, day type, preferred buy zone (VAL–POC), preferred sell zone (POC–VAH), expected range, best session, plan and confidence |
+
 ---
 
 ## Design principles
@@ -90,6 +101,20 @@ out the rest of the time.
 - **Theme**: `Dark Glass` (default) or `Light`; full color overrides available.
 
 ---
+
+## Deliberately not built (and why)
+
+A few requested ideas aren't a good fit for Pine Script and would be dishonest
+to fake, so they're left out rather than shipped half-working:
+
+- **True bid/ask volume delta** — Pine has no access to the order tape. We ship a
+  transparent *approximation* (Buyers/Sellers %) instead of pretending to have real delta.
+- **Replay coaching / trade replay review** ("good entry, poor exit") — Pine can't
+  persist a trade journal across sessions or read your fills, so a genuine post-trade
+  coach belongs in a companion app, not the indicator. The Morning Brief + live plan
+  cover the *pre*-trade side well.
+- **Next-day level projection** — beyond the ADR-based Expected Range we already show,
+  projecting tomorrow's POC/VA reliably needs data Pine doesn't expose intraday.
 
 ## Notes & limitations
 
