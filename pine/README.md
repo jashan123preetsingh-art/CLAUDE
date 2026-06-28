@@ -1,7 +1,8 @@
-# EMA + Market Structure PRO (v2)
+# EMA + Market Structure PRO (v3)
 
-A premium-grade, **non-repainting TradingView Pine Script v6** indicator. Four
-engines that only fire a signal when *everything* aligns.
+A focused, **non-repainting TradingView Pine Script v6** price-action engine —
+deliberately *no* liquidity sweeps, FVGs, order blocks or oscillators. Just a
+fast, clean, reliable decision engine.
 
 > File: [`InstitutionalEMA_MarketStructure.pine`](./InstitutionalEMA_MarketStructure.pine)
 
@@ -9,52 +10,45 @@ engines that only fire a signal when *everything* aligns.
 
 | Engine | What it does |
 | --- | --- |
-| **Triple-EMA trend** | **8** (momentum / white), **33** (trend / orange), **200** (macro / red). Bullish = `8 > 33 > 200` and price above the 33 (does **not** require price above the 200 — that only delays entries). |
-| **Market Structure** | Strong-BOS / CHoCH only. A break counts when the candle **closes** beyond structure, body ≥ 60 % of range, and penetration > ATR × 0.15. Weak breaks are ignored. **Adaptive swing length** scales with volatility (low → 10, mid → 15, high → 20). |
-| **Key Levels** | Adaptive demand/supply zones with **touch-based strength** (★☆), brighter borders the more a level is respected. Premium colours — support **blue**, resistance **yellow**, broken support → **orange**, broken resistance → **cyan**. |
-| **Confidence Engine** | 0-100 score: Trend 20 · Structure 20 · Zone 20 · Displacement 20 · EMA alignment 10 · Session 10. |
+| **Triple-EMA + Strength** | 8 / 33 / 200. Trend **quality** is measured by EMA separation, not just order: **Weak · Moderate · Strong · Explosive**. |
+| **Market Structure** | Strong-BOS / CHoCH only (close beyond structure + body ≥ 60 % + > ATR×0.15). ATR-adaptive swing length (10 / 15 / 20). |
+| **Key Levels + Freshness** | Demand/supply zones scored **Fresh · Tested 1x · Tested 2x · Weak**. Fresher = brighter border + higher confidence. Premium colours; broken support → orange, broken resistance → cyan. |
+| **Market-State Engine** | Classifies **Trending · Pullback · Range · Compression**. Signals are blocked in Range / Compression. |
+| **Confidence + Grade** | 0-100 (trend-strength 20 · structure 20 · zone-freshness 20 · displacement 15 · EMA align 5 · session 5 · HTF 15). Rendered as **A+ (95-100) / A (90-94) / B (≥ threshold)** — anything below is hidden. |
+| **HTF confirmation** | One higher timeframe (default 1H). Alignment adds to confidence; conflict reduces it. |
+| **Auto risk** | On every signal: Entry / Stop / Take-Profit lines + RR label, drawn for you. |
 
 ## A signal needs ALL of this
 
-**BUY** (SELL is the mirror):
-1. ✓ Bullish EMA trend
-2. ✓ Strong displacement BOS/CHoCH (not a weak break)
-3. ✓ Strong candle (body ≥ 60 % **or** range ≥ 1.2 ATR)
-4. ✓ Price inside a fresh **demand** zone
-5. ✓ ATR expansion — no flat EMAs, no contracted/ranging market
-6. ✓ Risk:Reward ≥ **1:2** (SL at structure/zone, TP at next zone)
-7. ✓ Confidence ≥ **85 %** (configurable)
-8. ✓ (optional) London / New York / Asia session
+**BUY** (SELL mirrors): bullish trend · strong displacement BOS/CHoCH · price in a
+**fresh demand** zone · market state Trending/Pullback (not Range/Compression) ·
+trend strength ≥ Moderate · RR ≥ **1:2** · confidence ≥ threshold · optional session.
 
-Signals print as a clean `BUY 94%` / `SELL 91%` label.
+Prints as a small `BUY A+ 96%` label, with Entry/SL/TP auto-drawn.
 
-## Dashboard (top-right, configurable)
+## Dashboard (top-right)
 
-Trend · Momentum · Structure (HH/HL…) · Nearest Demand · Nearest Resistance ·
-Session · **Confidence %** with live signal.
+Trend · **Strength** · **Market State** · HTF · Structure · Nearest Demand ·
+Nearest Resistance · **Recommended RR** · Confidence + grade.
 
-## Extras
+## Visual polish
 
-- **Candle colouring** (optional): dark-green bull trend, grey pullback, dark-red bear.
-- **Smart filter**: blocks signals on flat EMAs, contracted ATR, small bodies, or RR < target.
-- **Rich alerts** with trend, confidence, structure, zone, symbol and timeframe; plus
-  simple `alertcondition` alerts for BUY/SELL, strong BOS, and zone breaks.
+Gradient EMA fill (intensity scales with separation), small consistent labels,
+faded BOS/CHoCH tags, transparent backgrounds, tidy spacing.
 
 ## Non-repainting
 
-Swings & zones use confirmed `ta.pivot*` (fixed lag). Adaptive swing selects
-between **constant-length** pivot streams (10/15/20) by ATR regime, so each
-stream stays non-repainting. Breaks, zone touches and zone breaks all evaluate
-on closed bars.
+Swings & zones from confirmed `ta.pivot*` (fixed lag). HTF reads the previous
+completed bar with lookahead-on. Every state resolves on bar close.
 
 ## Install
 
-**TradingView → Pine Editor** → clear the editor → paste the file → save → **Add
-to chart**. Tune EMAs, swing/zone look-back, confidence threshold, RR and
-sessions in settings. Defaults are tuned for **XAUUSD 15m**.
+**TradingView → Pine Editor** → clear editor → paste → save → **Add to chart**.
+Defaults tuned for **XAUUSD 15m**. If signals feel too rare, lower *Min
+confidence* or disable the session restriction first.
 
 ---
 
 *Structure engine inspired by "Market Structure" © Leviathan; key-level concept
-inspired by "Bjorgum Key Levels" © Bjorgum. Self-contained, no library imports.
+inspired by "Bjorgum Key Levels" © Bjorgum. Self-contained, no imports.
 Educational / analytical tool — not financial advice.*
