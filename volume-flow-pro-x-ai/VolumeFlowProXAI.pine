@@ -1,0 +1,671 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Volume Flow Pro X AI
+//
+// ============================================================================
+//  VOLUME FLOW PRO X AI  —  The Ultimate Day Trading Workspace
+// ----------------------------------------------------------------------------
+//  An institutional Volume Profile + VWAP trading workspace for TradingView.
+//  This is not a buy/sell signal indicator. It is a decision-support terminal
+//  built on four primitives only: Price, Volume, VWAP and the Volume Profile.
+//
+//  Design goals: Bloomberg/Bookmap-grade clarity, minimal chart clutter,
+//  non-repainting, replay-compatible, memory-bounded object usage.
+//
+//  Architecture (matches the project module map):
+//    M1  Fixed Range Volume Profile (POC / VAH / VAL / HVN / LVN)
+//    M2  Anchored VWAP
+//    M3  Professional VWAP Suite (Daily / Weekly / Monthly + slope)
+//    M4  Standard Deviation Bands
+//    M8  Volume Flow Engine (relative volume rating, pressure)
+//    M9  Smart Price Action (trend / swings / S&R)
+//    M12 Market Condition Engine
+//    M13 Trade Quality Engine (0-100 score)
+//    M14 / M21  AI Trade Plan Engine (WAIT / BUY ZONE / SELL ZONE)
+//    M15 Professional Dashboard
+//    M16 Smart Alerts
+//    M17 Clean Chart Engine (bounded object recycling)
+//    M18 Customization
+//  ============================================================================
+//@version=6
+
+indicator("Volume Flow Pro X AI", shorttitle="VF Pro X AI", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500)
+
+// ============================================================================
+//  THEME & COLOR SYSTEM  (M18 / M20)
+// ============================================================================
+grpTheme = "◈  Theme & Appearance"
+themeMode   = input.string("Dark Glass", "Theme", options=["Dark Glass", "Light"], group=grpTheme)
+accentTransp = input.int(80, "Dashboard Opacity (lower = solid)", minval=40, maxval=95, group=grpTheme, tooltip="Glass transparency of the dashboard background. 80 ≈ soft glass.")
+
+// Elegant institutional palette — no rainbow, every hue has a job.
+cBull   = input.color(#26a69a, "Bullish",   group=grpTheme, inline="c1")
+cBear   = input.color(#ef5350, "Bearish",   group=grpTheme, inline="c1")
+cVwap   = input.color(#4fc3f7, "VWAP (Sky)", group=grpTheme, inline="c2")
+cPoc    = input.color(#ffca28, "POC (Gold)", group=grpTheme, inline="c2")
+cVah    = input.color(#ffa726, "VAH (Orange)", group=grpTheme, inline="c3")
+cVal    = input.color(#ab47bc, "VAL (Purple)", group=grpTheme, inline="c3")
+cHvn    = input.color(#42a5f5, "HVN (Blue)", group=grpTheme, inline="c4")
+cLvn    = input.color(#90a4ae, "LVN (Gray)", group=grpTheme, inline="c4")
+cSup    = input.color(#42a5f5, "Support",    group=grpTheme, inline="c5")
+cRes    = input.color(#ffa726, "Resistance", group=grpTheme, inline="c5")
+
+isLight = themeMode == "Light"
+cPanelBg   = isLight ? color.new(#ffffff, accentTransp - 20) : color.new(#0d1117, accentTransp)
+cPanelHdr  = isLight ? color.new(#eef2f7, 10) : color.new(#161b22, 10)
+cText      = isLight ? color.new(#1c2330, 0) : color.new(#e6edf3, 0)
+cTextDim   = isLight ? color.new(#5b6573, 0) : color.new(#8b949e, 0)
+cFrame     = isLight ? color.new(#c9d2dd, 30) : color.new(#30363d, 30)
+cGrid      = isLight ? color.new(#d6dde6, 40) : color.new(#21262d, 30)
+
+// ============================================================================
+//  GLOBAL TOGGLES  (M18)
+// ============================================================================
+grpShow = "◈  Modules"
+showProfile  = input.bool(true,  "Volume Profile (FRVP)", group=grpShow)
+showVwapD    = input.bool(true,  "Daily VWAP + Bands",    group=grpShow)
+showVwapW    = input.bool(true,  "Weekly VWAP",           group=grpShow)
+showVwapM    = input.bool(false, "Monthly VWAP",          group=grpShow)
+showAnchored = input.bool(false, "Anchored VWAP",         group=grpShow)
+showKeyLvls  = input.bool(true,  "Key Day Levels (PDH/PDL/OR)", group=grpShow)
+showSR       = input.bool(true,  "Support / Resistance",  group=grpShow)
+showDash     = input.bool(true,  "Professional Dashboard",group=grpShow)
+showPlanLbl  = input.bool(true,  "Trade Plan Label on chart", group=grpShow)
+
+// ============================================================================
+//  M1 — FIXED RANGE VOLUME PROFILE  (inputs)
+// ============================================================================
+grpVP = "◈  Volume Profile (M1 / M6 / M7)"
+vpMode    = input.string("Auto (Lookback)", "Range Mode", options=["Auto (Lookback)", "Session", "Manual Bars"], group=grpVP, tooltip="Auto = rolling lookback window. Session = current trading day. Manual = fixed bar count ending now.")
+vpLookback= input.int(260, "Lookback Bars", minval=20, maxval=1500, group=grpVP)
+vpBins    = input.int(40, "Profile Resolution (rows)", minval=12, maxval=120, group=grpVP, tooltip="Number of price bins. Higher = finer profile, slightly more CPU.")
+vpWidthPct= input.float(28, "Profile Width (% of range)", minval=5, maxval=90, group=grpVP)
+vpSide    = input.string("Right", "Profile Side", options=["Right", "Left"], group=grpVP)
+vaPercent = input.float(70, "Value Area %", minval=50, maxval=90, group=grpVP)
+vpProfTransp = input.int(78, "Profile Transparency", minval=40, maxval=95, group=grpVP)
+showHVNLVN  = input.bool(true, "Show Top HVN / LVN levels", group=grpVP)
+maxNodes    = input.int(2, "Top N HVN / LVN to draw", minval=1, maxval=3, group=grpVP, tooltip="Day-trader default keeps the chart clean: 2 each.")
+
+// ============================================================================
+//  M3 — VWAP SUITE  (inputs)
+// ============================================================================
+grpVWAP = "◈  VWAP Suite (M3 / M4)"
+vwapSrc   = input.source(hlc3, "VWAP Source", group=grpVWAP)
+showBands = input.bool(true, "Daily VWAP Std-Dev Bands", group=grpVWAP)
+band1Mult = input.float(1.0, "Band ±σ (1)", minval=0.1, step=0.1, group=grpVWAP, inline="b")
+band2Mult = input.float(2.0, "Band ±σ (2)", minval=0.1, step=0.1, group=grpVWAP, inline="b")
+vwapWidth = input.int(2, "VWAP Line Width", minval=1, maxval=4, group=grpVWAP)
+
+// ============================================================================
+//  M2 — ANCHORED VWAP  (inputs)
+// ============================================================================
+grpAVWAP = "◈  Anchored VWAP (M2)"
+avwapAnchorTime = input.time(timestamp("01 Jan 2024 00:00 +0000"), "Anchor Point", group=grpAVWAP, confirm=true, tooltip="Click a candle on the chart to anchor the VWAP, or set a date.")
+
+// ============================================================================
+//  M9 — PRICE ACTION / TREND  (inputs)
+// ============================================================================
+grpPA = "◈  Price Action & Trend (M9 / M12)"
+swingLen  = input.int(10, "Swing Pivot Strength", minval=2, maxval=50, group=grpPA)
+trendLen  = input.int(50, "Trend EMA Length", minval=5, maxval=400, group=grpPA)
+volMaLen  = input.int(20, "Relative Volume Length", minval=5, maxval=200, group=grpPA)
+
+// ============================================================================
+//  M13 / M14 — TRADE PLAN ENGINE  (inputs)
+// ============================================================================
+grpAI = "◈  AI Trade Plan (M13 / M14 / M21)"
+scoreThreshold = input.int(70, "Min Trade Score to arm a plan", minval=50, maxval=95, group=grpAI, tooltip="Below this, the engine stays in WAIT to protect against overtrading.")
+atrLenRisk = input.int(14, "ATR Length (stops/targets)", minval=5, maxval=50, group=grpAI)
+
+// ============================================================================
+//  M15 — DASHBOARD  (inputs)
+// ============================================================================
+grpDash = "◈  Dashboard (M15)"
+dashPos  = input.string("Top Right", "Position", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left", "Middle Right"], group=grpDash)
+dashSize = input.string("Normal", "Size", options=["Tiny", "Small", "Normal", "Large"], group=grpDash)
+
+// ============================================================================
+//  HELPERS
+// ============================================================================
+f_tblPos(p) =>
+    switch p
+        "Top Right"     => position.top_right
+        "Top Left"      => position.top_left
+        "Bottom Right"  => position.bottom_right
+        "Bottom Left"   => position.bottom_left
+        "Middle Right"  => position.middle_right
+        => position.top_right
+
+f_txtSize(s) =>
+    switch s
+        "Tiny"   => size.tiny
+        "Small"  => size.small
+        "Normal" => size.normal
+        "Large"  => size.large
+        => size.normal
+
+// Round to symbol tick for clean display
+f_px(x) => str.tostring(math.round_to_mintick(x))
+
+// ============================================================================
+//  M3 / M4 — VWAP SUITE (manual, full control over slope + bands, no repaint)
+// ----------------------------------------------------------------------------
+//  Manual accumulation lets us expose variance (for σ bands) and slope, and
+//  keeps everything calculated bar-by-bar so it is replay/realtime consistent.
+// ============================================================================
+f_vwap(src, anchorCond) =>
+    var float sumPV  = 0.0
+    var float sumV   = 0.0
+    var float sumP2V = 0.0
+    if anchorCond
+        sumPV  := 0.0
+        sumV   := 0.0
+        sumP2V := 0.0
+    vol = nz(volume)
+    sumPV  += src * vol
+    sumV   += vol
+    sumP2V += src * src * vol
+    vw  = sumV > 0 ? sumPV / sumV : src
+    varc = sumV > 0 ? math.max(sumP2V / sumV - vw * vw, 0.0) : 0.0
+    dev = math.sqrt(varc)
+    [vw, dev]
+
+newDay   = timeframe.change("D")
+newWeek  = timeframe.change("W")
+newMonth = timeframe.change("M")
+
+[vwapD, devD] = f_vwap(vwapSrc, newDay)
+[vwapW, _devW] = f_vwap(vwapSrc, newWeek)
+[vwapM, _devM] = f_vwap(vwapSrc, newMonth)
+[vwapA, _devA] = f_vwap(vwapSrc, time == avwapAnchorTime or (time > avwapAnchorTime and time[1] < avwapAnchorTime))
+
+// Daily VWAP bands
+vwapD_u1 = vwapD + devD * band1Mult
+vwapD_l1 = vwapD - devD * band1Mult
+vwapD_u2 = vwapD + devD * band2Mult
+vwapD_l2 = vwapD - devD * band2Mult
+
+// VWAP slope / direction (M3) — normalized by ATR so it is symbol-agnostic
+atr14 = ta.atr(atrLenRisk)
+vwapSlope = (vwapD - vwapD[3]) / (atr14 == 0 ? syminfo.mintick : atr14)
+vwapDir = vwapSlope > 0.06 ? "Rising" : vwapSlope < -0.06 ? "Falling" : "Flat"
+vwapDColor = vwapDir == "Rising" ? cBull : vwapDir == "Falling" ? cBear : cTextDim
+
+// ---- VWAP plots ----
+pVwapD = plot(showVwapD ? vwapD : na, "Daily VWAP", color=vwapDColor, linewidth=vwapWidth)
+pU1 = plot(showVwapD and showBands ? vwapD_u1 : na, "VWAP +1σ", color=color.new(cVwap, 55), linewidth=1)
+pL1 = plot(showVwapD and showBands ? vwapD_l1 : na, "VWAP -1σ", color=color.new(cVwap, 55), linewidth=1)
+pU2 = plot(showVwapD and showBands ? vwapD_u2 : na, "VWAP +2σ", color=color.new(cVwap, 75), linewidth=1)
+pL2 = plot(showVwapD and showBands ? vwapD_l2 : na, "VWAP -2σ", color=color.new(cVwap, 75), linewidth=1)
+fill(pU1, pL1, color=showVwapD and showBands ? color.new(cVwap, 92) : na, title="VWAP 1σ fill")
+fill(pU2, pU1, color=showVwapD and showBands ? color.new(cVwap, 95) : na, title="VWAP 2σ upper fill")
+fill(pL1, pL2, color=showVwapD and showBands ? color.new(cVwap, 95) : na, title="VWAP 2σ lower fill")
+
+plot(showVwapW ? vwapW : na, "Weekly VWAP", color=color.new(cVwap, 30), linewidth=1, style=plot.style_line)
+plot(showVwapM ? vwapM : na, "Monthly VWAP", color=color.new(#7e57c2, 20), linewidth=1, style=plot.style_line)
+plot(showAnchored ? vwapA : na, "Anchored VWAP", color=color.new(#ffb74d, 10), linewidth=2, style=plot.style_line)
+
+// ============================================================================
+//  M9 — PRICE ACTION: trend, swings, support/resistance
+// ============================================================================
+emaTrend = ta.ema(close, trendLen)
+trendUp  = close > emaTrend and emaTrend > emaTrend[3]
+trendDn  = close < emaTrend and emaTrend < emaTrend[3]
+trendStr = math.abs(close - emaTrend) / (atr14 == 0 ? syminfo.mintick : atr14)
+
+ph = ta.pivothigh(high, swingLen, swingLen)
+pl = ta.pivotlow(low, swingLen, swingLen)
+var float lastResistance = na
+var float lastSupport    = na
+var float prevPH = na
+var float prevPL = na
+if not na(ph)
+    prevPH := lastResistance
+    lastResistance := ph[0]
+if not na(pl)
+    prevPL := lastSupport
+    lastSupport := pl[0]
+
+// Higher-high / lower-low structure for trend confirmation
+structBull = not na(lastSupport) and not na(prevPL) and lastSupport > prevPL
+structBear = not na(lastResistance) and not na(prevPH) and lastResistance < prevPH
+
+// ============================================================================
+//  M8 — VOLUME FLOW ENGINE
+// ============================================================================
+volMa = ta.sma(volume, volMaLen)
+relVol = volMa > 0 ? volume / volMa : 1.0
+volRating = relVol >= 2.0 ? "Very High" : relVol >= 1.4 ? "High" : relVol >= 0.8 ? "Normal" : relVol >= 0.5 ? "Low" : "Very Low"
+volRColor = relVol >= 1.4 ? cBull : relVol < 0.8 ? cTextDim : cText
+// Buying vs selling pressure from where price closes within the bar, weighted by volume
+barRange = high - low
+buyP  = barRange > 0 ? (close - low) / barRange : 0.5
+pressure = ta.ema((buyP - 0.5) * 2 * relVol, 9)   // >0 buyers, <0 sellers
+pressureTxt = pressure > 0.25 ? "Strong Buyers" : pressure > 0.05 ? "Buyers" : pressure < -0.25 ? "Strong Sellers" : pressure < -0.05 ? "Sellers" : "Balanced"
+pressureColor = pressure > 0.05 ? cBull : pressure < -0.05 ? cBear : cTextDim
+
+// ============================================================================
+//  M1 / M6 / M7 — FIXED RANGE VOLUME PROFILE ENGINE
+// ----------------------------------------------------------------------------
+//  Computed once on the last bar for performance. Each historical bar's volume
+//  is distributed across the price bins it overlaps (proportional to overlap),
+//  which is far more accurate than dumping volume into a single bin.
+// ============================================================================
+// Determine the working range length
+sessLen = ta.barssince(newDay) + 1
+rangeLen = vpMode == "Session" ? math.min(sessLen, 1440) : vpMode == "Manual Bars" ? vpLookback : vpLookback
+rangeLen := math.max(rangeLen, 10)
+
+rngTop = ta.highest(high, rangeLen)
+rngBot = ta.lowest(low, rangeLen)
+
+var float[] binVol = array.new_float(vpBins, 0.0)
+var box[]   vpBoxes = array.new_box()
+var line[]  vpLines = array.new_line()
+var label[] vpLabels= array.new_label()
+
+// Outputs of the profile engine (persist for dashboard / plan)
+var float pocPrice = na
+var float vahPrice = na
+var float valPrice = na
+var float hvn1 = na
+var float hvn2 = na
+var float lvn1 = na
+var float lvn2 = na
+
+f_clearDrawings() =>
+    if array.size(vpBoxes) > 0
+        for b in vpBoxes
+            box.delete(b)
+        array.clear(vpBoxes)
+    if array.size(vpLines) > 0
+        for l in vpLines
+            line.delete(l)
+        array.clear(vpLines)
+    if array.size(vpLabels) > 0
+        for la in vpLabels
+            label.delete(la)
+        array.clear(vpLabels)
+
+// Draw a horizontal level line + right-aligned label (global so it is reusable)
+f_level(price, col, txt, styl, lx, rx) =>
+    ln = line.new(lx, price, rx, price, color=col, width=1, style=styl, xloc=xloc.bar_index)
+    array.push(vpLines, ln)
+    la = label.new(rx, price, txt + "  " + f_px(price), xloc=xloc.bar_index, style=label.style_label_left, color=color.new(col, 85), textcolor=col, size=size.small)
+    array.push(vpLabels, la)
+
+if barstate.islast
+    f_clearDrawings()
+    array.fill(binVol, 0.0)
+    float top = rngTop
+    float bot = rngBot
+    float binSize = (top - bot) / vpBins
+    if binSize > 0
+        // ---- distribute volume into bins ----
+        for i = 0 to rangeLen - 1
+            float bh = high[i]
+            float bl = low[i]
+            float bv = nz(volume[i])
+            float brange = bh - bl
+            if brange <= 0
+                idx = math.min(math.max(int((close[i] - bot) / binSize), 0), vpBins - 1)
+                array.set(binVol, idx, array.get(binVol, idx) + bv)
+            else
+                loIdx = math.min(math.max(int((bl - bot) / binSize), 0), vpBins - 1)
+                hiIdx = math.min(math.max(int((bh - bot) / binSize), 0), vpBins - 1)
+                for j = loIdx to hiIdx
+                    binBot = bot + j * binSize
+                    binTop = binBot + binSize
+                    overlap = math.min(bh, binTop) - math.max(bl, binBot)
+                    if overlap > 0
+                        array.set(binVol, j, array.get(binVol, j) + bv * overlap / brange)
+
+        // ---- POC ----
+        float maxV = array.max(binVol)
+        int pocIdx = array.indexof(binVol, maxV)
+        pocPrice := bot + (pocIdx + 0.5) * binSize
+
+        // ---- Value Area (expand from POC to vaPercent of total volume) ----
+        float totalV = array.sum(binVol)
+        float vaTarget = totalV * vaPercent / 100.0
+        float acc = maxV
+        int up = pocIdx
+        int dn = pocIdx
+        int guard = 0
+        while acc < vaTarget and (up < vpBins - 1 or dn > 0) and guard < vpBins * 2
+            float vUp = up < vpBins - 1 ? array.get(binVol, up + 1) : -1.0
+            float vDn = dn > 0 ? array.get(binVol, dn - 1) : -1.0
+            if vUp >= vDn
+                up += 1
+                acc += vUp
+            else
+                dn -= 1
+                acc += vDn
+            guard += 1
+        vahPrice := bot + (up + 1) * binSize
+        valPrice := bot + dn * binSize
+
+        // ---- HVN / LVN detection (local maxima / minima vs average) ----
+        float avgV = totalV / vpBins
+        hvn1 := na
+        hvn2 := na
+        lvn1 := na
+        lvn2 := na
+        float hvn1v = 0.0
+        float hvn2v = 0.0
+        float lvn1v = 1e30
+        float lvn2v = 1e30
+        for k = 1 to vpBins - 2
+            float v  = array.get(binVol, k)
+            float vp = array.get(binVol, k - 1)
+            float vn = array.get(binVol, k + 1)
+            float price = bot + (k + 0.5) * binSize
+            isHVN = v > vp and v > vn and v > avgV * 1.1 and k != pocIdx
+            isLVN = v < vp and v < vn and v < avgV * 0.6
+            if isHVN
+                if v > hvn1v
+                    hvn2 := hvn1
+                    hvn2v := hvn1v
+                    hvn1 := price
+                    hvn1v := v
+                else if v > hvn2v
+                    hvn2 := price
+                    hvn2v := v
+            if isLVN
+                if v < lvn1v
+                    lvn2 := lvn1
+                    lvn2v := lvn1v
+                    lvn1 := price
+                    lvn1v := v
+                else if v < lvn2v
+                    lvn2 := price
+                    lvn2v := v
+
+        // ---- DRAW the profile (M1 display) ----
+        if showProfile
+            int profW = math.max(int(vpWidthPct / 100.0 * rangeLen), 3)
+            int anchorX = bar_index
+            for i = 0 to vpBins - 1
+                float v = array.get(binVol, i)
+                if v > 0
+                    int w = math.max(int(profW * v / maxV), 0)
+                    float binBot = bot + i * binSize
+                    float binTop = binBot + binSize
+                    inVA = (binBot + binSize/2) <= vahPrice and (binBot + binSize/2) >= valPrice
+                    isPocBin = i == pocIdx
+                    col = isPocBin ? color.new(cPoc, vpProfTransp - 25) : inVA ? color.new(cHvn, vpProfTransp) : color.new(cTextDim, vpProfTransp + 8)
+                    int x1 = vpSide == "Right" ? anchorX - w : anchorX
+                    int x2 = vpSide == "Right" ? anchorX : anchorX + w
+                    array.push(vpBoxes, box.new(x1, binTop, x2, binBot, border_width=0, bgcolor=col, xloc=xloc.bar_index))
+
+        // ---- DRAW POC / VAH / VAL levels + labels ----
+        int lineLeft  = bar_index - rangeLen + 1
+        int lineRight = bar_index + 6
+        f_level(pocPrice, cPoc, "POC", line.style_solid, lineLeft, lineRight)
+        f_level(vahPrice, cVah, "VAH", line.style_dashed, lineLeft, lineRight)
+        f_level(valPrice, cVal, "VAL", line.style_dashed, lineLeft, lineRight)
+
+        if showHVNLVN
+            if not na(hvn1) and maxNodes >= 1
+                f_level(hvn1, cHvn, "HVN", line.style_dotted, lineLeft, lineRight)
+            if not na(hvn2) and maxNodes >= 2
+                f_level(hvn2, cHvn, "HVN", line.style_dotted, lineLeft, lineRight)
+            if not na(lvn1) and maxNodes >= 1
+                f_level(lvn1, cLvn, "LVN", line.style_dotted, lineLeft, lineRight)
+            if not na(lvn2) and maxNodes >= 2
+                f_level(lvn2, cLvn, "LVN", line.style_dotted, lineLeft, lineRight)
+
+// ============================================================================
+//  KEY DAY-TRADER LEVELS (PDH / PDL / PDC / Opening Range)  (M21 / workflow)
+// ============================================================================
+[pdh, pdl, pdc] = request.security(syminfo.tickerid, "D", [high[1], low[1], close[1]], lookahead=barmerge.lookahead_on)
+
+// Opening range = first 30 minutes of the session (configurable concept; uses session start)
+var float orH = na
+var float orL = na
+var int   orBars = 0
+orMinutes = 30
+barsPerOR = math.max(int(orMinutes / math.max(timeframe.in_seconds() / 60, 1)), 1)
+if newDay
+    orH := high
+    orL := low
+    orBars := 1
+else if orBars > 0 and orBars < barsPerOR
+    orH := math.max(orH, high)
+    orL := math.min(orL, low)
+    orBars += 1
+
+var line lnPDH = na
+var line lnPDL = na
+var line lnPDC = na
+var line lnORH = na
+var line lnORL = na
+var label lbPDH = na
+var label lbPDL = na
+
+if barstate.islast and showKeyLvls
+    line.delete(lnPDH)
+    line.delete(lnPDL)
+    line.delete(lnPDC)
+    line.delete(lnORH)
+    line.delete(lnORL)
+    label.delete(lbPDH)
+    label.delete(lbPDL)
+    lx1 = bar_index - 80
+    lx2 = bar_index + 6
+    lnPDH := line.new(lx1, pdh, lx2, pdh, color=color.new(cRes, 35), style=line.style_dashed, xloc=xloc.bar_index)
+    lnPDL := line.new(lx1, pdl, lx2, pdl, color=color.new(cSup, 35), style=line.style_dashed, xloc=xloc.bar_index)
+    lnPDC := line.new(lx1, pdc, lx2, pdc, color=color.new(cTextDim, 40), style=line.style_dotted, xloc=xloc.bar_index)
+    lbPDH := label.new(lx2, pdh, "PDH " + f_px(pdh), xloc=xloc.bar_index, style=label.style_label_left, color=color.new(cRes, 88), textcolor=cRes, size=size.small)
+    lbPDL := label.new(lx2, pdl, "PDL " + f_px(pdl), xloc=xloc.bar_index, style=label.style_label_left, color=color.new(cSup, 88), textcolor=cSup, size=size.small)
+    if not na(orH)
+        lnORH := line.new(lx1, orH, lx2, orH, color=color.new(cVah, 55), style=line.style_solid, xloc=xloc.bar_index)
+        lnORL := line.new(lx1, orL, lx2, orL, color=color.new(cVal, 55), style=line.style_solid, xloc=xloc.bar_index)
+
+// Support / Resistance pivots (M9)
+var line lnSup = na
+var line lnRes = na
+if barstate.islast and showSR
+    line.delete(lnSup)
+    line.delete(lnRes)
+    if not na(lastSupport)
+        lnSup := line.new(bar_index - 60, lastSupport, bar_index + 6, lastSupport, color=color.new(cSup, 45), width=1, xloc=xloc.bar_index)
+    if not na(lastResistance)
+        lnRes := line.new(bar_index - 60, lastResistance, bar_index + 6, lastResistance, color=color.new(cRes, 45), width=1, xloc=xloc.bar_index)
+
+// ============================================================================
+//  M12 — MARKET CONDITION ENGINE
+// ============================================================================
+atrPct = atr14 / close * 100
+atrPctMa = ta.sma(atrPct, 50)
+volState = atrPct > atrPctMa * 1.3 ? "High Volatility" : atrPct < atrPctMa * 0.7 ? "Low Volatility" : "Normal"
+inValueArea = not na(vahPrice) and not na(valPrice) and close <= vahPrice and close >= valPrice
+
+marketState = trendStr > 1.5 and trendUp ? "Trending Up" : trendStr > 1.5 and trendDn ? "Trending Down" : inValueArea and atrPct < atrPctMa ? "Balanced" : atrPct < atrPctMa * 0.7 ? "Compression" : atrPct > atrPctMa * 1.3 ? "Expansion" : "Range"
+marketStateColor = marketState == "Trending Up" ? cBull : marketState == "Trending Down" ? cBear : cTextDim
+
+// ============================================================================
+//  M14 / M21 — AI MARKET BIAS  (institutional lean from VWAP / POC / trend)
+// ============================================================================
+biasScore = 0.0
+biasScore += close > vwapD ? 1 : -1
+biasScore += showVwapW and not na(vwapW) ? (close > vwapW ? 1 : -1) : 0
+biasScore += not na(pocPrice) and close > pocPrice ? 1 : (not na(pocPrice) ? -1 : 0)
+biasScore += trendUp ? 1.5 : trendDn ? -1.5 : 0
+biasScore += structBull ? 1 : structBear ? -1 : 0
+biasScore += pressure > 0.05 ? 1 : pressure < -0.05 ? -1 : 0
+
+marketBias = biasScore >= 3.5 ? "Strong Bullish" : biasScore >= 1.5 ? "Bullish" : biasScore <= -3.5 ? "Strong Bearish" : biasScore <= -1.5 ? "Bearish" : "Neutral"
+biasColor = biasScore >= 1.5 ? cBull : biasScore <= -1.5 ? cBear : cTextDim
+
+// ============================================================================
+//  M13 — TRADE QUALITY ENGINE (0-100)
+// ----------------------------------------------------------------------------
+//  Long and short are scored independently; the higher conviction side wins,
+//  but a plan only arms if it clears the user threshold AND structure agrees.
+// ============================================================================
+longScore = 0.0
+longScore += close > vwapD ? 18 : 0
+longScore += showVwapW and not na(vwapW) and close > vwapW ? 12 : 0
+longScore += not na(pocPrice) and close > pocPrice ? 14 : 0
+longScore += trendUp ? 16 : 0
+longScore += structBull ? 10 : 0
+longScore += pressure > 0.05 ? 12 : 0
+longScore += relVol >= 1.0 ? 10 : relVol >= 0.7 ? 5 : 0
+longScore += (not na(valPrice) and close >= valPrice and close <= (na(pocPrice) ? close : pocPrice)) ? 8 : 0  // healthy pullback into value
+
+shortScore = 0.0
+shortScore += close < vwapD ? 18 : 0
+shortScore += showVwapW and not na(vwapW) and close < vwapW ? 12 : 0
+shortScore += not na(pocPrice) and close < pocPrice ? 14 : 0
+shortScore += trendDn ? 16 : 0
+shortScore += structBear ? 10 : 0
+shortScore += pressure < -0.05 ? 12 : 0
+shortScore += relVol >= 1.0 ? 10 : relVol >= 0.7 ? 5 : 0
+shortScore += (not na(vahPrice) and close <= vahPrice and close >= (na(pocPrice) ? close : pocPrice)) ? 8 : 0
+
+bool longSide = longScore >= shortScore
+float tradeScore = math.min(math.max(longSide ? longScore : shortScore, 0), 100)
+gradeTxt = tradeScore >= 90 ? "A+" : tradeScore >= 80 ? "A" : tradeScore >= 70 ? "B" : tradeScore >= 60 ? "C" : "D"
+qualityTxt = tradeScore >= 85 ? "Excellent" : tradeScore >= 75 ? "Very Good" : tradeScore >= 65 ? "Good" : tradeScore >= 55 ? "Average" : "Poor"
+
+// Market Quality (is the market worth trading at all — separate from setup) M21
+mktQ = 0.0
+mktQ += relVol >= 1.0 ? 30 : relVol >= 0.7 ? 15 : 0
+mktQ += marketState == "Trending Up" or marketState == "Trending Down" ? 30 : marketState == "Range" or marketState == "Balanced" ? 10 : 20
+mktQ += volState == "Normal" ? 20 : volState == "High Volatility" ? 12 : 8
+mktQ += not inValueArea ? 20 : 5
+mktQText = mktQ >= 80 ? "Excellent" : mktQ >= 65 ? "Good" : mktQ >= 45 ? "Average" : mktQ >= 30 ? "Poor" : "Very Poor"
+
+// ============================================================================
+//  M14 / M21 — AI TRADE PLAN (WAIT / BUY ZONE / SELL ZONE)
+// ============================================================================
+bool armLong  = longSide and longScore >= scoreThreshold and trendUp and not inValueArea
+bool armShort = (not longSide) and shortScore >= scoreThreshold and trendDn and not inValueArea
+
+planStatus = armLong ? "BUY PLAN READY" : armShort ? "SELL PLAN READY" : (longScore >= scoreThreshold - 12 and trendUp) ? "BUY SETUP FORMING" : (shortScore >= scoreThreshold - 12 and trendDn) ? "SELL SETUP FORMING" : "WAIT"
+planColor = armLong ? cBull : armShort ? cBear : str.contains(planStatus, "BUY") ? color.new(cBull, 35) : str.contains(planStatus, "SELL") ? color.new(cBear, 35) : cTextDim
+
+// Entry / stop / targets (M21 trade plan)
+float planEntry = close
+float planStop  = na
+float planT1 = na, float planT2 = na, float planT3 = na
+if armLong
+    planStop := math.min(nz(valPrice, close - atr14*1.5), close - atr14*1.2)
+    planT1 := not na(hvn1) and hvn1 > close ? hvn1 : close + atr14*1.5
+    planT2 := not na(vahPrice) and vahPrice > planT1 ? vahPrice : close + atr14*3
+    planT3 := not na(pdh) and pdh > planT2 ? pdh : close + atr14*5
+else if armShort
+    planStop := math.max(nz(vahPrice, close + atr14*1.5), close + atr14*1.2)
+    planT1 := not na(lvn1) and lvn1 < close ? lvn1 : close - atr14*1.5
+    planT2 := not na(valPrice) and valPrice < planT1 ? valPrice : close - atr14*3
+    planT3 := not na(pdl) and pdl < planT2 ? pdl : close - atr14*5
+
+planRR = not na(planStop) and (planEntry - planStop) != 0 ? math.abs(planT2 - planEntry) / math.abs(planEntry - planStop) : na
+
+// ============================================================================
+//  M14 — REASONING (human-readable, top reasons only)
+// ============================================================================
+f_reasons() =>
+    string r = ""
+    if armLong or str.contains(planStatus, "BUY")
+        r := (close > vwapD ? "✓ Above Daily VWAP\n" : "✗ Below Daily VWAP\n")
+        r += (not na(pocPrice) and close > pocPrice ? "✓ Holding above POC\n" : "• Below POC\n")
+        r += (trendUp ? "✓ Bullish trend\n" : "• Trend not bullish\n")
+        r += (pressure > 0.05 ? "✓ Buyers in control\n" : "• Weak buying pressure\n")
+        r += (relVol >= 1.0 ? "✓ Strong volume\n" : "• Volume below average\n")
+    else if armShort or str.contains(planStatus, "SELL")
+        r := (close < vwapD ? "✓ Below Daily VWAP\n" : "✗ Above Daily VWAP\n")
+        r += (not na(pocPrice) and close < pocPrice ? "✓ Below POC\n" : "• Above POC\n")
+        r += (trendDn ? "✓ Bearish trend\n" : "• Trend not bearish\n")
+        r += (pressure < -0.05 ? "✓ Sellers in control\n" : "• Weak selling pressure\n")
+        r += (relVol >= 1.0 ? "✓ Strong volume\n" : "• Volume below average\n")
+    else
+        r := (inValueArea ? "• Price inside Value Area\n" : "")
+        r += (relVol < 0.8 ? "• Volume below average\n" : "")
+        r += (vwapDir == "Flat" ? "• VWAP is flat\n" : "")
+        r += (math.abs(biasScore) < 1.5 ? "• No clear bias\n" : "")
+        r := r == "" ? "• Conditions mixed — low probability\n" : r
+    r
+
+// ============================================================================
+//  M15 — PROFESSIONAL DASHBOARD
+// ============================================================================
+f_hdr(tbl, sz, row, txt) =>
+    table.cell(tbl, 0, row, txt, text_color=cText, text_size=sz, text_halign=text.align_left, bgcolor=cPanelHdr)
+    table.cell(tbl, 1, row, "", bgcolor=cPanelHdr)
+
+f_row(tbl, sz, row, k, v, vcol) =>
+    table.cell(tbl, 0, row, k, text_color=cTextDim, text_size=sz, text_halign=text.align_left)
+    table.cell(tbl, 1, row, v, text_color=vcol, text_size=sz, text_halign=text.align_right)
+
+var table dash = na
+if barstate.islast and showDash
+    if not na(dash)
+        table.delete(dash)
+    sz = f_txtSize(dashSize)
+    dash := table.new(f_tblPos(dashPos), 2, 22, bgcolor=cPanelBg, frame_color=cFrame, frame_width=1, border_color=cGrid, border_width=1)
+
+    f_hdr(dash, sz, 0, "◆  VOLUME FLOW PRO X AI")
+    f_row(dash, sz, 1,  "Market Bias",   marketBias, biasColor)
+    f_row(dash, sz, 2,  "Market State",  marketState, marketStateColor)
+    f_row(dash, sz, 3,  "Trend",         trendUp ? "Bullish" : trendDn ? "Bearish" : "Neutral", trendUp ? cBull : trendDn ? cBear : cTextDim)
+    f_row(dash, sz, 4,  "VWAP Dir",      vwapDir, vwapDColor)
+
+    f_hdr(dash, sz, 5, "◆  VWAP")
+    f_row(dash, sz, 6,  "Price",         f_px(close), cText)
+    f_row(dash, sz, 7,  "Daily VWAP",    f_px(vwapD) + (close>vwapD?"  ▲":"  ▼"), close>vwapD?cBull:cBear)
+    f_row(dash, sz, 8,  "Weekly VWAP",   na(vwapW)?"—":f_px(vwapW), cTextDim)
+
+    f_hdr(dash, sz, 9, "◆  VOLUME PROFILE")
+    f_row(dash, sz, 10, "POC",           na(pocPrice)?"—":f_px(pocPrice), cPoc)
+    f_row(dash, sz, 11, "VAH",           na(vahPrice)?"—":f_px(vahPrice), cVah)
+    f_row(dash, sz, 12, "VAL",           na(valPrice)?"—":f_px(valPrice), cVal)
+    f_row(dash, sz, 13, "Nearest HVN",   na(hvn1)?"—":f_px(hvn1), cHvn)
+    f_row(dash, sz, 14, "Nearest LVN",   na(lvn1)?"—":f_px(lvn1), cLvn)
+
+    f_hdr(dash, sz, 15, "◆  FLOW")
+    f_row(dash, sz, 16, "Volume",        volRating, volRColor)
+    f_row(dash, sz, 17, "Pressure",      pressureTxt, pressureColor)
+    f_row(dash, sz, 18, "Market Quality",mktQText, mktQ>=65?cBull:mktQ>=45?cText:cBear)
+
+    f_hdr(dash, sz, 19, "◆  AI TRADE PLAN")
+    f_row(dash, sz, 20, "Status",        planStatus, planColor)
+    f_row(dash, sz, 21, "Score / Grade", str.tostring(math.round(tradeScore)) + "  " + gradeTxt, tradeScore>=70?cBull:tradeScore>=55?cText:cTextDim)
+
+// ---- On-chart plan label (M14, minimal) ----
+var label planLbl = na
+if barstate.islast and showPlanLbl and planStatus != "WAIT"
+    label.delete(planLbl)
+    string body = planStatus + "   (" + str.tostring(math.round(tradeScore)) + " / " + gradeTxt + ")\n"
+    body += "──────────────\n" + f_reasons()
+    if armLong or armShort
+        body += "──────────────\n"
+        body += "Entry  " + f_px(planEntry) + "\n"
+        body += "Stop   " + f_px(planStop) + "\n"
+        body += "TP1    " + f_px(planT1) + "\n"
+        body += "TP2    " + f_px(planT2) + "\n"
+        body += "TP3    " + f_px(planT3) + "\n"
+        body += na(planRR) ? "" : "R:R    " + str.tostring(math.round(planRR*100)/100)
+    planLbl := label.new(bar_index, low - atr14*1.2, body, xloc=xloc.bar_index, style=label.style_label_up, color=color.new(planColor, 12), textcolor=color.white, size=size.small, textalign=text.align_left)
+
+// ============================================================================
+//  M16 — SMART ALERTS
+// ============================================================================
+crossUpVwap   = ta.crossover(close, vwapD)
+crossDnVwap   = ta.crossunder(close, vwapD)
+vwapBounce    = low <= vwapD and close > vwapD and close > open and relVol >= 1.0
+vwapReject    = high >= vwapD and close < vwapD and close < open and relVol >= 1.0
+pocBreakUp    = not na(pocPrice) and ta.crossover(close, pocPrice)
+pocBreakDn    = not na(pocPrice) and ta.crossunder(close, pocPrice)
+enterValue    = not na(vahPrice) and not na(valPrice) and (close <= vahPrice and close >= valPrice) and not (close[1] <= vahPrice and close[1] >= valPrice)
+
+alertcondition(crossUpVwap, "VWAP Break Up", "VF Pro X AI: price broke above Daily VWAP")
+alertcondition(crossDnVwap, "VWAP Break Down", "VF Pro X AI: price broke below Daily VWAP")
+alertcondition(vwapBounce, "VWAP Bounce", "VF Pro X AI: bullish VWAP bounce")
+alertcondition(vwapReject, "VWAP Rejection", "VF Pro X AI: bearish VWAP rejection")
+alertcondition(pocBreakUp, "POC Break Up", "VF Pro X AI: price broke above POC")
+alertcondition(pocBreakDn, "POC Break Down", "VF Pro X AI: price broke below POC")
+alertcondition(enterValue, "Entered Value Area", "VF Pro X AI: price entered the Value Area")
+alertcondition(armLong, "Buy Plan Ready", "VF Pro X AI: BUY PLAN READY")
+alertcondition(armShort, "Sell Plan Ready", "VF Pro X AI: SELL PLAN READY")
+alertcondition(tradeScore >= scoreThreshold, "Trade Score Threshold", "VF Pro X AI: trade score crossed your threshold")
