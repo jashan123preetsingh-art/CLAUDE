@@ -79,6 +79,11 @@ script.
     line); reports trend score, age and distance.
 11. **Premium / Discount** — dealing range with equilibrium (Fib 50%) and
     optional shading.
+11b. **Volume Profile (HVN/LVN/POC)** — buckets recent volume into price bins to
+    reveal High-Volume Nodes (acceptance / strong S-R), Low-Volume Nodes
+    (imbalance / fast-move zones), the Point of Control line, and a 70% value
+    area. Drawn to the right of price on the last bar only (non-repainting,
+    self-cleaning).
 12. **Multi-Timeframe** — non-repainting bias across **8 timeframes**
     (Daily · 12H · 4H · 1H · 30m · 15m · 5m · 1m), shown in a clean 3-column
     panel with a **Volatility Timer** countdown to each candle close, plus an
@@ -86,10 +91,15 @@ script.
     any chart timeframe.
 13. **Confluence Engine** — weighted 0–100 probability per side
     (e.g. *93% Long*).
-14. **AI Entry** — only fires when probability ≥ a user threshold *and* a
-    structural trigger (MSS/BOS/sweep) is present.
-15. **AI Stop Loss** — structure + ATR volatility buffer.
-16. **AI Take Profit** — TP1/TP2/TP3 by configurable risk-reward.
+14. **AI Entry** — fully symmetric and **trigger-driven**: a bullish trigger
+    (MSS/BOS/sweep/CHoCH) produces a LONG, a bearish one a SHORT, so reversal
+    longs appear even inside a broader downtrend. Each side must also clear the
+    probability threshold; if both fire, the higher-scoring side wins.
+15. **AI Stop Loss** — three modes: **AI Optimized** (buffer adapts to the live
+    volatility regime so stops sit outside normal noise), Structure, or ATR.
+16. **AI Take Profit** — TP1/TP2/TP3 by risk-reward, with an optional
+    **Liquidity-aware** mode that snaps the final target onto the nearest
+    opposing liquidity / swing.
 17. **Dashboard** — floating, theme-aware table with an accent header, the
     8-timeframe trend + Volatility Timer panel, Signal Status, Active position,
     and optional detailed SMC rows (structure, liquidity, OB, FVG, probability).

@@ -38,6 +38,7 @@ const string GRP_OB    = "⑦ Order Blocks"
 const string GRP_FVG   = "⑧ Fair Value Gaps"
 const string GRP_TL    = "⑨ Dynamic Trendline"
 const string GRP_PD    = "⑩ Premium / Discount"
+const string GRP_VP    = "⑩+ Volume Profile (HVN/LVN)"
 const string GRP_MTF   = "⑪ Multi-Timeframe"
 const string GRP_CONF  = "⑫ Confluence / Entry"
 const string GRP_RISK  = "⑬ AI SL / TP"
@@ -62,10 +63,10 @@ themeNeutral = i_neutralUser
 themeBG      = themeMode == "Dark" ? color.new(#131722, 10) : color.new(#ffffff, 10)
 
 // Object budget scales with performance mode (keeps CPU/memory bounded).
-maxObjects   = perfMode == "Lite" ? 8 : perfMode == "Balanced" ? 16 : 30
+maxObjects   = perfMode == "Lite" ? 5 : perfMode == "Balanced" ? 10 : 20
 
 // 1.2 Market Structure Engine -------------------------------------------------
-showInternal     = input.bool(true,  "Show internal structure", group=GRP_MS)
+showInternal     = input.bool(false, "Show internal structure", group=GRP_MS, tooltip="Off by default for a cleaner chart. Turn on to see fast internal HH/HL/LH/LL.")
 showSwing        = input.bool(true,  "Show swing structure",    group=GRP_MS)
 showHPLabels     = input.bool(true,  "Show HP reversal labels (HP-UP / HP-DOWN)", group=GRP_MS, tooltip="Tags high-probability reversal swings instead of plain HH/HL/LH/LL text for a cleaner chart.")
 intLen           = input.int(5,  "Internal swing length", minval=2, maxval=50, group=GRP_MS, tooltip="Pivot lookback for fast internal structure. Lower = more sensitive.")
@@ -95,7 +96,7 @@ idmEqTol         = input.float(0.1, "Equal-level tolerance (ATR)", minval=0.01, 
 // 1.5 Liquidity ---------------------------------------------------------------
 showLiquidity    = input.bool(true,  "Enable liquidity engine", group=GRP_LIQ)
 liqEqTol         = input.float(0.1, "Equal high/low tolerance (ATR)", minval=0.01, step=0.01, group=GRP_LIQ)
-showLiqVoid      = input.bool(true,  "Show liquidity voids", group=GRP_LIQ)
+showLiqVoid      = input.bool(false, "Show liquidity voids", group=GRP_LIQ)
 showLiqBalls     = input.bool(true,  "Show liquidity balls (pending pools)", group=GRP_LIQ, tooltip="Blue markers on resting/uncollected liquidity — handy as logical take-profit targets.")
 liqBallColor     = input.color(#2962ff, "Liquidity ball color", group=GRP_LIQ)
 bslColor         = input.color(#f23645, "Sell-side liq (highs)", group=GRP_LIQ, inline="l1")
@@ -133,17 +134,31 @@ tlSensitivity    = input.float(1.0, "Trendline reactivity", minval=0.1, maxval=3
 showPD           = input.bool(true,  "Enable premium/discount", group=GRP_PD)
 pdShade          = input.bool(true,  "Shade zones", group=GRP_PD)
 
+// 1.10b Volume Profile --------------------------------------------------------
+showVP           = input.bool(true,  "Enable volume profile", group=GRP_VP)
+vpLookback       = input.int(200, "Lookback (bars)", minval=20, maxval=1000, group=GRP_VP, tooltip="How many bars of volume to profile.")
+vpBins           = input.int(24,  "Rows (price bins)", minval=6, maxval=50, group=GRP_VP)
+vpWidth          = input.int(40,  "Profile width (bars)", minval=10, maxval=150, group=GRP_VP, tooltip="Visual width of the histogram, drawn to the right of price.")
+vpHvnPct         = input.float(70, "HVN threshold (% of POC)", minval=20, maxval=99, group=GRP_VP, tooltip="Bins at/above this % of the POC volume are High Volume Nodes.")
+vpLvnPct         = input.float(25, "LVN threshold (% of POC)", minval=1,  maxval=60, group=GRP_VP, tooltip="Bins at/below this % of the POC volume are Low Volume Nodes (imbalance / fast-move zones).")
+vpShowVA         = input.bool(true,  "Show 70% value area + POC line", group=GRP_VP)
+vpPocColor       = input.color(#ffd54f, "POC",  group=GRP_VP, inline="vp1")
+vpHvnColor       = input.color(color.new(#2962ff, 55), "HVN", group=GRP_VP, inline="vp1")
+vpLvnColor       = input.color(color.new(#787b86, 75), "LVN", group=GRP_VP, inline="vp1")
+
 // 1.11 Multi-Timeframe --------------------------------------------------------
 showMTF          = input.bool(true,  "Enable MTF dashboard rows", group=GRP_MTF)
 
 // 1.12 Confluence / Entry -----------------------------------------------------
 showConfluence   = input.bool(true,  "Enable confluence engine", group=GRP_CONF)
-minEntryScore    = input.int(70, "Minimum entry probability %", minval=0, maxval=100, group=GRP_CONF)
+minEntryScore    = input.int(60, "Minimum entry probability %", minval=0, maxval=100, group=GRP_CONF, tooltip="Lower = more (and earlier) long/short signals; higher = fewer, higher-conviction setups.")
 showEntries      = input.bool(true,  "Plot AI entries", group=GRP_CONF)
 
 // 1.13 AI SL / TP -------------------------------------------------------------
 showRisk         = input.bool(true,  "Enable AI SL/TP", group=GRP_RISK)
+slMode           = input.string("AI Optimized", "Stop-loss engine", options=["AI Optimized","Structure","ATR"], group=GRP_RISK, tooltip="AI Optimized adapts the buffer to the live volatility regime so stops sit outside normal noise.")
 slATRmult        = input.float(1.5, "SL ATR buffer", minval=0.1, step=0.1, group=GRP_RISK)
+tpMode           = input.string("Liquidity-aware", "Take-profit engine", options=["Liquidity-aware","Fixed R"], group=GRP_RISK, tooltip="Liquidity-aware snaps TPs toward the nearest opposing liquidity / swing when one sits beyond the R target.")
 rr1              = input.float(1.0, "TP1 R", minval=0.1, step=0.1, group=GRP_RISK, inline="r1")
 rr2              = input.float(2.0, "TP2 R", minval=0.1, step=0.1, group=GRP_RISK, inline="r1")
 rr3              = input.float(3.0, "TP3 R", minval=0.1, step=0.1, group=GRP_RISK, inline="r1")
@@ -537,9 +552,15 @@ makeOB(bool bull, bool swing) =>
             ob_bar := bar_index - k
             break
     if not na(t) and (not obUseVol or volume > volMA)
-        col = bull ? obBullColor : obBearColor
-        bx = box.new(ob_bar, t, bar_index + 5, b, border_color=color.new(col, 40), bgcolor=col)
-        lb = label.new(ob_bar, swing ? t : b, swing ? "OB" : "ob", style=swing ? label.style_label_down : label.style_label_up, color=na, textcolor=color.new(bull ? i_bullColor : i_bearColor, 0), size=size.tiny)
+        base   = bull ? i_bullColor : i_bearColor
+        // Swing OBs: crisp solid border + light fill. Internal OBs: borderless,
+        // more transparent — keeps majors prominent and minors quiet (clean look).
+        fillT  = swing ? 80 : 90
+        bordC  = swing ? color.new(base, 25) : na
+        bordW  = swing ? 2 : 1
+        bx = box.new(ob_bar, t, bar_index + 10, b, border_color=bordC, border_width=bordW, bgcolor=color.new(base, fillT))
+        // Single tiny right-edge tag on swing OBs only; none on internal OBs.
+        lb = swing ? label.new(bar_index + 10, (t + b) / 2, bull ? "OB+" : "OB−", style=label.style_label_left, color=color.new(base, 30), textcolor=color.white, size=size.tiny) : na
         array.push(obs, OB.new(bx, lb, t, b, ob_bar, bull, swing, "Fresh", true))
 
 if showOB and (not obRequireBOS or bullBOS or bullMSS) and (bullBOS or bullMSS)
@@ -558,7 +579,9 @@ if array.size(obs) > 0
     for i = array.size(obs) - 1 to 0
         OB ob = array.get(obs, i)
         if ob.alive
-            box.set_right(ob.b, bar_index + 5)
+            box.set_right(ob.b, bar_index + 10)
+            if not na(ob.l)
+                label.set_x(ob.l, bar_index + 10)
             inside = low <= ob.top and high >= ob.bot
             broken = ob.bull ? close < ob.bot : close > ob.top
             if broken
@@ -642,6 +665,96 @@ if showPD and barstate.islast
         pdPrem := box.new(bar_index - 50, rangeHigh, bar_index + 5, eqm, border_color=na, bgcolor=color.new(i_bearColor, 92))
         pdDisc := box.new(bar_index - 50, eqm, bar_index + 5, rangeLow, border_color=na, bgcolor=color.new(i_bullColor, 92))
     pdEq := line.new(bar_index - 50, eqm, bar_index + 5, eqm, color=color.new(themeNeutral, 20), style=line.style_dashed)
+
+// ============================================================================
+// SECTION 12B — VOLUME PROFILE (HVN / LVN / POC, non-repainting, drawn on last bar)
+// ============================================================================
+// Buckets recent volume into price bins to reveal acceptance (HVN) and
+// rejection / imbalance (LVN) zones plus the Point of Control. Rebuilt only on
+// the last bar; all previous boxes/lines are deleted first so nothing repaints
+// into history and the chart stays clean.
+var array<box>  vpBoxes = array.new<box>()
+var box   vpPocBox = na
+var line  vpPocLn  = na
+var box   vpVaBox  = na
+var float vpPoc    = na
+
+f_clearVP() =>
+    if array.size(vpBoxes) > 0
+        for i = 0 to array.size(vpBoxes) - 1
+            box.delete(array.get(vpBoxes, i))
+        array.clear(vpBoxes)
+    box.delete(vpPocBox)
+    box.delete(vpVaBox)
+    line.delete(vpPocLn)
+
+if showVP and barstate.islast
+    f_clearVP()
+    lb   = math.min(vpLookback, bar_index)            // never look past available history
+    // Range scan (manual loop avoids calling ta.* inside a conditional block).
+    float hiP = high
+    float loP = low
+    for k = 0 to lb - 1
+        hiP := math.max(hiP, high[k])
+        loP := math.min(loP, low[k])
+    rng  = hiP - loP
+    if rng > 0
+        binH = rng / vpBins
+        bins = array.new<float>(vpBins, 0.0)
+        // Distribute each bar's volume across the bins its range spans (fairer
+        // than dumping it all on one price — a light, original approximation).
+        for k = 0 to lb - 1
+            bHi = high[k]
+            bLo = low[k]
+            v   = nz(volume[k], 0.0)
+            loIdx = int(math.floor((bLo - loP) / binH))
+            hiIdx = int(math.floor((bHi - loP) / binH))
+            loIdx := math.max(0, math.min(vpBins - 1, loIdx))
+            hiIdx := math.max(0, math.min(vpBins - 1, hiIdx))
+            span = math.max(1, hiIdx - loIdx + 1)
+            share = v / span
+            for bi = loIdx to hiIdx
+                array.set(bins, bi, array.get(bins, bi) + share)
+        // POC + totals for the value-area (70%) calc.
+        maxV = array.max(bins)
+        pocIdx = array.indexof(bins, maxV)
+        vpPoc := loP + (pocIdx + 0.5) * binH
+        total = array.sum(bins)
+        // Draw each bin as a horizontal bar to the RIGHT of price (keeps candles clean).
+        x0 = bar_index + 2
+        for bi = 0 to vpBins - 1
+            v = array.get(bins, bi)
+            if v > 0
+                wBars = int(math.round(v / maxV * vpWidth))
+                yTop = loP + (bi + 1) * binH
+                yBot = loP + bi * binH
+                pct  = v / maxV * 100.0
+                isHVN = pct >= vpHvnPct
+                isLVN = pct <= vpLvnPct
+                col = isHVN ? vpHvnColor : isLVN ? vpLvnColor : color.new(themeNeutral, 70)
+                bx = box.new(x0, yTop, x0 + math.max(1, wBars), yBot, border_color=na, bgcolor=col)
+                array.push(vpBoxes, bx)
+        // POC highlight line across the visible range.
+        if vpShowVA
+            vpPocLn := line.new(bar_index - lb, vpPoc, bar_index + 2 + vpWidth, vpPoc, color=vpPocColor, width=2)
+            // 70% value area: expand around POC until 70% of volume is covered.
+            covered = maxV
+            loVA = pocIdx
+            hiVA = pocIdx
+            while covered < total * 0.70 and (loVA > 0 or hiVA < vpBins - 1)
+                belowV = loVA > 0 ? array.get(bins, loVA - 1) : -1.0
+                aboveV = hiVA < vpBins - 1 ? array.get(bins, hiVA + 1) : -1.0
+                if aboveV >= belowV and hiVA < vpBins - 1
+                    hiVA += 1
+                    covered += aboveV
+                else if loVA > 0
+                    loVA -= 1
+                    covered += belowV
+                else
+                    break
+            vaTop = loP + (hiVA + 1) * binH
+            vaBot = loP + loVA * binH
+            vpVaBox := box.new(bar_index + 2, vaTop, bar_index + 2 + vpWidth, vaBot, border_color=color.new(vpPocColor, 40), bgcolor=color.new(vpPocColor, 90))
 
 // ============================================================================
 // SECTION 13 — DYNAMIC TRENDLINE (weighted multi-factor, not a naive pivot line)
@@ -775,6 +888,10 @@ f_score() =>
     // Momentum.
     bull += mom > 0 ? 5 : 0
     bear += mom < 0 ? 5 : 0
+    // Volume-profile acceptance: trading above the POC favors longs, below favors
+    // shorts (institutional fair-value pivot). Skipped until the POC is computed.
+    bull += not na(vpPoc) and close > vpPoc ? 5 : 0
+    bear += not na(vpPoc) and close < vpPoc ? 5 : 0
     // Session quality (kill zone = institutional window).
     sessBoost = (inKZ_London or inKZ_NY) ? 4 : 0
     bull += sessBoost
@@ -800,31 +917,57 @@ var line  tp2Line   = na
 var line  tp3Line   = na
 var line  entryLine = na
 
-newEntry = showConfluence and showEntries and probability >= minEntryScore and barstate.isconfirmed and (bullMSS or bearMSS or bullBOS or bearBOS or bullSweep or bearSweep)
+// Entries are TRIGGER-DRIVEN and fully symmetric: a bullish trigger produces a
+// LONG, a bearish trigger a SHORT (so reversal longs appear even inside a
+// broader downtrend). Each side must also clear the probability threshold.
+bullTrigger = bullMSS or bullBOS or bullSweep or bullCHOCH
+bearTrigger = bearMSS or bearBOS or bearSweep or bearCHOCH
+longSetup   = bullTrigger and bullScore >= minEntryScore
+shortSetup  = bearTrigger and bearScore >= minEntryScore
+// If both fire on the same bar, take the higher-scoring side.
+takeLong    = longSetup and (not shortSetup or bullScore >= bearScore)
+takeShort   = shortSetup and (not longSetup or bearScore > bullScore)
+newEntry    = showConfluence and showEntries and barstate.isconfirmed and (takeLong or takeShort)
+setupProb   = takeLong ? bullScore : bearScore
+
+// Volatility regime drives the AI-Optimized stop width (wider when volatile).
+volRegime = atr / math.max(ta.sma(atr, 50), syminfo.mintick)
+aiBuffer  = atr * slATRmult * math.max(0.8, math.min(2.0, volRegime))
 
 if newEntry
-    entryLong  := longBias
+    entryLong  := takeLong
     entryPrice := close
-    // SL: beyond the protecting structure with ATR buffer (structure + volatility).
+    // --- AI Stop-Loss engine -------------------------------------------------
     structSL = entryLong ? math.min(nz(swgLastL.price, low), low) : math.max(nz(swgLastH.price, high), high)
-    slPrice  := entryLong ? structSL - atr * slATRmult : structSL + atr * slATRmult
-    risk     = math.abs(entryPrice - slPrice)
-    // TP projected by R multiples; biased toward opposing liquidity when present.
+    buf = slMode == "AI Optimized" ? aiBuffer : slMode == "ATR" ? atr * slATRmult : atr * 0.25
+    slBase = slMode == "ATR" ? entryPrice : structSL
+    slPrice := entryLong ? slBase - buf : slBase + buf
+    risk     = math.max(math.abs(entryPrice - slPrice), atr * 0.25)
+    // --- AI Take-Profit engine ----------------------------------------------
     tp1 := entryLong ? entryPrice + risk * rr1 : entryPrice - risk * rr1
     tp2 := entryLong ? entryPrice + risk * rr2 : entryPrice - risk * rr2
     tp3 := entryLong ? entryPrice + risk * rr3 : entryPrice - risk * rr3
+    // Liquidity-aware: pull the final target onto the opposing liquidity / swing
+    // when one rests just beyond the R3 objective (price gravitates to liquidity).
+    if tpMode == "Liquidity-aware"
+        liqTgt = entryLong ? nz(swgLastH.price, tp3) : nz(swgLastL.price, tp3)
+        if entryLong and liqTgt > tp2 and liqTgt < tp3 * 1.5
+            tp3 := liqTgt
+        if not entryLong and liqTgt < tp2 and liqTgt > tp3 * 0.5
+            tp3 := liqTgt
     if showRisk
         line.delete(slLine)
         line.delete(tp1Line)
         line.delete(tp2Line)
         line.delete(tp3Line)
         line.delete(entryLine)
+        tpCol = entryLong ? i_bullColor : i_bearColor
         entryLine := line.new(bar_index, entryPrice, bar_index + 30, entryPrice, color=themeText, style=line.style_solid, width=1)
-        slLine    := line.new(bar_index, slPrice, bar_index + 30, slPrice, color=i_bearColor, style=line.style_dashed)
-        tp1Line   := line.new(bar_index, tp1, bar_index + 30, tp1, color=i_bullColor, style=line.style_dotted)
-        tp2Line   := line.new(bar_index, tp2, bar_index + 30, tp2, color=i_bullColor, style=line.style_dotted)
-        tp3Line   := line.new(bar_index, tp3, bar_index + 30, tp3, color=i_bullColor, style=line.style_dotted)
-    label.new(bar_index, entryLong ? low : high, (entryLong ? "▲ LONG " : "▼ SHORT ") + str.tostring(math.round(probability)) + "%", style=entryLong ? label.style_label_up : label.style_label_down, color=color.new(entryLong ? i_bullColor : i_bearColor, 10), textcolor=color.white, size=size.small)
+        slLine    := line.new(bar_index, slPrice, bar_index + 30, slPrice, color=color.new(i_bearColor, 0), style=line.style_dashed)
+        tp1Line   := line.new(bar_index, tp1, bar_index + 30, tp1, color=tpCol, style=line.style_dotted)
+        tp2Line   := line.new(bar_index, tp2, bar_index + 30, tp2, color=tpCol, style=line.style_dotted)
+        tp3Line   := line.new(bar_index, tp3, bar_index + 30, tp3, color=tpCol, style=line.style_dotted)
+    label.new(bar_index, entryLong ? low : high, (entryLong ? "▲ LONG " : "▼ SHORT ") + str.tostring(math.round(setupProb)) + "%", style=entryLong ? label.style_label_up : label.style_label_down, color=color.new(entryLong ? i_bullColor : i_bearColor, 10), textcolor=color.white, size=size.small)
 
 // Track TP/SL hits for alerts.
 slHit  = not na(slPrice) and (entryLong ? low <= slPrice : high >= slPrice)
