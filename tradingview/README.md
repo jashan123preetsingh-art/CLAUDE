@@ -100,9 +100,14 @@ script.
 16. **AI Take Profit** — TP1/TP2/TP3 by risk-reward, with an optional
     **Liquidity-aware** mode that snaps the final target onto the nearest
     opposing liquidity / swing.
-17. **Dashboard** — floating, theme-aware table with an accent header, the
-    8-timeframe trend + Volatility Timer panel, Signal Status, Active position,
-    and optional detailed SMC rows (structure, liquidity, OB, FVG, probability).
+17. **Dashboard** — professional floating panel: accent header, blue row labels,
+    orange gridlines, the 8-timeframe trend + Volatility Timer panel, a
+    highlighted **Signal Status** (BUY/SELL Active vs Waiting), and
+    **Entry Price / Stop Loss (pts) / TP1 (pts) / Active PL** rows. Optional
+    detailed SMC rows (structure, liquidity, OB, FVG, probability) can be toggled
+    on. The dynamic trend line is a color-adaptive, price-hugging plot
+    (green = bullish, red = bearish, gray = transition) with hysteresis so it
+    holds direction instead of flickering.
 
 ### Visual polish
 

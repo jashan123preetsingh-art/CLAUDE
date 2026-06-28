@@ -169,9 +169,12 @@ dashPos          = input.string("Top Right", "Position", options=["Top Right","T
 dashSize         = input.string("Normal", "Size", options=["Tiny","Small","Normal","Large"], group=GRP_DASH)
 dashAccent       = input.color(#ff9800, "Header accent", group=GRP_DASH, inline="d1")
 dashHeaderTxt    = input.color(#ffffff, "Header text", group=GRP_DASH, inline="d1")
+dashKeyColor     = input.color(#4a90e2, "Row label color", group=GRP_DASH, inline="d2")
+dashGridColor    = input.color(#ff9800, "Grid lines", group=GRP_DASH, inline="d2")
 dashTitle        = input.string("Smart AI 🔥", "Dashboard title", group=GRP_DASH)
 dashShowTimers   = input.bool(true,  "Show Volatility Timer column", group=GRP_DASH)
-dashShowDetail   = input.bool(true,  "Show detailed SMC rows", group=GRP_DASH, tooltip="Adds structure / liquidity / OB / FVG / probability rows under the MTF panel.")
+dashShowTrade    = input.bool(true,  "Show Entry / SL / TP rows", group=GRP_DASH)
+dashShowDetail   = input.bool(false, "Show detailed SMC rows", group=GRP_DASH, tooltip="Adds structure / liquidity / OB / FVG / probability rows under the MTF panel.")
 
 // 1.15 Sessions ---------------------------------------------------------------
 showSessions     = input.bool(true,  "Enable session engine", group=GRP_SESS)
@@ -757,10 +760,12 @@ if showVP and barstate.islast
             vpVaBox := box.new(bar_index + 2, vaTop, bar_index + 2 + vpWidth, vaBot, border_color=color.new(vpPocColor, 40), bgcolor=color.new(vpPocColor, 90))
 
 // ============================================================================
-// SECTION 13 — DYNAMIC TRENDLINE (weighted multi-factor, not a naive pivot line)
+// SECTION 13 — DYNAMIC TRENDLINE (adaptive, price-hugging, color-coded)
 // ============================================================================
-// Trend score blends structure, EMA slope, momentum, ATR position. The line is
-// anchored on the relevant swing and recolored by the composite score.
+// A smoothed price-following line (like a custom EMA) whose color is driven by a
+// weighted composite of structure, slope, momentum, premium/discount and breaks.
+// Green = bullish control, Red = bearish control, Gray = transition — exactly the
+// clean institutional look. Plotted (not a segment) so it hugs price on every bar.
 ema      = ta.ema(close, tlEmaLen)
 emaSlope = (ema - ema[3]) / (atr == 0 ? 1 : atr)
 mom      = ta.rsi(close, 14) - 50
@@ -772,20 +777,21 @@ w_mom    = math.max(-15, math.min(15, mom * 0.6))
 w_pd     = inDiscount ? 10 : inPremium ? -10 : 0
 w_brk    = (bullBOS or bullMSS or bullSweep ? 10 : 0) + (bearBOS or bearMSS or bearSweep ? -10 : 0)
 trendScore = w_struct + w_int + w_ema + w_mom + w_pd + w_brk
-trendColor = trendScore > 15 ? i_bullColor : trendScore < -15 ? i_bearColor : themeNeutral
+// Hysteresis so the color holds direction (no rapid flicker) until clearly flipped.
+var int trendDir = 0
+trendDir := trendScore > 12 ? 1 : trendScore < -12 ? -1 : trendDir
+trendColor = trendDir == 1 ? i_bullColor : trendDir == -1 ? i_bearColor : themeNeutral
 
-var line trendLn = na
-var int  trendAge = 0
-trendAge := trendScore > 15 or trendScore < -15 ? nz(trendAge[1]) + 1 : 0
-if showTrendline and barstate.islast
-    line.delete(trendLn)
-    anchorBar   = trendScore >= 0 ? (na(swgLastL.bar) ? bar_index - 10 : swgLastL.bar) : (na(swgLastH.bar) ? bar_index - 10 : swgLastH.bar)
-    anchorPrice = trendScore >= 0 ? (na(swgLastL.price) ? low : swgLastL.price) : (na(swgLastH.price) ? high : swgLastH.price)
-    trendLn := line.new(anchorBar, anchorPrice, bar_index, close, color=trendColor, width=2)
+var int trendAge = 0
+trendAge := trendDir != 0 and trendDir == trendDir[1] ? nz(trendAge[1]) + 1 : 0
 
-// Trendline retest / break flags (consumed by alerts/confluence).
-tlRetest = showTrendline and not na(trendLn) and math.abs(close - line.get_y2(trendLn)) <= atr * 0.25
-tlBreak  = showTrendline and ((trendScore > 0 and close < ema and close[1] >= ema[1]) or (trendScore < 0 and close > ema and close[1] <= ema[1]))
+// The plotted dynamic trend line (the centerpiece visual).
+plot(showTrendline ? ema : na, "Dynamic Trendline", color=trendColor, linewidth=2)
+
+// Retest / break flags (consumed by alerts/confluence) — measured off the line.
+tlRetest = showTrendline and math.abs(close - ema) <= atr * 0.2 and math.abs(close[1] - ema[1]) > atr * 0.2
+tlBreak  = showTrendline and ((trendDir == 1 and close < ema and close[1] >= ema[1]) or (trendDir == -1 and close > ema and close[1] <= ema[1]))
+distToTL = math.abs(close - ema)
 
 // ============================================================================
 // SECTION 14 — MULTI-TIMEFRAME ENGINE (non-repainting bias per TF + timers)
@@ -972,6 +978,15 @@ if newEntry
 // Track TP/SL hits for alerts.
 slHit  = not na(slPrice) and (entryLong ? low <= slPrice : high >= slPrice)
 tpHit  = not na(tp1) and (entryLong ? high >= tp1 : low <= tp1)
+tp3Hit = not na(tp3) and (entryLong ? high >= tp3 : low <= tp3)
+
+// Live position state — keeps "Signal Status" showing BUY/SELL Active until the
+// trade is resolved (stop or final target), then reverts to Waiting.
+var bool posActive = false
+if newEntry
+    posActive := true
+if posActive and (slHit or tp3Hit)
+    posActive := false
 
 // ============================================================================
 // SECTION 18 — DASHBOARD (single floating table, rebuilt only on last bar)
@@ -982,57 +997,88 @@ f_txtSize() =>
     dashSize == "Tiny" ? size.tiny : dashSize == "Small" ? size.small : dashSize == "Large" ? size.large : size.normal
 
 // ---- Dashboard row helpers (functions must live at top level) --------------
-// A multi-timeframe row: TF label | Bullish/Bearish (colored) | countdown timer.
+// Multi-timeframe row: blue TF label | Bullish/Bearish (colored) | countdown.
 f_tfRow(table t, int r, string lbl, int bias, string tmr, string sz) =>
     bullish = bias >= 0
-    rowBG   = color.new(bullish ? i_bullColor : i_bearColor, 90)
-    table.cell(t, 0, r, lbl, text_color=themeText, text_size=sz, text_halign=text.align_left, bgcolor=rowBG)
-    table.cell(t, 1, r, bullish ? "Bullish" : "Bearish", text_color=bullish ? i_bullColor : i_bearColor, text_size=sz, text_halign=text.align_center, bgcolor=rowBG)
-    table.cell(t, 2, r, dashShowTimers ? tmr : "", text_color=themeNeutral, text_size=sz, text_halign=text.align_right, bgcolor=rowBG)
+    table.cell(t, 0, r, lbl, text_color=dashKeyColor, text_size=sz, text_halign=text.align_left)
+    table.cell(t, 1, r, bullish ? "Bullish" : "Bearish", text_color=bullish ? i_bullColor : i_bearColor, text_size=sz, text_halign=text.align_center)
+    table.cell(t, 2, r, dashShowTimers ? tmr : "", text_color=themeNeutral, text_size=sz, text_halign=text.align_right)
 
-// A generic detail row: label | value (colored) | (optional 3rd value).
-f_infoRow(table t, int r, string k, string v, color vc, string extra, string sz) =>
-    table.cell(t, 0, r, k, text_color=themeText, text_size=sz, text_halign=text.align_left)
-    table.cell(t, 1, r, v, text_color=vc, text_size=sz, text_halign=text.align_center)
-    table.cell(t, 2, r, extra, text_color=themeNeutral, text_size=sz, text_halign=text.align_right)
+// Generic row: blue label | value (colored) | optional 3rd value. Optional bg
+// highlight (used for the Signal Status row).
+f_infoRow(table t, int r, string k, string v, color vc, string extra, color hl, string sz) =>
+    table.cell(t, 0, r, k, text_color=dashKeyColor, text_size=sz, text_halign=text.align_left, bgcolor=hl)
+    table.cell(t, 1, r, v, text_color=vc, text_size=sz, text_halign=text.align_center, bgcolor=hl)
+    table.cell(t, 2, r, extra, text_color=themeNeutral, text_size=sz, text_halign=text.align_right, bgcolor=hl)
 
 var table dash = na
 if showDash and na(dash)
-    dash := table.new(f_tablePos(), 3, 24, bgcolor=themeBG, border_color=color.new(themeNeutral, 70), border_width=1, frame_color=color.new(themeNeutral, 30), frame_width=1)
+    dash := table.new(f_tablePos(), 3, 26, bgcolor=themeBG, border_color=color.new(dashGridColor, 35), border_width=1, frame_color=color.new(dashGridColor, 20), frame_width=2)
 if showDash and barstate.islast and not na(dash)
     sz = f_txtSize()
-    // Header row (accent-colored, three columns: Title | Active | Volatility Timer).
-    table.cell(dash, 0, 0, dashTitle, text_color=dashHeaderTxt, text_size=sz, text_halign=text.align_left, bgcolor=dashAccent)
-    table.cell(dash, 1, 0, "Active", text_color=dashHeaderTxt, text_size=sz, text_halign=text.align_center, bgcolor=dashAccent)
-    table.cell(dash, 2, 0, dashShowTimers ? "Volatility Timer" : "", text_color=dashHeaderTxt, text_size=sz, text_halign=text.align_right, bgcolor=dashAccent)
+    int r = 0
+    // Header row (accent-colored: Title | Active | Volatility Timer).
+    table.cell(dash, 0, r, dashTitle, text_color=dashHeaderTxt, text_size=sz, text_halign=text.align_left, bgcolor=dashAccent)
+    table.cell(dash, 1, r, "Active", text_color=dashHeaderTxt, text_size=sz, text_halign=text.align_center, bgcolor=dashAccent)
+    table.cell(dash, 2, r, dashShowTimers ? "Volatility Timer" : "", text_color=dashHeaderTxt, text_size=sz, text_halign=text.align_right, bgcolor=dashAccent)
     // Multi-timeframe trend panel (Daily → 1min) with per-candle countdowns.
     if showMTF
-        f_tfRow(dash, 1, "Daily Trend", biasD,   "",      sz)
-        f_tfRow(dash, 2, "12H Trend",   bias12h, tmr12h,  sz)
-        f_tfRow(dash, 3, "4H Trend",    bias4h,  tmr4h,   sz)
-        f_tfRow(dash, 4, "1H Trend",    bias1h,  tmr1h,   sz)
-        f_tfRow(dash, 5, "30min Trend", bias30,  tmr30,   sz)
-        f_tfRow(dash, 6, "15min Trend", bias15,  tmr15,   sz)
-        f_tfRow(dash, 7, "5min Trend",  bias5,   tmr5,    sz)
-        f_tfRow(dash, 8, "1min Trend",  bias1m,  tmr1m,   sz)
-    // Signal Status + Active position rows (mirrors the reference layout).
-    signalTxt = probability >= minEntryScore ? (longBias ? "Long" : "Short") : "Waiting"
-    signalCol = probability >= minEntryScore ? (longBias ? i_bullColor : i_bearColor) : dashAccent
+        r += 1
+        f_tfRow(dash, r, "Daily Trend", biasD,   "",      sz)
+        r += 1
+        f_tfRow(dash, r, "12H Trend",   bias12h, tmr12h,  sz)
+        r += 1
+        f_tfRow(dash, r, "4H Trend",    bias4h,  tmr4h,   sz)
+        r += 1
+        f_tfRow(dash, r, "1H Trend",    bias1h,  tmr1h,   sz)
+        r += 1
+        f_tfRow(dash, r, "30min Trend", bias30,  tmr30,   sz)
+        r += 1
+        f_tfRow(dash, r, "15min Trend", bias15,  tmr15,   sz)
+        r += 1
+        f_tfRow(dash, r, "5min Trend",  bias5,   tmr5,    sz)
+        r += 1
+        f_tfRow(dash, r, "1min Trend",  bias1m,  tmr1m,   sz)
+    // Signal Status — highlighted when a trade is live (BUY/SELL Active).
+    signalTxt = posActive ? (entryLong ? "BUY Active" : "SELL Active") : "Waiting"
+    signalCol = posActive ? color.white : themeNeutral
+    signalHL  = posActive ? color.new(entryLong ? i_bullColor : i_bearColor, 25) : na
     chartMs   = nz(timeframe.in_seconds(), 60) * 1000.0
-    f_infoRow(dash, 9,  "Signal Status", signalTxt, signalCol, f_tfTimer(chartMs), sz)
-    f_infoRow(dash, 10, "Active PL [1M]", not na(entryPrice) ? (entryLong ? "Long" : "Short") : "None", not na(entryPrice) ? (entryLong ? i_bullColor : i_bearColor) : themeNeutral, "", sz)
+    r += 1
+    f_infoRow(dash, r, "Signal Status", signalTxt, signalCol, posActive ? "" : f_tfTimer(chartMs), signalHL, sz)
+    // Trade rows — Entry / Stop Loss (pts) / TP1 (pts), mirroring the reference.
+    // Points = price distance expressed in the instrument's quote units.
+    slPts = not na(slPrice) and not na(entryPrice) ? str.tostring(math.abs(entryPrice - slPrice), format.mintick) + "pts" : ""
+    tpPts = not na(tp1) and not na(entryPrice) ? str.tostring(math.abs(tp1 - entryPrice), format.mintick) + "pts" : ""
+    if dashShowTrade
+        r += 1
+        f_infoRow(dash, r, "Entry Price", not na(entryPrice) ? str.tostring(entryPrice, format.mintick) : "—", themeText, "", na, sz)
+        r += 1
+        f_infoRow(dash, r, "Stop Loss",   not na(slPrice) ? str.tostring(slPrice, format.mintick) : "—", i_bearColor, slPts, na, sz)
+        r += 1
+        f_infoRow(dash, r, "TP1 (1-" + str.tostring(rr1, "#.#") + ")", not na(tp1) ? str.tostring(tp1, format.mintick) : "—", i_bullColor, tpPts, na, sz)
+    r += 1
+    f_infoRow(dash, r, "Active PL [1M]", posActive ? (entryLong ? "Long" : "Short") : "None", posActive ? (entryLong ? i_bullColor : i_bearColor) : themeNeutral, "", na, sz)
     // Optional detailed SMC rows.
     if dashShowDetail
         trendTxt = swgTrend == 1 ? "Bullish" : swgTrend == -1 ? "Bearish" : "Range"
         trendCol = swgTrend == 1 ? i_bullColor : swgTrend == -1 ? i_bearColor : themeNeutral
-        f_infoRow(dash, 11, "Structure",   trendTxt, trendCol, "", sz)
-        f_infoRow(dash, 12, "HTF Bias",    htfBias, htfBias == "Bullish" ? i_bullColor : htfBias == "Bearish" ? i_bearColor : themeNeutral, "", sz)
-        f_infoRow(dash, 13, "Probability", str.tostring(math.round(probability)) + "%", longBias ? i_bullColor : i_bearColor, longBias ? "Long" : "Short", sz)
-        f_infoRow(dash, 14, "Zone",        inPremium ? "Premium" : inDiscount ? "Discount" : "Equilibrium", inPremium ? i_bearColor : inDiscount ? i_bullColor : themeNeutral, "", sz)
-        f_infoRow(dash, 15, "Liquidity",   str.tostring(array.size(liqs)) + " lvls", themeText, "", sz)
-        f_infoRow(dash, 16, "Order Blocks",str.tostring(array.size(obs)), themeText, "", sz)
-        f_infoRow(dash, 17, "FVGs",        str.tostring(array.size(fvgs)), themeText, "", sz)
-        f_infoRow(dash, 18, "Session",     curSession, themeText, "", sz)
+        r += 1
+        f_infoRow(dash, r, "Structure",   trendTxt, trendCol, "", na, sz)
+        r += 1
+        f_infoRow(dash, r, "HTF Bias",    htfBias, htfBias == "Bullish" ? i_bullColor : htfBias == "Bearish" ? i_bearColor : themeNeutral, "", na, sz)
+        r += 1
+        f_infoRow(dash, r, "Probability", str.tostring(math.round(probability)) + "%", longBias ? i_bullColor : i_bearColor, longBias ? "Long" : "Short", na, sz)
+        r += 1
+        f_infoRow(dash, r, "Zone",        inPremium ? "Premium" : inDiscount ? "Discount" : "Equilibrium", inPremium ? i_bearColor : inDiscount ? i_bullColor : themeNeutral, "", na, sz)
+        r += 1
+        f_infoRow(dash, r, "Liquidity",   str.tostring(array.size(liqs)) + " lvls", themeText, "", na, sz)
+        r += 1
+        f_infoRow(dash, r, "Order Blocks",str.tostring(array.size(obs)), themeText, "", na, sz)
+        r += 1
+        f_infoRow(dash, r, "FVGs",        str.tostring(array.size(fvgs)), themeText, "", na, sz)
+        r += 1
+        f_infoRow(dash, r, "Session",     curSession, themeText, "", na, sz)
 
 // ============================================================================
 // SECTION 19 — ALERT ENGINE (independent message per event; master switch)
