@@ -78,8 +78,9 @@ grpVP = "◈  Volume Profile (M1 / M6 / M7)"
 vpMode    = input.string("Auto (Lookback)", "Range Mode", options=["Auto (Lookback)", "Session", "Manual Bars"], group=grpVP, tooltip="Auto = rolling lookback window. Session = current trading day. Manual = fixed bar count ending now.")
 vpLookback= input.int(260, "Lookback Bars", minval=20, maxval=1500, group=grpVP)
 vpBins    = input.int(40, "Profile Resolution (rows)", minval=12, maxval=120, group=grpVP, tooltip="Number of price bins. Higher = finer profile, slightly more CPU.")
-vpWidthPct= input.float(28, "Profile Width (% of range)", minval=5, maxval=90, group=grpVP)
-vpSide    = input.string("Right", "Profile Side", options=["Right", "Left"], group=grpVP)
+vpWidthBars = input.int(60, "Profile Width (bars)", minval=10, maxval=300, group=grpVP, tooltip="Width of the histogram drawn in the chart margin, measured in bars.")
+vpGapBars   = input.int(5, "Gap From Last Candle (bars)", minval=1, maxval=60, group=grpVP, tooltip="Empty space between the most recent candle and the profile so candles stay unobstructed.")
+vpSide    = input.string("Right", "Profile Side", options=["Right", "Left"], group=grpVP, tooltip="Right = bars grow rightward from the gap. Left = bars grow leftward toward price (TradingView-style), still inside the margin.")
 vaPercent = input.float(70, "Value Area %", minval=50, maxval=90, group=grpVP)
 vpProfTransp = input.int(78, "Profile Transparency", minval=40, maxval=95, group=grpVP)
 showHVNLVN  = input.bool(true, "Show Top HVN / LVN levels", group=grpVP)
@@ -463,26 +464,33 @@ if barstate.islast
         poorHigh := array.get(binVol, vpBins - 1) > avgV * 0.7
         poorLow  := array.get(binVol, 0) > avgV * 0.7
 
-        // ---- DRAW the profile (M1 display) ----
+        // ---- DRAW the profile in the RIGHT MARGIN (never over the candles) ----
+        // The histogram is anchored a few bars to the RIGHT of the last candle,
+        // in the empty future area Pine allows drawing into (xloc.bar_index +
+        // offset). Bars never cross back into price, so candles stay clean.
+        int profStart = bar_index + vpGapBars            // left edge of the margin profile
+        int maxW      = vpWidthBars                       // full width (bars) of the widest row (POC)
+        int profEnd   = profStart + maxW                  // right edge of the margin profile
         if showProfile
-            int profW = math.max(int(vpWidthPct / 100.0 * rangeLen), 3)
-            int anchorX = bar_index
             for i = 0 to vpBins - 1
                 float v = array.get(binVol, i)
                 if v > 0
-                    int w = math.max(int(profW * v / maxV), 0)
+                    int w = math.max(int(maxW * v / maxV), 1)
                     float binBot = bot + i * binSize
                     float binTop = binBot + binSize
                     inVA = (binBot + binSize/2) <= vahPrice and (binBot + binSize/2) >= valPrice
                     isPocBin = i == pocIdx
                     col = isPocBin ? color.new(cPoc, vpProfTransp - 25) : inVA ? color.new(cHvn, vpProfTransp) : color.new(cTextDim, vpProfTransp + 8)
-                    int x1 = vpSide == "Right" ? anchorX - w : anchorX
-                    int x2 = vpSide == "Right" ? anchorX : anchorX + w
+                    // Right: grow rightward from the gap. Left: grow leftward from the far edge (toward price).
+                    int x1 = vpSide == "Right" ? profStart : profEnd - w
+                    int x2 = vpSide == "Right" ? profStart + w : profEnd
                     array.push(vpBoxes, box.new(x1, binTop, x2, binBot, border_width=0, bgcolor=col, xloc=xloc.bar_index))
 
         // ---- DRAW POC / VAH / VAL levels + labels ----
+        // Lines run across the range and into the profile; labels sit just
+        // beyond the profile's right edge so text never lands on candles.
         int lineLeft  = bar_index - rangeLen + 1
-        int lineRight = bar_index + 6
+        int lineRight = profEnd
         f_level(pocPrice, cPoc, "POC", line.style_solid, lineLeft, lineRight)
         f_level(vahPrice, cVah, "VAH", line.style_dashed, lineLeft, lineRight)
         f_level(valPrice, cVal, "VAL", line.style_dashed, lineLeft, lineRight)
@@ -533,7 +541,7 @@ if barstate.islast and showKeyLvls
     label.delete(lbPDH)
     label.delete(lbPDL)
     lx1 = bar_index - 80
-    lx2 = bar_index + 6
+    lx2 = bar_index + vpGapBars + vpWidthBars + 2
     lnPDH := line.new(lx1, pdh, lx2, pdh, color=color.new(cRes, 35), style=line.style_dashed, xloc=xloc.bar_index)
     lnPDL := line.new(lx1, pdl, lx2, pdl, color=color.new(cSup, 35), style=line.style_dashed, xloc=xloc.bar_index)
     lnPDC := line.new(lx1, pdc, lx2, pdc, color=color.new(cTextDim, 40), style=line.style_dotted, xloc=xloc.bar_index)

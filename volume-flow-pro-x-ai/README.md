@@ -96,7 +96,11 @@ out the rest of the time.
 
 - **Volume Profile → Range Mode**: `Auto (Lookback)` for a rolling window,
   `Session` for today's developing profile, `Manual Bars` for a fixed count.
-- **Volume Profile → Resolution / Width**: rows and on-chart width of the histogram.
+- **Volume Profile → Resolution / Width (bars) / Gap**: rows, and how wide /
+  how far off the last candle the histogram is drawn. The profile lives in the
+  **right margin** (the empty area to the right of price), never on top of the
+  candles — like TradingView/Bookmap. `Side = Left` makes the bars grow leftward
+  toward price (still inside the margin).
 - **AI Trade Plan → Min Trade Score**: raise it to be more selective (default 70).
 - **Theme**: `Dark Glass` (default) or `Light`; full color overrides available.
 
