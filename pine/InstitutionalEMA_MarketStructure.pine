@@ -1,125 +1,130 @@
 //@version=6
 // ════════════════════════════════════════════════════════════════════════════
-//  EMA + MARKET STRUCTURE PRO  ·  v3
-//  Pine Script v6 · non-repainting · clean price-action engine
+//  EMA + MARKET STRUCTURE PRO  ·  v4
+//  Pine Script v6 · non-repainting · premium price-action workstation
 //
-//  A focused, premium price-action system — no liquidity sweeps, FVGs, order
-//  blocks or oscillators. Just a fast, reliable engine:
+//  A clean, intelligent trading assistant — NOT another SMC dump. Focus only on
+//  Trend · Market Structure · Demand/Supply · EMA · Price Action · Momentum.
+//  No liquidity sweeps, FVGs, order blocks, RSI, MACD, VWAP or volume profile.
 //
-//    1) Triple-EMA trend       — 8 / 33 / 200 with EMA-separation STRENGTH
-//                                 (Weak · Moderate · Strong · Explosive)
-//    2) Market Structure        — strong-BOS / CHoCH, ATR-adaptive swing length
-//    3) Key Levels              — demand/supply zones with FRESHNESS scoring
-//                                 (Fresh · Tested 1x · Tested 2x · Weak)
-//    4) Market-State Engine      — Trending · Pullback · Range · Compression
-//                                 (signals blocked in Range / Compression)
-//    5) Confidence + Grade       — 0-100 score → A+ / A / B (sub-threshold hidden)
-//    6) HTF confirmation (opt.)  — one higher timeframe nudges confidence
-//    7) Auto risk                — Entry / SL / TP / RR drawn for you
+//  PIPELINE (a dot only prints when the whole chain passes):
+//    Strong trend → healthy pullback to 8/33 EMA → strong confirmation candle
+//    → strong BOS → fresh demand/supply zone → confidence ≥ threshold → DOT
 //
-//  NON-REPAINT: swings & zones use confirmed ta.pivot* (fixed lag). HTF uses
-//  lookahead-on on the previous completed bar. All states resolve on close.
-//  Structure engine inspired by "Market Structure" © Leviathan; key-level
-//  concept inspired by "Bjorgum Key Levels" © Bjorgum. Self-contained.
+//  ENGINES
+//    • Trend Strength   — EMA separation + slope + ATR expansion (Weak→Explosive)
+//    • Market State     — Trending / Pullback / Compression / Range
+//    • Structure        — strong BOS / CHoCH only
+//    • Smart Zones      — max 3 demand + 3 supply, quality-scored, auto-pruned
+//    • Confidence       — weighted: trend 25 · structure 20 · zone 20 ·
+//                          pullback 15 · candle 10 · HTF 10
+//
+//  Signals are a single small dot (no text/arrows). Cooldown prevents repeats.
+//  Beginner / Advanced display modes. Self-contained, non-repainting.
+//  Structure concept inspired by © Leviathan; zone concept inspired by © Bjorgum.
 // ════════════════════════════════════════════════════════════════════════════
 
 indicator("EMA + Market Structure PRO", "EMA·MS PRO", overlay = true,
-     max_boxes_count = 500, max_labels_count = 500, max_lines_count = 500)
+     max_boxes_count = 200, max_labels_count = 200, max_lines_count = 200)
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GROUPS
 // ─────────────────────────────────────────────────────────────────────────────
+var string G_MODE = "Mode"
 var string G_EMA  = "EMAs & Trend Strength"
 var string G_MS   = "Market Structure"
-var string G_KL   = "Key Levels"
-var string G_SIG  = "Signals · Confidence · HTF"
+var string G_KL   = "Smart Zones"
+var string G_SIG  = "Entry · Confidence · HTF"
 var string G_SES  = "Session Filter"
 var string G_UI   = "Dashboard & Visuals"
 
+mode = input.string("Advanced", "Display Mode", ["Beginner", "Advanced"], group = G_MODE,
+     tooltip = "Beginner: EMAs, entry dots, zones, dashboard. Advanced: also structure, BOS/CHoCH, risk lines, stars.")
+adv  = mode == "Advanced"
+
 // ─────────────────────────────────────────────────────────────────────────────
-//  EMA INPUTS  (8 / 33 / 200)
+//  EMA INPUTS
 // ─────────────────────────────────────────────────────────────────────────────
 fastLen   = input.int(8,   "Momentum EMA", minval = 1, group = G_EMA, inline = "f")
-fastCol   = input.color(color.white,  "", group = G_EMA, inline = "f")
 fastW     = input.int(2,   "W", minval = 1, maxval = 5, group = G_EMA, inline = "f")
 showFast  = input.bool(true, "", group = G_EMA, inline = "f")
-
-medLen    = input.int(33,  "Trend EMA",    minval = 1, group = G_EMA, inline = "m")
+medLen    = input.int(33,  "Trend EMA", minval = 1, group = G_EMA, inline = "m")
 medCol    = input.color(color.orange, "", group = G_EMA, inline = "m")
 medW      = input.int(2,   "W", minval = 1, maxval = 5, group = G_EMA, inline = "m")
 showMed   = input.bool(true, "", group = G_EMA, inline = "m")
-
-macroLen  = input.int(200, "Macro EMA",    minval = 1, group = G_EMA, inline = "x")
-macroCol  = input.color(color.red,    "", group = G_EMA, inline = "x")
-macroW    = input.int(3,   "W", minval = 1, maxval = 5, group = G_EMA, inline = "x")
+macroLen  = input.int(200, "Macro EMA", minval = 1, group = G_EMA, inline = "x")
+macroCol  = input.color(color.new(color.red, 20), "", group = G_EMA, inline = "x")
+macroW    = input.int(2,   "W", minval = 1, maxval = 5, group = G_EMA, inline = "x")
 showMacro = input.bool(true, "", group = G_EMA, inline = "x")
-
-showFill  = input.bool(true, "Gradient fill (Momentum↔Trend)", group = G_EMA)
-sepMod    = input.float(0.30, "Sep: Moderate ≥", minval = 0.05, step = 0.05, group = G_EMA, inline = "sep")
-sepStr    = input.float(0.70, "Strong ≥",        minval = 0.10, step = 0.05, group = G_EMA, inline = "sep")
-sepExp    = input.float(1.30, "Explosive ≥",     minval = 0.20, step = 0.05, group = G_EMA, inline = "sep")
+dynEMA    = input.bool(true, "Dynamic Momentum-EMA colour (by strength)", group = G_EMA)
+showFill  = input.bool(true, "Gradient fill", group = G_EMA)
+sepMod    = input.float(0.30, "Sep ≥ Moderate", minval = 0.05, step = 0.05, group = G_EMA, inline = "sp")
+sepStr    = input.float(0.70, "Strong", minval = 0.10, step = 0.05, group = G_EMA, inline = "sp")
+sepExp    = input.float(1.30, "Explosive", minval = 0.20, step = 0.05, group = G_EMA, inline = "sp")
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  MARKET STRUCTURE INPUTS
 // ─────────────────────────────────────────────────────────────────────────────
-showMS      = input.bool(true,  "Show Market Structure", group = G_MS)
+showMS      = input.bool(true,  "Show structure (Advanced)", group = G_MS)
 adaptiveSw  = input.bool(true,  "Adaptive swing length (by ATR)", group = G_MS)
 swFixed     = input.int(15, "Fixed swing length", minval = 2, group = G_MS)
 swLow       = input.int(10, "Low-vol",  minval = 2, group = G_MS, inline = "sw")
 swMid       = input.int(15, "Mid-vol",  minval = 2, group = G_MS, inline = "sw")
 swHigh      = input.int(20, "High-vol", minval = 2, group = G_MS, inline = "sw")
 bosConfType = input.string("Candle Close", "BOS Confirmation", ["Candle Close", "Wicks"], group = G_MS)
-minBodyPct  = input.float(0.60, "Strong-break min body %", minval = 0.1, maxval = 0.95, step = 0.05, group = G_MS)
+minBodyPct  = input.float(0.60, "Strong candle min body %", minval = 0.1, maxval = 0.95, step = 0.05, group = G_MS)
 breakAtr    = input.float(0.15, "Min break beyond structure (ATR)", minval = 0.0, step = 0.05, group = G_MS)
-showCHOCH   = input.bool(true,  "Label first counter-trend break as CHoCH", group = G_MS)
-showSwing   = input.bool(true,  "Show swing labels (HH/HL/LH/LL)", group = G_MS)
-bosColor    = input.color(color.rgb(120, 123, 130), "BOS / CHoCH line", group = G_MS)
+showCHOCH   = input.bool(true,  "Label CHoCH", group = G_MS)
+showSwing   = input.bool(false, "Show swing labels (HH/HL/LH/LL)", group = G_MS)
+maxStructLab= input.int(6, "Keep last N structure labels", minval = 1, maxval = 30, group = G_MS)
+bosColor    = input.color(color.rgb(120, 123, 130), "BOS / CHoCH", group = G_MS)
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  KEY LEVELS INPUTS
+//  SMART ZONE INPUTS
 // ─────────────────────────────────────────────────────────────────────────────
-showKL    = input.bool(true,  "Show Key Levels", group = G_KL)
-klLeft    = input.int(20, "Look Left",  minval = 1, group = G_KL, inline = "lr")
-klRight   = input.int(15, "Look Right", minval = 1, group = G_KL, inline = "lr")
-maxZones  = input.int(10, "Max zones", minval = 2, maxval = 30, group = G_KL)
-klAtrLen  = input.int(30, "ATR Length", minval = 1, group = G_KL)
-klMult    = input.float(0.5, "Zone Width (ATR)", minval = 0.1, step = 0.1, group = G_KL)
-klPer     = input.float(5,  "Max Zone Percent", minval = 0.1, step = 0.5, group = G_KL)
-klSrc     = input.string("HA", "Source for Pivots", ["HA", "High/Low Body", "High/Low"], group = G_KL)
-mergeZones= input.bool(true,  "Merge & strengthen recurring zones", group = G_KL)
-showStars = input.bool(true,  "Show zone freshness (★)", group = G_KL)
-supCol    = input.color(#2196f3, "Demand / Support", group = G_KL, inline = "c1")
-resCol    = input.color(#ffd54f, "Supply / Resistance", group = G_KL, inline = "c1")
-brkSupCol = input.color(#ff9800, "Broken support", group = G_KL, inline = "c2")
-brkResCol = input.color(#00e5ff, "Broken resistance", group = G_KL, inline = "c2")
+showKL      = input.bool(true,  "Show Smart Zones", group = G_KL)
+klLeft      = input.int(20, "Look Left",  minval = 1, group = G_KL, inline = "lr")
+klRight     = input.int(15, "Look Right", minval = 1, group = G_KL, inline = "lr")
+maxPerType  = input.int(3,  "Max zones per side", minval = 1, maxval = 6, group = G_KL)
+klAtrLen    = input.int(30, "ATR Length", minval = 1, group = G_KL)
+klMult      = input.float(0.5, "Zone Width (ATR)", minval = 0.1, step = 0.1, group = G_KL)
+klPer       = input.float(5,  "Max Zone Percent", minval = 0.1, step = 0.5, group = G_KL)
+klSrc       = input.string("HA", "Source", ["HA", "High/Low Body", "High/Low"], group = G_KL)
+maxTests    = input.int(3,  "Delete after N tests", minval = 1, maxval = 10, group = G_KL)
+maxAge      = input.int(400,"Delete zones older than (bars)", minval = 50, group = G_KL)
+minZoneQual = input.float(35,"Min zone quality to display", minval = 0, maxval = 100, group = G_KL)
+showStars   = input.bool(false, "Show zone quality stars (Advanced)", group = G_KL)
+supCol      = input.color(#2196f3, "Demand", group = G_KL, inline = "c1")
+resCol      = input.color(#ffd54f, "Supply", group = G_KL, inline = "c1")
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SIGNAL / CONFIDENCE / HTF INPUTS
+//  ENTRY / CONFIDENCE / HTF
 // ─────────────────────────────────────────────────────────────────────────────
-showSig     = input.bool(true,  "Show graded BUY / SELL signals", group = G_SIG)
-minConf     = input.int(85, "Min confidence / grade B (%)", minval = 50, maxval = 100, group = G_SIG)
+showDots    = input.bool(true,  "Show entry dots", group = G_SIG)
+minConf     = input.int(80, "Min confidence (%)", minval = 50, maxval = 100, group = G_SIG)
 minRR       = input.float(2.0, "Min Risk:Reward", minval = 0.5, step = 0.5, group = G_SIG)
-smartFilter = input.bool(true,  "Smart filter (block Range / Compression / Weak)", group = G_SIG)
-showRisk    = input.bool(true,  "Draw Entry / SL / TP on signal", group = G_SIG)
-useHTF      = input.bool(true,  "Higher-timeframe confirmation", group = G_SIG, inline = "htf")
-htfTF       = input.timeframe("60", "TF", group = G_SIG, inline = "htf")
-slopeMin    = input.float(0.04, "Min EMA slope (ATR/bar, flat filter)", minval = 0.0, step = 0.01, group = G_SIG)
+armWindow   = input.int(10, "Pullback→entry window (bars)", minval = 2, maxval = 40, group = G_SIG)
+cooldown    = input.int(15, "Signal cooldown (bars)", minval = 0, maxval = 100, group = G_SIG)
+showRisk    = input.bool(true,  "Draw Entry/SL/TP (Advanced)", group = G_SIG)
+useHTF      = input.bool(true,  "HTF confirmation", group = G_SIG, inline = "h")
+htfTF       = input.timeframe("60", "TF", group = G_SIG, inline = "h")
+slopeMin    = input.float(0.04, "Min EMA slope (flat filter)", minval = 0.0, step = 0.01, group = G_SIG)
 compMax     = input.float(0.45, "Compression: EMA spread <", minval = 0.1, step = 0.05, group = G_SIG)
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SESSION INPUTS
+//  SESSION
 // ─────────────────────────────────────────────────────────────────────────────
-useSession  = input.bool(false, "Restrict signals to sessions", group = G_SES)
-useLondon   = input.bool(true,  "London", group = G_SES, inline = "s1")
-useNY       = input.bool(true,  "New York", group = G_SES, inline = "s1")
-useAsia     = input.bool(false, "Asia", group = G_SES, inline = "s1")
+useSession  = input.bool(false, "Restrict to sessions", group = G_SES)
+useLondon   = input.bool(true,  "London", group = G_SES, inline = "s")
+useNY       = input.bool(true,  "New York", group = G_SES, inline = "s")
+useAsia     = input.bool(false, "Asia", group = G_SES, inline = "s")
 londonSess  = input.session("0800-1700", "London",   group = G_SES)
 nySess      = input.session("1300-2200", "New York", group = G_SES)
 asiaSess    = input.session("0000-0900", "Asia",     group = G_SES)
-sessTZ      = input.string("GMT", "Session timezone", group = G_SES)
+sessTZ      = input.string("GMT", "Timezone", group = G_SES)
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  DASHBOARD & VISUAL INPUTS
+//  DASHBOARD & VISUALS
 // ─────────────────────────────────────────────────────────────────────────────
 showDash    = input.bool(true,  "Show dashboard", group = G_UI)
 dashPos     = input.string("Top Right", "Position", ["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group = G_UI)
@@ -143,26 +148,28 @@ body     = math.abs(close - open)
 rng      = high - low
 rngSafe  = rng == 0 ? syminfo.mintick : rng
 bodyPct  = body / rngSafe
+upWick   = high - math.max(open, close)
+dnWick   = math.min(open, close) - low
 displacement = bodyPct >= minBodyPct or rng >= 1.2 * atrSafe
 
-// Trend (price above 33; 200 not required, to avoid late entries)
 bullTrend = emaFast > emaMed and emaMed > emaMacro and close > emaMed
 bearTrend = emaFast < emaMed and emaMed < emaMacro and close < emaMed
 fullBull  = bullTrend and close > emaMacro
 fullBear  = bearTrend and close < emaMacro
 
-// ── 1) Trend STRENGTH from EMA separation ───────────────────────────────────
-emaSep   = math.abs(emaFast - emaMed) / atrSafe
-strScore = emaSep < sepMod ? 0 : emaSep < sepStr ? 1 : emaSep < sepExp ? 2 : 3
-trendStr = strScore == 0 ? "Weak" : strScore == 1 ? "Moderate" : strScore == 2 ? "Strong" : "Explosive"
-strCol   = strScore == 0 ? color.gray : strScore == 1 ? color.silver : strScore == 2 ? color.new(color.lime, 0) : color.new(color.aqua, 0)
-
-// ── EMA slope + spread → flat / compression ─────────────────────────────────
+// ── Trend STRENGTH: EMA separation + slope + ATR expansion ──────────────────
+emaSep    = math.abs(emaFast - emaMed) / atrSafe
 slopeMed  = (emaMed - emaMed[3]) / 3 / atrSafe
-emaFlat   = math.abs(slopeMed) < slopeMin
-emaSpread = (math.max(emaFast, emaMed, emaMacro) - math.min(emaFast, emaMed, emaMacro)) / atrSafe
+absSlope  = math.abs(slopeMed)
+sepScore  = emaSep   < sepMod ? 0 : emaSep   < sepStr ? 1 : emaSep < sepExp ? 2 : 3
+slScore   = absSlope < 0.05   ? 0 : absSlope < 0.12   ? 1 : absSlope < 0.25 ? 2 : 3
+atrScore  = atrRatio < 0.90   ? 0 : atrRatio < 1.10   ? 1 : atrRatio < 1.40 ? 2 : 3
+strScore  = int(math.round((sepScore + slScore + atrScore) / 3.0))
+trendStr  = strScore == 0 ? "Weak" : strScore == 1 ? "Moderate" : strScore == 2 ? "Strong" : "Explosive"
 
-// ── 3) MARKET-STATE engine ──────────────────────────────────────────────────
+// ── Market STATE ────────────────────────────────────────────────────────────
+emaFlat       = absSlope < slopeMin
+emaSpread     = (math.max(emaFast, emaMed, emaMacro) - math.min(emaFast, emaMed, emaMacro)) / atrSafe
 isCompression = emaSpread < compMax or atrRatio < 0.70
 isTrending    = (bullTrend or bearTrend) and not emaFlat and not isCompression
 isPullback    = isTrending and ((bullTrend and close < emaFast) or (bearTrend and close > emaFast))
@@ -170,18 +177,25 @@ isRange       = not isCompression and not isTrending
 marketState   = isCompression ? "Compression" : isPullback ? "Pullback" : isTrending ? "Trending" : "Range"
 stateCol      = isCompression ? color.new(#9c27b0, 0) : isRange ? color.gray : isPullback ? color.orange : bullTrend ? accentBull : accentBear
 
+// ── Dynamic EMA colour ──────────────────────────────────────────────────────
+f_emaDyn() =>
+    bullTrend ? (strScore == 0 ? #a5d6a7 : strScore == 1 ? #66bb6a : strScore == 2 ? #00e676 : #39ff14) :
+     bearTrend ? (strScore == 0 ? #ffb74d : strScore == 1 ? #ff7043 : strScore == 2 ? #ff1744 : #b71c1c) :
+     color.new(color.gray, 20)
+fastDyn = dynEMA ? f_emaDyn() : color.white
+
 // ════════════════════════════════════════════════════════════════════════════
-//  EMA PLOTS  (8) visual polish — gradient fill by separation
+//  EMA PLOTS  (thin, soft, gradient fill)
 // ════════════════════════════════════════════════════════════════════════════
-pf = plot(showFast  ? emaFast  : na, "Momentum EMA", color = fastCol,  linewidth = fastW)
+pf = plot(showFast  ? emaFast  : na, "Momentum EMA", color = fastDyn,  linewidth = fastW)
 pm = plot(showMed   ? emaMed   : na, "Trend EMA",    color = medCol,   linewidth = medW)
 plot(showMacro ? emaMacro : na, "Macro EMA", color = macroCol, linewidth = macroW)
 dirCol  = bullTrend ? accentBull : bearTrend ? accentBear : color.gray
-fillCol = color.from_gradient(emaSep, 0, sepExp, color.new(dirCol, 95), color.new(dirCol, 70))
+fillCol = color.from_gradient(emaSep, 0, sepExp, color.new(dirCol, 96), color.new(dirCol, 78))
 fill(pf, pm, color = showFill ? fillCol : na, title = "EMA Fill")
 
 // ════════════════════════════════════════════════════════════════════════════
-//  HTF CONFIRMATION  (non-repainting)
+//  HTF CONFIRMATION (non-repainting)
 // ════════════════════════════════════════════════════════════════════════════
 f_htf(_e) =>
     request.security(syminfo.tickerid, htfTF, _e[1], lookahead = barmerge.lookahead_on)
@@ -194,7 +208,7 @@ htfDir   = htfBull ? 1 : htfBear ? -1 : 0
 htfTxt   = not useHTF ? "Off" : htfBull ? "Bullish" : htfBear ? "Bearish" : "Neutral"
 
 // ════════════════════════════════════════════════════════════════════════════
-//  ADAPTIVE SWING + PIVOTS  (constant-length streams keep it non-repainting)
+//  ADAPTIVE SWING + PIVOTS
 // ════════════════════════════════════════════════════════════════════════════
 phL = ta.pivothigh(high, swLow,  swLow)
 phM = ta.pivothigh(high, swMid,  swMid)
@@ -204,14 +218,13 @@ plM = ta.pivotlow(low,   swMid,  swMid)
 plH = ta.pivotlow(low,   swHigh, swHigh)
 phF = ta.pivothigh(high, swFixed, swFixed)
 plF = ta.pivotlow(low,   swFixed, swFixed)
-
 regime = atrRatio < 0.8 ? 0 : atrRatio > 1.2 ? 2 : 1
 swNow  = adaptiveSw ? (regime == 0 ? swLow : regime == 1 ? swMid : swHigh) : swFixed
 pivHi  = adaptiveSw ? (regime == 0 ? phL : regime == 1 ? phM : phH) : phF
 pivLo  = adaptiveSw ? (regime == 0 ? plL : regime == 1 ? plM : plH) : plF
 
 // ════════════════════════════════════════════════════════════════════════════
-//  MARKET STRUCTURE ENGINE  (strong BOS / CHoCH)
+//  MARKET STRUCTURE ENGINE  (strong BOS / CHoCH, capped labels)
 // ════════════════════════════════════════════════════════════════════════════
 var float prevHigh      = na
 var float prevLow       = na
@@ -223,50 +236,58 @@ var int   prevBreakDir  = 0
 var int   structDir     = 0
 var string strucHi      = "—"
 var string strucLo      = "—"
+var label[] structLabs  = array.new_label()
+var line[]  structLines = array.new_line()
+
+f_keepLast(_labs, _lines, _max) =>
+    while array.size(_labs) > _max
+        label.delete(array.shift(_labs))
+    while array.size(_lines) > _max
+        line.delete(array.shift(_lines))
 
 if not na(pivHi)
     strucHi := pivHi >= nz(prevHigh, pivHi) ? "HH" : "LH"
-    prevHigh      := pivHi
-    highActive    := true
+    prevHigh := pivHi
+    highActive := true
     prevHighIndex := bar_index - swNow
-    if showMS and showSwing
-        label.new(bar_index - swNow, pivHi, strucHi, color = color.rgb(0,0,0,100), style = label.style_label_down, textcolor = chart.fg_color, size = size.tiny)
+    if adv and showMS and showSwing
+        array.push(structLabs, label.new(bar_index - swNow, pivHi, strucHi, color = color.rgb(0,0,0,100), style = label.style_label_down, textcolor = chart.fg_color, size = size.tiny))
 
 if not na(pivLo)
     strucLo := pivLo >= nz(prevLow, pivLo) ? "HL" : "LL"
-    prevLow      := pivLo
-    lowActive    := true
+    prevLow := pivLo
+    lowActive := true
     prevLowIndex := bar_index - swNow
-    if showMS and showSwing
-        label.new(bar_index - swNow, pivLo, strucLo, color = color.rgb(0,0,0,100), style = label.style_label_up, textcolor = chart.fg_color, size = size.tiny)
+    if adv and showMS and showSwing
+        array.push(structLabs, label.new(bar_index - swNow, pivLo, strucLo, color = color.rgb(0,0,0,100), style = label.style_label_up, textcolor = chart.fg_color, size = size.tiny))
 
 highSrc = bosConfType == "Candle Close" ? close : high
 lowSrc  = bosConfType == "Candle Close" ? close : low
-
 strongBreakUp = highActive and not na(prevHigh) and highSrc > prevHigh and bodyPct >= minBodyPct and (close - prevHigh) > breakAtr * atrSafe
 strongBreakDn = lowActive  and not na(prevLow)  and lowSrc  < prevLow  and bodyPct >= minBodyPct and (prevLow - close) > breakAtr * atrSafe
-
 if not na(prevHigh) and highSrc > prevHigh
     highActive := false
 if not na(prevLow) and lowSrc < prevLow
     lowActive := false
-
 chochUp = strongBreakUp and prevBreakDir == -1
 chochDn = strongBreakDn and prevBreakDir ==  1
 
-if showMS and strongBreakUp
-    line.new(prevHighIndex, prevHigh, bar_index, prevHigh, color = color.new(bosColor, 20), style = line.style_dashed, width = 1)
-    label.new(math.floor(bar_index - (bar_index - prevHighIndex) / 2), prevHigh, (chochUp and showCHOCH) ? "CHoCH" : "BOS", color = color.rgb(0,0,0,100), textcolor = bosColor, size = size.tiny)
-    structDir    := 1
+if adv and showMS and strongBreakUp
+    array.push(structLines, line.new(prevHighIndex, prevHigh, bar_index, prevHigh, color = color.new(bosColor, 25), style = line.style_dashed, width = 1))
+    array.push(structLabs, label.new(math.floor(bar_index - (bar_index - prevHighIndex) / 2), prevHigh, (chochUp and showCHOCH) ? "CHoCH" : "BOS", color = color.rgb(0,0,0,100), textcolor = bosColor, size = size.tiny))
+if adv and showMS and strongBreakDn
+    array.push(structLines, line.new(prevLowIndex, prevLow, bar_index, prevLow, color = color.new(bosColor, 25), style = line.style_dashed, width = 1))
+    array.push(structLabs, label.new(math.floor(bar_index - (bar_index - prevLowIndex) / 2), prevLow, (chochDn and showCHOCH) ? "CHoCH" : "BOS", color = color.rgb(0,0,0,100), textcolor = bosColor, style = label.style_label_up, size = size.tiny))
+if strongBreakUp
+    structDir := 1
     prevBreakDir := 1
-if showMS and strongBreakDn
-    line.new(prevLowIndex, prevLow, bar_index, prevLow, color = color.new(bosColor, 20), style = line.style_dashed, width = 1)
-    label.new(math.floor(bar_index - (bar_index - prevLowIndex) / 2), prevLow, (chochDn and showCHOCH) ? "CHoCH" : "BOS", color = color.rgb(0,0,0,100), textcolor = bosColor, style = label.style_label_up, size = size.tiny)
-    structDir    := -1
+if strongBreakDn
+    structDir := -1
     prevBreakDir := -1
+f_keepLast(structLabs, structLines, maxStructLab)
 
 // ════════════════════════════════════════════════════════════════════════════
-//  KEY LEVELS ENGINE  (zones with freshness, premium colours, broken states)
+//  SMART ZONE ENGINE  (quality-scored, auto-pruned, max 3+3)
 // ════════════════════════════════════════════════════════════════════════════
 sync      = bar_index
 confirmed = barstate.isconfirmed
@@ -277,8 +298,9 @@ var box[]   zBox    = array.new_box()
 var float[] zTop    = array.new_float()
 var float[] zBot    = array.new_float()
 var bool[]  zSup    = array.new_bool()
-var bool[]  zBroken = array.new_bool()
 var int[]   zTouch  = array.new_int()
+var int[]   zBirth  = array.new_int()
+var float[] zDisp   = array.new_float()   // displacement strength at creation (0-30)
 var bool[]  zInside = array.new_bool()
 
 f_haBody() =>
@@ -287,88 +309,111 @@ f_haBody() =>
     haOpen := na(haOpen[1]) ? (open + close) / 2 : (nz(haOpen[1]) + nz(haClose[1])) / 2
     [haOpen, haClose]
 
-f_zoneCols(_isSup, _broken, _touch) =>
-    base   = _broken ? (_isSup ? brkSupCol : brkResCol) : (_isSup ? supCol : resCol)
-    bAlpha = int(math.max(15, 55 - _touch * 8))
-    [color.new(base, bAlpha), color.new(base, 90)]
+f_qualAt(_i) =>
+    t   = array.get(zTouch, _i)
+    age = bar_index - array.get(zBirth, _i)
+    freshP = math.max(0.0, 40.0 - (t - 1) * 15.0)
+    ageP   = math.max(0.0, 30.0 * (1.0 - age / maxAge))
+    freshP + ageP + array.get(zDisp, _i)
 
-// freshness label from touch count
-f_fresh(_t) =>
-    _t <= 1 ? "Fresh" : _t == 2 ? "Tested 1x" : _t == 3 ? "Tested 2x" : "Weak"
+f_zoneCols(_isSup, _touch) =>
+    base   = _isSup ? supCol : resCol
+    bAlpha = int(math.max(20, 55 - _touch * 8))
+    [color.new(base, bAlpha), color.new(base, 92)]
 
-f_dropOldest() =>
+f_removeAt(_i) =>
+    box.delete(array.get(zBox, _i))
+    array.remove(zBox, _i)
+    array.remove(zTop, _i)
+    array.remove(zBot, _i)
+    array.remove(zSup, _i)
+    array.remove(zTouch, _i)
+    array.remove(zBirth, _i)
+    array.remove(zDisp, _i)
+    array.remove(zInside, _i)
+
+f_capType(_isSup) =>
+    cnt = 0
     if array.size(zBox) > 0
-        box.delete(array.pop(zBox))
-        array.pop(zTop)
-        array.pop(zBot)
-        array.pop(zSup)
-        array.pop(zBroken)
-        array.pop(zTouch)
-        array.pop(zInside)
-
-f_addZone(_top, _bot, _isSup) =>
-    merged = false
-    if mergeZones and array.size(zBox) > 0
         for i = 0 to array.size(zBox) - 1
-            if array.get(zSup, i) == _isSup and not array.get(zBroken, i)
-                t_ = array.get(zTop, i)
-                b_ = array.get(zBot, i)
-                if _top >= b_ and _bot <= t_
-                    array.set(zTouch, i, array.get(zTouch, i) + 1)
-                    array.set(zTop, i, math.max(t_, _top))
-                    array.set(zBot, i, math.min(b_, _bot))
-                    merged := true
-                    break
+            if array.get(zSup, i) == _isSup
+                cnt += 1
+    if cnt > maxPerType
+        worstI = -1
+        worstQ = 1e9
+        for i = 0 to array.size(zBox) - 1
+            if array.get(zSup, i) == _isSup
+                q = f_qualAt(i)
+                if q < worstQ
+                    worstQ := q
+                    worstI := i
+        if worstI >= 0
+            f_removeAt(worstI)
+
+f_addZone(_top, _bot, _isSup, _disp) =>
+    merged = false
+    if array.size(zBox) > 0
+        for i = 0 to array.size(zBox) - 1
+            if array.get(zSup, i) == _isSup and _top >= array.get(zBot, i) and _bot <= array.get(zTop, i)
+                array.set(zTouch, i, array.get(zTouch, i) + 1)
+                array.set(zTop, i, math.max(array.get(zTop, i), _top))
+                array.set(zBot, i, math.min(array.get(zBot, i), _bot))
+                array.set(zBirth, i, bar_index)
+                merged := true
+                break
     if not merged
-        [bc, bg] = f_zoneCols(_isSup, false, 1)
+        [bc, bg] = f_zoneCols(_isSup, 1)
         b = box.new(sync[klRight], _top, sync, _bot, xloc = xloc.bar_index, border_color = bc, bgcolor = bg)
         array.unshift(zBox, b)
         array.unshift(zTop, _top)
         array.unshift(zBot, _bot)
         array.unshift(zSup, _isSup)
-        array.unshift(zBroken, false)
         array.unshift(zTouch, 1)
+        array.unshift(zBirth, bar_index)
+        array.unshift(zDisp, _disp)
         array.unshift(zInside, false)
-        if array.size(zBox) > maxZones
-            f_dropOldest()
+        f_capType(_isSup)
 
 [haOpen, haClose] = f_haBody()
 srcHigh = haSrc ? math.max(haClose, haOpen) : hiLoSrc ? high : math.max(close, open)
 srcLow  = haSrc ? math.min(haClose, haOpen) : hiLoSrc ? low  : math.min(close, open)
-
 pivot_high = ta.pivothigh(srcHigh, klLeft, klRight)
 pivot_low  = ta.pivotlow(srcLow,  klLeft, klRight)
 perc = close * (klPer / 100)
 band = math.min(atr * klMult, perc)[klRight] / 2
+// displacement strength of the candle that formed the pivot (0-30)
+dispAtPivot = math.min(30.0, (bodyPct[klRight] >= 0.6 ? 20.0 : 10.0) + math.min(10.0, rng[klRight] / atrSafe * 6.0))
 
 if showKL and not na(pivot_high) and confirmed
-    f_addZone(pivot_high + band, pivot_high - band, false)
+    f_addZone(pivot_high + band, pivot_high - band, false, dispAtPivot)
 if showKL and not na(pivot_low) and confirmed
-    f_addZone(pivot_low + band, pivot_low - band, true)
+    f_addZone(pivot_low + band, pivot_low - band, true, dispAtPivot)
 
+// per-bar maintenance: touch, prune (broken / old / over-tested / weak), redraw
 var bool newSupBreak = false
 var bool newResBreak = false
 newSupBreak := false
 newResBreak := false
-
 if array.size(zBox) > 0
-    for i = 0 to array.size(zBox) - 1
+    for i = array.size(zBox) - 1 to 0
+        isSup = array.get(zSup, i)
         t_ = array.get(zTop, i)
         b_ = array.get(zBot, i)
-        isSup  = array.get(zSup, i)
-        broken = array.get(zBroken, i)
-        if not broken
-            if isSup and close < b_
-                array.set(zBroken, i, true)
+        if (isSup and close < b_) or (not isSup and close > t_)        // broken → delete
+            if isSup
                 newSupBreak := true
-            if not isSup and close > t_
-                array.set(zBroken, i, true)
+            else
                 newResBreak := true
+            f_removeAt(i)
+            continue
         nowInside = high >= b_ and low <= t_
-        if nowInside and not array.get(zInside, i) and not array.get(zBroken, i)
+        if nowInside and not array.get(zInside, i)
             array.set(zTouch, i, array.get(zTouch, i) + 1)
         array.set(zInside, i, nowInside)
-        [bc, bg] = f_zoneCols(isSup, array.get(zBroken, i), array.get(zTouch, i))
+        if bar_index - array.get(zBirth, i) > maxAge or array.get(zTouch, i) > maxTests or f_qualAt(i) < minZoneQual
+            f_removeAt(i)
+            continue
+        [bc, bg] = f_zoneCols(isSup, array.get(zTouch, i))
         bx = array.get(zBox, i)
         box.set_top(bx, t_)
         box.set_bottom(bx, b_)
@@ -376,62 +421,54 @@ if array.size(zBox) > 0
         box.set_border_color(bx, bc)
         box.set_bgcolor(bx, bg)
 
-// freshness stars (last bar only — clean)
+// quality stars (advanced, last bar)
 var label[] starLabs = array.new_label()
-if showKL and showStars and barstate.islast
+if adv and showKL and showStars and barstate.islast
     if array.size(starLabs) > 0
         for j = 0 to array.size(starLabs) - 1
             label.delete(array.get(starLabs, j))
         array.clear(starLabs)
     if array.size(zBox) > 0
         for i = 0 to array.size(zBox) - 1
-            if not array.get(zBroken, i)
-                t = array.get(zTouch, i)
-                n = int(math.max(1, math.min(5, 6 - t)))   // fresher = more stars
-                stars = str.repeat("★", n) + str.repeat("☆", 5 - n)
-                isSup = array.get(zSup, i)
-                lab = label.new(sync + 3, isSup ? array.get(zBot, i) : array.get(zTop, i), stars,
-                     color = color.rgb(0,0,0,100), style = isSup ? label.style_label_up : label.style_label_down,
-                     textcolor = isSup ? supCol : resCol, size = size.tiny)
-                array.push(starLabs, lab)
+            q = f_qualAt(i)
+            n = int(math.max(1, math.min(5, math.round(q / 20))))
+            stars = str.repeat("★", n) + str.repeat("☆", 5 - n)
+            isSup = array.get(zSup, i)
+            array.push(starLabs, label.new(sync + 3, isSup ? array.get(zBot, i) : array.get(zTop, i), stars, color = color.rgb(0,0,0,100), style = isSup ? label.style_label_up : label.style_label_down, textcolor = isSup ? supCol : resCol, size = size.tiny))
 
-// ── nearest zones & in-zone freshness ───────────────────────────────────────
+// ── nearest zones & in-zone state (with freshness) ──────────────────────────
 f_nearestSupport() =>
     float lvl = na
     if array.size(zBox) > 0
         for i = 0 to array.size(zBox) - 1
-            if array.get(zSup, i) and not array.get(zBroken, i) and array.get(zTop, i) <= close
-                if na(lvl) or array.get(zTop, i) > lvl
-                    lvl := array.get(zTop, i)
+            if array.get(zSup, i) and array.get(zTop, i) <= close and (na(lvl) or array.get(zTop, i) > lvl)
+                lvl := array.get(zTop, i)
     lvl
-
 f_nearestResistance() =>
     float lvl = na
     if array.size(zBox) > 0
         for i = 0 to array.size(zBox) - 1
-            if not array.get(zSup, i) and not array.get(zBroken, i) and array.get(zBot, i) >= close
-                if na(lvl) or array.get(zBot, i) < lvl
-                    lvl := array.get(zBot, i)
+            if not array.get(zSup, i) and array.get(zBot, i) >= close and (na(lvl) or array.get(zBot, i) < lvl)
+                lvl := array.get(zBot, i)
     lvl
-
-// returns [insideZone, freshestTouchCount]
 f_zoneHit(_wantSup) =>
     bool hit = false
     int  fresh = 99
     if array.size(zBox) > 0
         for i = 0 to array.size(zBox) - 1
-            if array.get(zSup, i) == _wantSup and not array.get(zBroken, i)
-                if high >= array.get(zBot, i) and low <= array.get(zTop, i)
-                    hit := true
-                    fresh := math.min(fresh, array.get(zTouch, i))
+            if array.get(zSup, i) == _wantSup and high >= array.get(zBot, i) and low <= array.get(zTop, i)
+                hit := true
+                fresh := math.min(fresh, array.get(zTouch, i))
     [hit, hit ? fresh : 0]
 
 nearSup = f_nearestSupport()
 nearRes = f_nearestResistance()
 [inDemand, demandTouch] = f_zoneHit(true)
 [inSupply, supplyTouch] = f_zoneHit(false)
+freshDemand = inDemand and demandTouch <= 2
+freshSupply = inSupply and supplyTouch <= 2
 
-// ── auto risk levels ────────────────────────────────────────────────────────
+// ── auto risk ───────────────────────────────────────────────────────────────
 slLong  = na(prevLow)  ? close - atrSafe : math.min(prevLow, na(nearSup) ? prevLow : nearSup) - 0.1 * atrSafe
 slShort = na(prevHigh) ? close + atrSafe : math.max(prevHigh, na(nearRes) ? prevHigh : nearRes) + 0.1 * atrSafe
 tpLong  = na(nearRes) ? close + (close - slLong) * minRR : nearRes
@@ -441,7 +478,7 @@ rrShort = slShort - close > 0 ? (close - tpShort) / (slShort - close) : 0.0
 recRR   = bullTrend ? rrLong : bearTrend ? rrShort : math.max(rrLong, rrShort)
 
 // ════════════════════════════════════════════════════════════════════════════
-//  SESSION FILTER
+//  SESSION
 // ════════════════════════════════════════════════════════════════════════════
 inLondon = useLondon and not na(time(timeframe.period, londonSess, sessTZ))
 inNY     = useNY     and not na(time(timeframe.period, nySess, sessTZ))
@@ -450,80 +487,108 @@ inSess   = not useSession or inLondon or inNY or inAsia
 sessName = inLondon and inNY ? "London+NY" : inLondon ? "London" : inNY ? "New York" : inAsia ? "Asia" : useSession ? "Closed" : "—"
 
 // ════════════════════════════════════════════════════════════════════════════
-//  CONFIDENCE ENGINE  (0-100)   trend-strength + freshness + HTF weighted
+//  ENTRY CANDLE QUALITY
+// ════════════════════════════════════════════════════════════════════════════
+buyCandleQual  = close > open and bodyPct >= minBodyPct and (high - close) / rngSafe < 0.25 and upWick / rngSafe < 0.25
+sellCandleQual = close < open and bodyPct >= minBodyPct and (close - low) / rngSafe < 0.25 and dnWick / rngSafe < 0.25
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DYNAMIC PULLBACK STATE MACHINE
+// ════════════════════════════════════════════════════════════════════════════
+touchedEMA_bull = bullTrend and (low <= emaFast or low <= emaMed) and close > emaMed
+touchedEMA_bear = bearTrend and (high >= emaFast or high >= emaMed) and close < emaMed
+var int buyArmedBar  = na
+var int sellArmedBar = na
+if touchedEMA_bull
+    buyArmedBar := bar_index
+if touchedEMA_bear
+    sellArmedBar := bar_index
+if not bullTrend
+    buyArmedBar := na
+if not bearTrend
+    sellArmedBar := na
+buyArmed  = not na(buyArmedBar)  and (bar_index - buyArmedBar)  <= armWindow
+sellArmed = not na(sellArmedBar) and (bar_index - sellArmedBar) <= armWindow
+
+// ════════════════════════════════════════════════════════════════════════════
+//  CONFIDENCE  (weighted: trend25 structure20 zone20 pullback15 candle10 htf10)
 // ════════════════════════════════════════════════════════════════════════════
 f_conf(_bull) =>
     float s = 0.0
-    tScore = strScore == 3 ? 20 : strScore == 2 ? 18 : strScore == 1 ? 12 : 5
-    s += (_bull ? bullTrend : bearTrend) ? tScore : 0
+    s += (_bull ? bullTrend : bearTrend) ? (strScore == 3 ? 25 : strScore == 2 ? 22 : strScore == 1 ? 15 : 6) : 0
     s += (_bull ? structDir == 1 : structDir == -1) ? 20 : (structDir == 0 ? 8 : 0)
     zt  = _bull ? demandTouch : supplyTouch
     zin = _bull ? inDemand : inSupply
-    s += zin ? (zt <= 1 ? 20 : zt == 2 ? 13 : zt == 3 ? 7 : 3) : 0
-    s += displacement ? 15 : 0
-    s += (_bull ? fullBull : fullBear) ? 5 : 0
-    s += inSess ? 5 : 0
-    s += not useHTF ? 15 : ((_bull ? htfDir == 1 : htfDir == -1) ? 15 : htfDir == 0 ? 7 : 0)
+    s += zin ? (zt <= 1 ? 20 : zt == 2 ? 13 : 5) : 0
+    s += (_bull ? buyArmed : sellArmed) ? 15 : 0
+    s += (_bull ? buyCandleQual : sellCandleQual) ? 10 : 0
+    s += not useHTF ? 10 : ((_bull ? htfDir == 1 : htfDir == -1) ? 10 : htfDir == 0 ? 5 : 0)
     int(math.round(s))
 confBull = f_conf(true)
 confBear = f_conf(false)
 confShow = bullTrend ? confBull : bearTrend ? confBear : int(math.max(confBull, confBear))
 
-f_grade(_c) =>
-    _c >= 95 ? "A+" : _c >= 90 ? "A" : _c >= minConf ? "B" : ""
-
 // ════════════════════════════════════════════════════════════════════════════
-//  SIGNALS  (graded, sub-threshold hidden, state-aware)
+//  ENTRY DOTS  (single small marker; full chain + cooldown)
 // ════════════════════════════════════════════════════════════════════════════
-envOK = inSess and (not smartFilter or (isTrending or isPullback) and strScore >= 1 and bodyPct >= 0.45)
-buySignal  = showSig and bullTrend and strongBreakUp and displacement and inDemand and confBull >= minConf and rrLong  >= minRR and envOK
-sellSignal = showSig and bearTrend and strongBreakDn and displacement and inSupply and confBear >= minConf and rrShort >= minRR and envOK
+envOK = inSess and (isTrending or isPullback) and strScore >= 1
+var int lastBuyBar    = na
+var int lastSellBar   = na
+var int lastBuyStruct = na
+var int lastSellStruct= na
+buyCdOK  = na(lastBuyBar)  or (bar_index - lastBuyBar)  >= cooldown or structDir != lastBuyStruct
+sellCdOK = na(lastSellBar) or (bar_index - lastSellBar) >= cooldown or structDir != lastSellStruct
 
-if buySignal
-    label.new(bar_index, low, "BUY " + f_grade(confBull) + "  " + str.tostring(confBull) + "%", yloc = yloc.belowbar, style = label.style_label_up, color = accentBull, textcolor = color.white, size = size.small)
-if sellSignal
-    label.new(bar_index, high, "SELL " + f_grade(confBear) + "  " + str.tostring(confBear) + "%", yloc = yloc.abovebar, style = label.style_label_down, color = accentBear, textcolor = color.white, size = size.small)
+buyEntry  = showDots and bullTrend and buyArmed and buyCandleQual and strongBreakUp and freshDemand and envOK and confBull >= minConf and rrLong  >= minRR and buyCdOK
+sellEntry = showDots and bearTrend and sellArmed and sellCandleQual and strongBreakDn and freshSupply and envOK and confBear >= minConf and rrShort >= minRR and sellCdOK
 
-// ── auto risk drawing (Entry / SL / TP), refreshed per signal ───────────────
+if buyEntry
+    buyArmedBar := na
+    lastBuyBar := bar_index
+    lastBuyStruct := structDir
+if sellEntry
+    sellArmedBar := na
+    lastSellBar := bar_index
+    lastSellStruct := structDir
+
+plotshape(buyEntry,  "Bullish setup", shape.circle, location.belowbar, color.new(accentBull, 0), size = size.tiny)
+plotshape(sellEntry, "Bearish setup", shape.circle, location.abovebar, color.new(accentBear, 0), size = size.tiny)
+
+// auto risk lines (advanced)
 var line lnE = na
 var line lnS = na
 var line lnT = na
 var label lbR = na
-if showRisk and (buySignal or sellSignal)
+if adv and showRisk and (buyEntry or sellEntry)
     if not na(lnE)
         line.delete(lnE)
         line.delete(lnS)
         line.delete(lnT)
         label.delete(lbR)
-    e  = close
-    sl = buySignal ? slLong : slShort
-    tp = buySignal ? tpLong : tpShort
-    rr = buySignal ? rrLong : rrShort
+    sl = buyEntry ? slLong : slShort
+    tp = buyEntry ? tpLong : tpShort
+    rr = buyEntry ? rrLong : rrShort
     x2 = bar_index + 24
-    lnE := line.new(bar_index, e,  x2, e,  color = color.new(color.white, 0),   width = 1)
-    lnS := line.new(bar_index, sl, x2, sl, color = color.new(accentBear, 0),    style = line.style_dashed, width = 1)
-    lnT := line.new(bar_index, tp, x2, tp, color = color.new(accentBull, 0),    style = line.style_dashed, width = 1)
-    lbR := label.new(x2, tp, "RR 1:" + str.tostring(rr, "#.#"), style = label.style_label_left, color = color.rgb(0,0,0,100), textcolor = color.new(accentBull, 0), size = size.tiny)
+    lnE := line.new(bar_index, close, x2, close, color = color.new(color.white, 10), width = 1)
+    lnS := line.new(bar_index, sl, x2, sl, color = color.new(accentBear, 0), style = line.style_dashed, width = 1)
+    lnT := line.new(bar_index, tp, x2, tp, color = color.new(accentBull, 0), style = line.style_dashed, width = 1)
+    lbR := label.new(x2, tp, "1:" + str.tostring(rr, "#.#"), style = label.style_label_left, color = color.rgb(0,0,0,100), textcolor = color.new(accentBull, 0), size = size.tiny)
 
-// ════════════════════════════════════════════════════════════════════════════
-//  CANDLE COLOURING
-// ════════════════════════════════════════════════════════════════════════════
-pullback  = (bullTrend and close < emaFast) or (bearTrend and close > emaFast)
-candleCol = not colorCandle ? na : pullback ? color.new(color.gray, 30) : bullTrend ? #1b5e20 : bearTrend ? #7f1d1d : color.new(color.gray, 40)
+// candle colouring
+pullbackC = (bullTrend and close < emaFast) or (bearTrend and close > emaFast)
+candleCol = not colorCandle ? na : pullbackC ? color.new(color.gray, 30) : bullTrend ? #1b5e20 : bearTrend ? #7f1d1d : color.new(color.gray, 40)
 barcolor(candleCol, title = "Trend candles")
 
 // ════════════════════════════════════════════════════════════════════════════
-//  DASHBOARD
+//  DASHBOARD  (minimal)
 // ════════════════════════════════════════════════════════════════════════════
 f_pos() =>
     dashPos == "Top Right" ? position.top_right : dashPos == "Top Left" ? position.top_left : dashPos == "Bottom Right" ? position.bottom_right : position.bottom_left
-
 trendTxt = fullBull ? "STRONG BULL" : bullTrend ? "BULLISH" : fullBear ? "STRONG BEAR" : bearTrend ? "BEARISH" : "NEUTRAL"
 trendCol = bullTrend ? accentBull : bearTrend ? accentBear : color.gray
-sigTxt   = buySignal ? "BUY " + f_grade(confBull) : sellSignal ? "SELL " + f_grade(confBear) : "—"
+strCol   = strScore == 0 ? color.gray : strScore == 1 ? color.silver : strScore == 2 ? color.new(color.lime, 0) : color.new(color.aqua, 0)
 
 var table dash = na
-
 f_cell(_r, _k, _v, _c) =>
     table.cell(dash, 0, _r, _k, text_color = color.new(color.silver, 0), text_size = size.small, text_halign = text.align_left,  bgcolor = color.new(#0e0f13, 5))
     table.cell(dash, 1, _r, _v, text_color = _c, text_size = size.small, text_halign = text.align_right, bgcolor = color.new(#0e0f13, 5))
@@ -531,43 +596,37 @@ f_cell(_r, _k, _v, _c) =>
 if showDash and barstate.islast
     if not na(dash)
         table.delete(dash)
-    dash := table.new(f_pos(), 2, 10, bgcolor = color.new(#0e0f13, 5), frame_color = color.new(color.gray, 55), frame_width = 1, border_color = color.new(color.gray, 75), border_width = 1)
+    dash := table.new(f_pos(), 2, 10, bgcolor = color.new(#0e0f13, 5), frame_color = color.new(color.gray, 60), frame_width = 1, border_color = color.new(color.gray, 80), border_width = 1)
     table.cell(dash, 0, 0, "EMA·MS PRO", text_color = color.white, text_size = size.normal, text_halign = text.align_left, bgcolor = color.new(trendCol, 25))
     table.cell(dash, 1, 0, syminfo.ticker + " " + timeframe.period, text_color = color.white, text_size = size.small, text_halign = text.align_right, bgcolor = color.new(trendCol, 25))
-    f_cell(1, "Trend",       trendTxt,  trendCol)
-    f_cell(2, "Strength",    trendStr,  strCol)
-    f_cell(3, "Market State",marketState, stateCol)
-    f_cell(4, "HTF",         htfTxt,    htfDir == 1 ? accentBull : htfDir == -1 ? accentBear : color.gray)
-    f_cell(5, "Structure",   strucHi + "  " + strucLo, structDir == 1 ? accentBull : structDir == -1 ? accentBear : color.gray)
+    f_cell(1, "Trend",        trendTxt, trendCol)
+    f_cell(2, "Strength",     trendStr, strCol)
+    f_cell(3, "Market State", marketState, stateCol)
+    f_cell(4, "Confidence",   str.tostring(confShow) + "%", confShow >= 90 ? accentBull : confShow >= minConf ? color.orange : color.gray)
+    f_cell(5, "HTF",          htfTxt, htfDir == 1 ? accentBull : htfDir == -1 ? accentBear : color.gray)
     f_cell(6, "Nearest Demand",     na(nearSup) ? "—" : str.tostring(nearSup, format.mintick), supCol)
     f_cell(7, "Nearest Resistance", na(nearRes) ? "—" : str.tostring(nearRes, format.mintick), resCol)
     f_cell(8, "Recommended RR",     recRR <= 0 ? "—" : "1:" + str.tostring(recRR, "#.#"), recRR >= minRR ? accentBull : color.gray)
-    confC = confShow >= 90 ? accentBull : confShow >= minConf ? color.orange : color.gray
-    table.cell(dash, 0, 9, "Confidence", text_color = color.white, text_size = size.small, text_halign = text.align_left, bgcolor = color.new(confC, 30))
-    table.cell(dash, 1, 9, str.tostring(confShow) + "%  " + sigTxt, text_color = color.white, text_size = size.normal, text_halign = text.align_right, bgcolor = color.new(confC, 30))
+    f_cell(9, "Session",      sessName, sessName == "Closed" ? color.gray : color.white)
 
 // ════════════════════════════════════════════════════════════════════════════
-//  ALERTS
+//  ALERTS  (no BUY/SELL wording)
 // ════════════════════════════════════════════════════════════════════════════
-f_msg(_dir, _conf) =>
-    _dir + " " + f_grade(_conf) +
+f_msg(_bull, _conf) =>
+    (_bull ? "High-Probability Bullish Setup" : "High-Probability Bearish Setup") +
+         "\nConfidence : " + str.tostring(_conf) + "%" +
          "\nTrend : " + trendTxt + " (" + trendStr + ")" +
          "\nState : " + marketState +
-         "\nConfidence : " + str.tostring(_conf) + "%" +
-         "\nStructure : " + ((_dir == "BUY" and chochUp) or (_dir == "SELL" and chochDn) ? "CHoCH" : "BOS") +
-         "\nZone : " + (_dir == "BUY" ? "Demand" : "Supply") +
-         "\nRR : 1:" + str.tostring(_dir == "BUY" ? rrLong : rrShort, "#.#") +
+         "\nRR : 1:" + str.tostring(_bull ? rrLong : rrShort, "#.#") +
          "\nHTF : " + htfTxt +
          "\nSymbol : " + syminfo.ticker + "  TF : " + timeframe.period
 
-if buySignal
-    alert(f_msg("BUY", confBull), alert.freq_once_per_bar_close)
-if sellSignal
-    alert(f_msg("SELL", confBear), alert.freq_once_per_bar_close)
+if buyEntry
+    alert(f_msg(true, confBull), alert.freq_once_per_bar_close)
+if sellEntry
+    alert(f_msg(false, confBear), alert.freq_once_per_bar_close)
 
-alertcondition(buySignal,     "BUY signal",        "BUY confluence · {{ticker}} {{interval}} · {{close}}")
-alertcondition(sellSignal,    "SELL signal",       "SELL confluence · {{ticker}} {{interval}} · {{close}}")
-alertcondition(strongBreakUp, "Bullish Strong BOS","Bullish strong BOS/CHoCH on {{interval}} · {{close}}")
-alertcondition(strongBreakDn, "Bearish Strong BOS","Bearish strong BOS/CHoCH on {{interval}} · {{close}}")
-alertcondition(newSupBreak,   "Support broken",    "Support zone broken on {{interval}} · {{close}}")
-alertcondition(newResBreak,   "Resistance broken", "Resistance zone broken on {{interval}} · {{close}}")
+alertcondition(buyEntry,      "Bullish setup",      "High-Probability Bullish Setup · {{ticker}} {{interval}} · {{close}}")
+alertcondition(sellEntry,     "Bearish setup",      "High-Probability Bearish Setup · {{ticker}} {{interval}} · {{close}}")
+alertcondition(strongBreakUp, "Bullish Strong BOS", "Bullish strong BOS/CHoCH on {{interval}} · {{close}}")
+alertcondition(strongBreakDn, "Bearish Strong BOS", "Bearish strong BOS/CHoCH on {{interval}} · {{close}}")
