@@ -40,7 +40,7 @@ Works on any symbol/timeframe, but it is tuned for **intraday day trading**
 | M9 | **Smart Price Action** | Trend EMA, swing pivots, dynamic support/resistance, HH/LL structure |
 | M12 | **Market Condition** | Trending / Range / Balanced / Compression / Expansion + volatility regime |
 | M13 | **Trade Quality** | Independent 0–100 long & short scoring → grade (A+…D) and Market Quality |
-| M14/M21 | **AI Trade Plan** | WAIT / SETUP FORMING / BUY-SELL PLAN READY with reasons, entry zone, stop, TP1–TP3, R:R |
+| M14/M21 | **AI Trade Plan** | A clean status tag — WAIT / SETUP FORMING / BUY-SELL PLAN READY — with score, grade and the reasons behind it (no entry/stop/target clutter) |
 | M15 | **Dashboard** | Dark-glass terminal panel: bias, state, VWAP, POC/VA, HVN/LVN, flow, plan |
 | M16 | **Smart Alerts** | VWAP break/bounce/reject, POC break, value-area entry, plan-ready, score threshold |
 | M17 | **Clean Chart** | All drawings are recycled on the last bar; object count stays bounded |
@@ -74,9 +74,10 @@ score ≥ your threshold  AND  trend agrees  AND  price is outside the Value Are
 ```
 
 Otherwise it shows **SETUP FORMING** (close but not confirmed) or **WAIT**.
-Stops anchor to VAL/VAH or ATR; targets cascade through HVN/LVN → VA edge →
-previous day high/low. This protects against overtrading and forcing entries
-inside balance.
+The on-chart output is a clean tag only — the plan status plus its score, grade
+and reasons. Execution (entry, stop, targets) is left to the trader; the
+indicator's job is to tell you *when and why* there is an edge, and to keep you
+out the rest of the time.
 
 ---
 

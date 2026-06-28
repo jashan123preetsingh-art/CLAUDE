@@ -545,23 +545,6 @@ bool armShort = (not longSide) and shortScore >= scoreThreshold and trendDn and 
 planStatus = armLong ? "BUY PLAN READY" : armShort ? "SELL PLAN READY" : (longScore >= scoreThreshold - 12 and trendUp) ? "BUY SETUP FORMING" : (shortScore >= scoreThreshold - 12 and trendDn) ? "SELL SETUP FORMING" : "WAIT"
 planColor = armLong ? cBull : armShort ? cBear : str.contains(planStatus, "BUY") ? color.new(cBull, 35) : str.contains(planStatus, "SELL") ? color.new(cBear, 35) : cTextDim
 
-// Entry / stop / targets (M21 trade plan)
-float planEntry = close
-float planStop  = na
-float planT1 = na, float planT2 = na, float planT3 = na
-if armLong
-    planStop := math.min(nz(valPrice, close - atr14*1.5), close - atr14*1.2)
-    planT1 := not na(hvn1) and hvn1 > close ? hvn1 : close + atr14*1.5
-    planT2 := not na(vahPrice) and vahPrice > planT1 ? vahPrice : close + atr14*3
-    planT3 := not na(pdh) and pdh > planT2 ? pdh : close + atr14*5
-else if armShort
-    planStop := math.max(nz(vahPrice, close + atr14*1.5), close + atr14*1.2)
-    planT1 := not na(lvn1) and lvn1 < close ? lvn1 : close - atr14*1.5
-    planT2 := not na(valPrice) and valPrice < planT1 ? valPrice : close - atr14*3
-    planT3 := not na(pdl) and pdl < planT2 ? pdl : close - atr14*5
-
-planRR = not na(planStop) and (planEntry - planStop) != 0 ? math.abs(planT2 - planEntry) / math.abs(planEntry - planStop) : na
-
 // ============================================================================
 //  M14 — REASONING (human-readable, top reasons only)
 // ============================================================================
@@ -632,20 +615,12 @@ if barstate.islast and showDash
     f_row(dash, sz, 20, "Status",        planStatus, planColor)
     f_row(dash, sz, 21, "Score / Grade", str.tostring(math.round(tradeScore)) + "  " + gradeTxt, tradeScore>=70?cBull:tradeScore>=55?cText:cTextDim)
 
-// ---- On-chart plan label (M14, minimal) ----
+// ---- On-chart plan tag (M14, minimal — status + score + reasons only) ----
 var label planLbl = na
 if barstate.islast and showPlanLbl and planStatus != "WAIT"
     label.delete(planLbl)
     string body = planStatus + "   (" + str.tostring(math.round(tradeScore)) + " / " + gradeTxt + ")\n"
     body += "──────────────\n" + f_reasons()
-    if armLong or armShort
-        body += "──────────────\n"
-        body += "Entry  " + f_px(planEntry) + "\n"
-        body += "Stop   " + f_px(planStop) + "\n"
-        body += "TP1    " + f_px(planT1) + "\n"
-        body += "TP2    " + f_px(planT2) + "\n"
-        body += "TP3    " + f_px(planT3) + "\n"
-        body += na(planRR) ? "" : "R:R    " + str.tostring(math.round(planRR*100)/100)
     planLbl := label.new(bar_index, low - atr14*1.2, body, xloc=xloc.bar_index, style=label.style_label_up, color=color.new(planColor, 12), textcolor=color.white, size=size.small, textalign=text.align_left)
 
 // ============================================================================
