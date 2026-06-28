@@ -1,3 +1,4 @@
+//@version=6
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © Volume Flow Pro X AI
 //
@@ -26,7 +27,6 @@
 //    M17 Clean Chart Engine (bounded object recycling)
 //    M18 Customization
 //  ============================================================================
-//@version=6
 
 indicator("Volume Flow Pro X AI", shorttitle="VF Pro X AI", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500, max_bars_back=1500)
 
@@ -588,7 +588,6 @@ dayType = trendStr > 2 and (trendUp or trendDn) ? "Trend Day" : marketState == "
 // ---- Buyers vs Sellers participation (M14 — delta approximation from bar location) ----
 buyersPct  = math.round(math.max(0, math.min(100, ta.ema(buyP, 14) * 100)))
 sellersPct = 100 - buyersPct
-flowTxt    = buyersPct >= 60 ? "Buyers Dominating" : buyersPct <= 40 ? "Sellers Dominating" : "Balanced Flow"
 flowColor  = buyersPct >= 60 ? cBull : buyersPct <= 40 ? cBear : cTextDim
 
 // ---- Multi-Timeframe POC (approximate; lookback capped for performance) ----
@@ -665,7 +664,6 @@ shortScore += (not na(vahPrice) and close <= vahPrice and close >= (na(pocPrice)
 bool longSide = longScore >= shortScore
 float tradeScore = math.min(math.max(longSide ? longScore : shortScore, 0), 100)
 gradeTxt = tradeScore >= 90 ? "A+" : tradeScore >= 80 ? "A" : tradeScore >= 70 ? "B" : tradeScore >= 60 ? "C" : "D"
-qualityTxt = tradeScore >= 85 ? "Excellent" : tradeScore >= 75 ? "Very Good" : tradeScore >= 65 ? "Good" : tradeScore >= 55 ? "Average" : "Poor"
 
 // Market Quality (is the market worth trading at all — separate from setup) M21
 mktQ = 0.0
@@ -729,7 +727,7 @@ if barstate.islast and showDash
     if not na(dash)
         table.delete(dash)
     sz = f_txtSize(dashSize)
-    int nRows = 5 + 4 + 6 + 5 + 3 + (showMTFpoc ? 4 : 0) + (showSession ? 3 : 0)
+    int nRows = (3 + (showAuction ? 2 : 0)) + 4 + 6 + 5 + 3 + (showMTFpoc ? 4 : 0) + (showSession ? 3 : 0)
     dash := table.new(f_tblPos(dashPos), 2, nRows, bgcolor=cPanelBg, frame_color=cFrame, frame_width=1, border_color=cGrid, border_width=0)
     int r = 0
 
@@ -737,10 +735,11 @@ if barstate.islast and showDash
     r += 1
     f_row(dash, sz, r, "Market Bias", marketBias, biasColor)
     r += 1
-    f_row(dash, sz, r, "Day Type", dayType, marketStateColor)
-    r += 1
-    f_row(dash, sz, r, "Auction", auctionDisp, auctionCol)
-    r += 1
+    if showAuction
+        f_row(dash, sz, r, "Day Type", dayType, marketStateColor)
+        r += 1
+        f_row(dash, sz, r, "Auction", auctionDisp, auctionCol)
+        r += 1
     f_row(dash, sz, r, "Trend", trendUp ? "Bullish" : trendDn ? "Bearish" : "Neutral", trendUp ? cBull : trendDn ? cBear : cTextDim)
     r += 1
 
