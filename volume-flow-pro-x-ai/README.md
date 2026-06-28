@@ -57,6 +57,22 @@ Works on any symbol/timeframe, but it is tuned for **intraday day trading**
 | **Volume Delta Approximation** | Buyers % vs Sellers % and a "Buyers/Sellers Dominating" read, estimated from bar location × volume (Pine has no true bid/ask tape) |
 | **AI Morning Brief** | A pre-trade panel: bias, day type, preferred buy zone (VAL–POC), preferred sell zone (POC–VAH), expected range, best session, plan and confidence |
 
+### AI Trading Assistant (v3)
+
+The intelligence layer that turns the data above into plain-English guidance.
+No new indicators, no target/probability prediction — these read the signals
+already computed.
+
+| Module | What it does |
+|--------|--------------|
+| **AI Market GPS** | A dedicated panel showing exactly where price sits in today's auction — above/below Daily/Weekly/Anchored VWAP & POC, position inside the Value Area, vs previous day, and whether price is sitting at an HVN (acceptance) or LVN (fast-move) node. Updates live. |
+| **Institutional Confluence** | Counts how many institutional factors agree with the active bias — VWAP, POC, Trend, Volume, Momentum, Price Action — as an `X / 6` score with a ★ rating, so the strongest locations are obvious. |
+| **AI Decision Engine** | One clear instruction instead of arrows: WAIT / WATCH / BUY PULLBACK / SELL RETEST / NO TRADE, plus MANAGE / MOVE STOP / TAKE PARTIAL / EXIT once you set *Active Position* (advisory only — it doesn't track fills). |
+| **Market Energy** | A Very-Low→Very-High read built from relative volume, VWAP slope, ATR expansion, trend strength and momentum — tells you whether the market is even worth trading. |
+| **AI Market Personality** | One active label for the day: Runner / Trend Day / Expansion / Compression / Balanced / Slow Grind / Low Participation / Choppy. |
+| **AI Reasoning** | Every decision explains itself in plain English (the on-chart tag and panels). |
+| **Smart Level Importance** | The ranked Key Levels panel (top-5, ★ rated) — institutional levels outrank intraday ones. |
+
 ---
 
 ## Design principles
