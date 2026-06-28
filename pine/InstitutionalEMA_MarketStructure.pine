@@ -85,17 +85,17 @@ bosColor    = input.color(color.rgb(120, 123, 130), "BOS / CHoCH", group = G_MS)
 showKL      = input.bool(true,  "Show Smart Zones", group = G_KL)
 klLeft      = input.int(20, "Look Left",  minval = 1, group = G_KL, inline = "lr")
 klRight     = input.int(15, "Look Right", minval = 1, group = G_KL, inline = "lr")
-maxPerType  = input.int(3,  "Max zones per side", minval = 1, maxval = 6, group = G_KL)
 klAtrLen    = input.int(30, "ATR Length", minval = 1, group = G_KL)
 klMult      = input.float(0.5, "Zone Width (ATR)", minval = 0.1, step = 0.1, group = G_KL)
 klPer       = input.float(5,  "Max Zone Percent", minval = 0.1, step = 0.5, group = G_KL)
 klSrc       = input.string("HA", "Source", ["HA", "High/Low Body", "High/Low"], group = G_KL)
-maxTests    = input.int(3,  "Delete after N tests", minval = 1, maxval = 10, group = G_KL)
-maxAge      = input.int(400,"Delete zones older than (bars)", minval = 50, group = G_KL)
-minZoneQual = input.float(35,"Min zone quality to display", minval = 0, maxval = 100, group = G_KL)
-showStars   = input.bool(false, "Show zone quality stars (Advanced)", group = G_KL)
-supCol      = input.color(#2196f3, "Demand", group = G_KL, inline = "c1")
-resCol      = input.color(#ffd54f, "Supply", group = G_KL, inline = "c1")
+maxZones    = input.int(10, "Max zones", minval = 2, maxval = 30, group = G_KL)
+mergeZones  = input.bool(true,  "Merge & strengthen recurring zones", group = G_KL)
+showStars   = input.bool(false, "Show zone freshness stars (Advanced)", group = G_KL)
+supCol      = input.color(#2196f3, "Demand / Support", group = G_KL, inline = "c1")
+resCol      = input.color(#ffd54f, "Supply / Resistance", group = G_KL, inline = "c1")
+brkSupCol   = input.color(#ff9800, "Broken support", group = G_KL, inline = "c2")
+brkResCol   = input.color(#00e5ff, "Broken resistance", group = G_KL, inline = "c2")
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  ENTRY / CONFIDENCE / HTF
@@ -287,7 +287,7 @@ if strongBreakDn
 f_keepLast(structLabs, structLines, maxStructLab)
 
 // ════════════════════════════════════════════════════════════════════════════
-//  SMART ZONE ENGINE  (quality-scored, auto-pruned, max 3+3)
+//  ZONE ENGINE  (v3 behaviour — immediate, merge, cap, recolour-on-break)
 // ════════════════════════════════════════════════════════════════════════════
 sync      = bar_index
 confirmed = barstate.isconfirmed
@@ -298,9 +298,8 @@ var box[]   zBox    = array.new_box()
 var float[] zTop    = array.new_float()
 var float[] zBot    = array.new_float()
 var bool[]  zSup    = array.new_bool()
+var bool[]  zBroken = array.new_bool()
 var int[]   zTouch  = array.new_int()
-var int[]   zBirth  = array.new_int()
-var float[] zDisp   = array.new_float()   // displacement strength at creation (0-30)
 var bool[]  zInside = array.new_bool()
 
 f_haBody() =>
@@ -309,70 +308,43 @@ f_haBody() =>
     haOpen := na(haOpen[1]) ? (open + close) / 2 : (nz(haOpen[1]) + nz(haClose[1])) / 2
     [haOpen, haClose]
 
-f_qualAt(_i) =>
-    t   = array.get(zTouch, _i)
-    age = bar_index - array.get(zBirth, _i)
-    freshP = math.max(0.0, 40.0 - (t - 1) * 15.0)
-    ageP   = math.max(0.0, 30.0 * (1.0 - age / maxAge))
-    freshP + ageP + array.get(zDisp, _i)
+f_zoneCols(_isSup, _broken, _touch) =>
+    base   = _broken ? (_isSup ? brkSupCol : brkResCol) : (_isSup ? supCol : resCol)
+    bAlpha = int(math.max(15, 55 - _touch * 8))
+    [color.new(base, bAlpha), color.new(base, 90)]
 
-f_zoneCols(_isSup, _touch) =>
-    base   = _isSup ? supCol : resCol
-    bAlpha = int(math.max(20, 55 - _touch * 8))
-    [color.new(base, bAlpha), color.new(base, 92)]
-
-f_removeAt(_i) =>
-    box.delete(array.get(zBox, _i))
-    array.remove(zBox, _i)
-    array.remove(zTop, _i)
-    array.remove(zBot, _i)
-    array.remove(zSup, _i)
-    array.remove(zTouch, _i)
-    array.remove(zBirth, _i)
-    array.remove(zDisp, _i)
-    array.remove(zInside, _i)
-
-f_capType(_isSup) =>
-    cnt = 0
+f_dropOldest() =>
     if array.size(zBox) > 0
-        for i = 0 to array.size(zBox) - 1
-            if array.get(zSup, i) == _isSup
-                cnt += 1
-    if cnt > maxPerType
-        worstI = -1
-        worstQ = 1e9
-        for i = 0 to array.size(zBox) - 1
-            if array.get(zSup, i) == _isSup
-                q = f_qualAt(i)
-                if q < worstQ
-                    worstQ := q
-                    worstI := i
-        if worstI >= 0
-            f_removeAt(worstI)
+        box.delete(array.pop(zBox))
+        array.pop(zTop)
+        array.pop(zBot)
+        array.pop(zSup)
+        array.pop(zBroken)
+        array.pop(zTouch)
+        array.pop(zInside)
 
-f_addZone(_top, _bot, _isSup, _disp) =>
+f_addZone(_top, _bot, _isSup) =>
     merged = false
-    if array.size(zBox) > 0
+    if mergeZones and array.size(zBox) > 0
         for i = 0 to array.size(zBox) - 1
-            if array.get(zSup, i) == _isSup and _top >= array.get(zBot, i) and _bot <= array.get(zTop, i)
+            if array.get(zSup, i) == _isSup and not array.get(zBroken, i) and _top >= array.get(zBot, i) and _bot <= array.get(zTop, i)
                 array.set(zTouch, i, array.get(zTouch, i) + 1)
                 array.set(zTop, i, math.max(array.get(zTop, i), _top))
                 array.set(zBot, i, math.min(array.get(zBot, i), _bot))
-                array.set(zBirth, i, bar_index)
                 merged := true
                 break
     if not merged
-        [bc, bg] = f_zoneCols(_isSup, 1)
+        [bc, bg] = f_zoneCols(_isSup, false, 1)
         b = box.new(sync[klRight], _top, sync, _bot, xloc = xloc.bar_index, border_color = bc, bgcolor = bg)
         array.unshift(zBox, b)
         array.unshift(zTop, _top)
         array.unshift(zBot, _bot)
         array.unshift(zSup, _isSup)
+        array.unshift(zBroken, false)
         array.unshift(zTouch, 1)
-        array.unshift(zBirth, bar_index)
-        array.unshift(zDisp, _disp)
         array.unshift(zInside, false)
-        f_capType(_isSup)
+        if array.size(zBox) > maxZones
+            f_dropOldest()
 
 [haOpen, haClose] = f_haBody()
 srcHigh = haSrc ? math.max(haClose, haOpen) : hiLoSrc ? high : math.max(close, open)
@@ -381,39 +353,35 @@ pivot_high = ta.pivothigh(srcHigh, klLeft, klRight)
 pivot_low  = ta.pivotlow(srcLow,  klLeft, klRight)
 perc = close * (klPer / 100)
 band = math.min(atr * klMult, perc)[klRight] / 2
-// displacement strength of the candle that formed the pivot (0-30)
-dispAtPivot = math.min(30.0, (bodyPct[klRight] >= 0.6 ? 20.0 : 10.0) + math.min(10.0, rng[klRight] / atrSafe * 6.0))
 
 if showKL and not na(pivot_high) and confirmed
-    f_addZone(pivot_high + band, pivot_high - band, false, dispAtPivot)
+    f_addZone(pivot_high + band, pivot_high - band, false)
 if showKL and not na(pivot_low) and confirmed
-    f_addZone(pivot_low + band, pivot_low - band, true, dispAtPivot)
+    f_addZone(pivot_low + band, pivot_low - band, true)
 
-// per-bar maintenance: touch, prune (broken / old / over-tested / weak), redraw
+// per-bar maintenance: mark broken (recolour, don't delete), touch, redraw
 var bool newSupBreak = false
 var bool newResBreak = false
 newSupBreak := false
 newResBreak := false
 if array.size(zBox) > 0
-    for i = array.size(zBox) - 1 to 0
-        isSup = array.get(zSup, i)
+    for i = 0 to array.size(zBox) - 1
+        isSup  = array.get(zSup, i)
         t_ = array.get(zTop, i)
         b_ = array.get(zBot, i)
-        if (isSup and close < b_) or (not isSup and close > t_)        // broken → delete
-            if isSup
+        broken = array.get(zBroken, i)
+        if not broken
+            if isSup and close < b_
+                array.set(zBroken, i, true)
                 newSupBreak := true
-            else
+            if not isSup and close > t_
+                array.set(zBroken, i, true)
                 newResBreak := true
-            f_removeAt(i)
-            continue
         nowInside = high >= b_ and low <= t_
-        if nowInside and not array.get(zInside, i)
+        if nowInside and not array.get(zInside, i) and not array.get(zBroken, i)
             array.set(zTouch, i, array.get(zTouch, i) + 1)
         array.set(zInside, i, nowInside)
-        if bar_index - array.get(zBirth, i) > maxAge or array.get(zTouch, i) > maxTests or f_qualAt(i) < minZoneQual
-            f_removeAt(i)
-            continue
-        [bc, bg] = f_zoneCols(isSup, array.get(zTouch, i))
+        [bc, bg] = f_zoneCols(isSup, array.get(zBroken, i), array.get(zTouch, i))
         bx = array.get(zBox, i)
         box.set_top(bx, t_)
         box.set_bottom(bx, b_)
@@ -421,7 +389,7 @@ if array.size(zBox) > 0
         box.set_border_color(bx, bc)
         box.set_bgcolor(bx, bg)
 
-// quality stars (advanced, last bar)
+// freshness stars (advanced, last bar) — fewer touches = more stars
 var label[] starLabs = array.new_label()
 if adv and showKL and showStars and barstate.islast
     if array.size(starLabs) > 0
@@ -430,25 +398,25 @@ if adv and showKL and showStars and barstate.islast
         array.clear(starLabs)
     if array.size(zBox) > 0
         for i = 0 to array.size(zBox) - 1
-            q = f_qualAt(i)
-            n = int(math.max(1, math.min(5, math.round(q / 20))))
-            stars = str.repeat("★", n) + str.repeat("☆", 5 - n)
-            isSup = array.get(zSup, i)
-            array.push(starLabs, label.new(sync + 3, isSup ? array.get(zBot, i) : array.get(zTop, i), stars, color = color.rgb(0,0,0,100), style = isSup ? label.style_label_up : label.style_label_down, textcolor = isSup ? supCol : resCol, size = size.tiny))
+            if not array.get(zBroken, i)
+                n = int(math.max(1, math.min(5, 6 - array.get(zTouch, i))))
+                stars = str.repeat("★", n) + str.repeat("☆", 5 - n)
+                isSup = array.get(zSup, i)
+                array.push(starLabs, label.new(sync + 3, isSup ? array.get(zBot, i) : array.get(zTop, i), stars, color = color.rgb(0,0,0,100), style = isSup ? label.style_label_up : label.style_label_down, textcolor = isSup ? supCol : resCol, size = size.tiny))
 
-// ── nearest zones & in-zone state (with freshness) ──────────────────────────
+// ── nearest zones & in-zone state (skip broken) ─────────────────────────────
 f_nearestSupport() =>
     float lvl = na
     if array.size(zBox) > 0
         for i = 0 to array.size(zBox) - 1
-            if array.get(zSup, i) and array.get(zTop, i) <= close and (na(lvl) or array.get(zTop, i) > lvl)
+            if array.get(zSup, i) and not array.get(zBroken, i) and array.get(zTop, i) <= close and (na(lvl) or array.get(zTop, i) > lvl)
                 lvl := array.get(zTop, i)
     lvl
 f_nearestResistance() =>
     float lvl = na
     if array.size(zBox) > 0
         for i = 0 to array.size(zBox) - 1
-            if not array.get(zSup, i) and array.get(zBot, i) >= close and (na(lvl) or array.get(zBot, i) < lvl)
+            if not array.get(zSup, i) and not array.get(zBroken, i) and array.get(zBot, i) >= close and (na(lvl) or array.get(zBot, i) < lvl)
                 lvl := array.get(zBot, i)
     lvl
 f_zoneHit(_wantSup) =>
@@ -456,7 +424,7 @@ f_zoneHit(_wantSup) =>
     int  fresh = 99
     if array.size(zBox) > 0
         for i = 0 to array.size(zBox) - 1
-            if array.get(zSup, i) == _wantSup and high >= array.get(zBot, i) and low <= array.get(zTop, i)
+            if array.get(zSup, i) == _wantSup and not array.get(zBroken, i) and high >= array.get(zBot, i) and low <= array.get(zTop, i)
                 hit := true
                 fresh := math.min(fresh, array.get(zTouch, i))
     [hit, hit ? fresh : 0]

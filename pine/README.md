@@ -27,7 +27,7 @@ above** = bearish. The chart guides you; it doesn't shout.
 | **Market State** | Trending · Pullback · Compression · Range. Entries are blocked in Range and Compression. |
 | **Dynamic Pullback** | Arms on a healthy pullback to the 8/33 EMA in a strong trend, then waits for a strong confirmation candle + BOS — no buying blindly after a break. |
 | **Entry-Candle Quality** | Body ≥ 60 %, close near the extreme, small rejection wick, no doji / spinning top. |
-| **Smart Zones** | Max **3 demand + 3 supply**. Quality-scored (freshness + displacement + age). Auto-deletes broken, over-tested (>3), aged (>400 bars) and weak zones; merges overlaps. The chart stays clean. |
+| **Zones** | Demand/supply zones created on confirmed pivots, merged when they overlap, capped at `Max zones`. Broken zones recolour (support→orange, resistance→cyan) rather than vanish, so the chart updates instantly without lag. |
 | **Confidence** | Weighted: Trend 25 · Structure 20 · Zone 20 · Pullback 15 · Candle 10 · HTF 10. |
 | **HTF confirmation** | Optional higher timeframe (default 1H) raises/lowers confidence. Non-repainting. |
 | **Cooldown** | After a dot, no new same-direction signal until structure flips or N bars pass (default 15). |
