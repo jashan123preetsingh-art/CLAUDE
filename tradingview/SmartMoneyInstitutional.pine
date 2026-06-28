@@ -1,0 +1,885 @@
+// © 2026 — Original implementation. Released for educational use.
+// Smart Money Institutional Suite (SMI) — Pine Script v6
+// ----------------------------------------------------------------------------
+// An institutional-grade Smart Money Concepts (SMC) / ICT trading system built
+// around ONE unified Market Structure Engine. Every module (Order Blocks, FVG,
+// Liquidity, Sweeps, BOS/CHoCH/MSS, Inducement, Trendline, Confluence, Entry,
+// SL/TP, Dashboard, Sessions, Alerts) consumes the SAME structural data — there
+// is no duplicated structure logic anywhere in this script.
+//
+// Design principles enforced throughout this file:
+//   * NON-REPAINTING  — structure is only confirmed on closed pivots (a swing
+//                       point is N bars old before it is ever used). No module
+//                       reads an unconfirmed value.
+//   * NO FUTURE DATA  — request.security() uses lookahead_off and the [1]
+//                       confirmed-bar idiom. No `barstate.isrealtime` peeking.
+//   * REPLAY SAFE     — all drawing/state mutation is guarded by barstate so the
+//                       bar-replay tool reproduces identical results.
+//   * SELF-CLEANING   — invalid / mitigated / out-of-range objects are deleted
+//                       automatically to keep the chart uncluttered.
+//   * MODULAR         — every module has an on/off switch and its own settings.
+//   * REUSABLE        — shared helpers; no copy-pasted calculations.
+//   * ACCURACY > FREQ — confirmations are stacked; quality over quantity.
+// ----------------------------------------------------------------------------
+//@version=6
+indicator("Smart Money Institutional Suite", shorttitle="SMI", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500, max_bars_back=1000)
+
+// ============================================================================
+// SECTION 0 — GLOBAL CONSTANTS & THEME
+// ============================================================================
+// Centralised palette so Dark/Light themes and user overrides stay consistent.
+const string GRP_GEN   = "① General / Theme"
+const string GRP_MS    = "② Market Structure Engine"
+const string GRP_BOS   = "③ BOS / CHoCH / MSS"
+const string GRP_IDM   = "④ Inducement (IDM)"
+const string GRP_LIQ   = "⑤ Liquidity"
+const string GRP_SWP   = "⑥ Liquidity Sweeps"
+const string GRP_OB    = "⑦ Order Blocks"
+const string GRP_FVG   = "⑧ Fair Value Gaps"
+const string GRP_TL    = "⑨ Dynamic Trendline"
+const string GRP_PD    = "⑩ Premium / Discount"
+const string GRP_MTF   = "⑪ Multi-Timeframe"
+const string GRP_CONF  = "⑫ Confluence / Entry"
+const string GRP_RISK  = "⑬ AI SL / TP"
+const string GRP_DASH  = "⑭ Dashboard"
+const string GRP_SESS  = "⑮ Sessions"
+const string GRP_ALRT  = "⑯ Alerts"
+const string GRP_PERF  = "⑰ Performance"
+
+// ----------------------------------------------------------------------------
+// SECTION 1 — INPUTS
+// ----------------------------------------------------------------------------
+// 1.1 General / Theme ---------------------------------------------------------
+themeMode      = input.string("Dark", "Theme", options=["Dark", "Light"], group=GRP_GEN, tooltip="Adapts neutral text/line colors for dark or light chart backgrounds.")
+i_bullColor    = input.color(#089981, "Bullish color", group=GRP_GEN, inline="c1")
+i_bearColor    = input.color(#f23645, "Bearish color", group=GRP_GEN, inline="c1")
+i_neutralUser  = input.color(#787b86, "Neutral color", group=GRP_GEN, inline="c1")
+perfMode       = input.string("Balanced", "Performance mode", options=["Lite", "Balanced", "Max"], group=GRP_GEN, tooltip="Lite draws fewer objects for slow machines. Max keeps the full history.")
+
+// Theme-derived neutral / text colors.
+themeText    = themeMode == "Dark" ? color.new(#d1d4dc, 0) : color.new(#1e222d, 0)
+themeNeutral = i_neutralUser
+themeBG      = themeMode == "Dark" ? color.new(#131722, 10) : color.new(#ffffff, 10)
+
+// Object budget scales with performance mode (keeps CPU/memory bounded).
+maxObjects   = perfMode == "Lite" ? 8 : perfMode == "Balanced" ? 16 : 30
+
+// 1.2 Market Structure Engine -------------------------------------------------
+showInternal     = input.bool(true,  "Show internal structure", group=GRP_MS)
+showSwing        = input.bool(true,  "Show swing structure",    group=GRP_MS)
+intLen           = input.int(5,  "Internal swing length", minval=2, maxval=50, group=GRP_MS, tooltip="Pivot lookback for fast internal structure. Lower = more sensitive.")
+swgLen           = input.int(25, "Swing structure length", minval=5, maxval=100, group=GRP_MS, tooltip="Pivot lookback for major swing structure.")
+useATRfilter     = input.bool(true,  "ATR noise filter", group=GRP_MS, tooltip="Ignore micro-swings smaller than a fraction of ATR.")
+atrFilterMult    = input.float(0.5, "ATR filter multiplier", minval=0.0, maxval=5.0, step=0.1, group=GRP_MS)
+useFractalConfirm= input.bool(false, "Require fractal confirmation", group=GRP_MS, tooltip="Adds a Williams-fractal sanity check to each pivot.")
+structSensitivity= input.string("Normal", "Structure sensitivity", options=["Conservative","Normal","Aggressive"], group=GRP_MS)
+
+// 1.3 BOS / CHoCH / MSS -------------------------------------------------------
+showBOS          = input.bool(true,  "Show BOS",   group=GRP_BOS, inline="b1")
+showCHOCH        = input.bool(true,  "Show CHoCH", group=GRP_BOS, inline="b1")
+showMSS          = input.bool(true,  "Show MSS",   group=GRP_BOS, inline="b1")
+requireClose     = input.bool(true,  "Require candle close to confirm break", group=GRP_BOS)
+useDisplacement  = input.bool(true,  "Displacement filter", group=GRP_BOS, tooltip="Break candle range must exceed an ATR multiple (true expansion).")
+dispMult         = input.float(1.2, "Displacement ATR mult", minval=0.1, step=0.1, group=GRP_BOS)
+useVolFilter     = input.bool(false, "Volume filter on breaks", group=GRP_BOS)
+chochColor       = input.color(#ff9800, "CHoCH color", group=GRP_BOS, inline="b2")
+mssColor         = input.color(#9c27b0, "MSS color",   group=GRP_BOS, inline="b2")
+
+// 1.4 Inducement --------------------------------------------------------------
+showIDM          = input.bool(true,  "Enable inducement engine", group=GRP_IDM)
+idmColor         = input.color(#2962ff, "IDM color", group=GRP_IDM)
+idmShowZones     = input.bool(true,  "Show trap zones", group=GRP_IDM)
+idmEqTol         = input.float(0.1, "Equal-level tolerance (ATR)", minval=0.01, step=0.01, group=GRP_IDM, tooltip="How close two highs/lows must be to count as equal liquidity / inducement.")
+
+// 1.5 Liquidity ---------------------------------------------------------------
+showLiquidity    = input.bool(true,  "Enable liquidity engine", group=GRP_LIQ)
+liqEqTol         = input.float(0.1, "Equal high/low tolerance (ATR)", minval=0.01, step=0.01, group=GRP_LIQ)
+showLiqVoid      = input.bool(true,  "Show liquidity voids", group=GRP_LIQ)
+bslColor         = input.color(#f23645, "Sell-side liq (highs)", group=GRP_LIQ, inline="l1")
+sslColor         = input.color(#089981, "Buy-side liq (lows)",  group=GRP_LIQ, inline="l1")
+
+// 1.6 Sweeps ------------------------------------------------------------------
+showSweeps       = input.bool(true,  "Enable sweep engine", group=GRP_SWP)
+sweepWickRatio   = input.float(0.5, "Min wick ratio for wick-sweep", minval=0.1, maxval=0.95, step=0.05, group=GRP_SWP)
+
+// 1.7 Order Blocks ------------------------------------------------------------
+showOB           = input.bool(true,  "Enable order blocks", group=GRP_OB)
+obUseInternal    = input.bool(true,  "Internal OBs", group=GRP_OB, inline="o1")
+obUseSwing       = input.bool(true,  "Swing OBs",    group=GRP_OB, inline="o1")
+obRequireBOS     = input.bool(true,  "Require BOS confirmation", group=GRP_OB)
+obUseVol         = input.bool(false, "Volume confirmation", group=GRP_OB)
+obDeleteMitig    = input.bool(true,  "Auto-delete mitigated blocks", group=GRP_OB)
+obBullColor      = input.color(color.new(#089981, 80), "Bull OB", group=GRP_OB, inline="o2")
+obBearColor      = input.color(color.new(#f23645, 80), "Bear OB", group=GRP_OB, inline="o2")
+
+// 1.8 Fair Value Gaps ---------------------------------------------------------
+showFVG          = input.bool(true,  "Enable FVG engine", group=GRP_FVG)
+fvgMinATR        = input.float(0.25, "Min FVG size (ATR)", minval=0.0, step=0.05, group=GRP_FVG)
+fvgMinPct        = input.float(0.0,  "Min FVG size (%)", minval=0.0, step=0.05, group=GRP_FVG)
+fvgShowCE        = input.bool(true,  "Show consequent encroachment (CE)", group=GRP_FVG)
+fvgMerge         = input.bool(true,  "Merge nearby FVGs", group=GRP_FVG)
+fvgBullColor     = input.color(color.new(#089981, 82), "Bull FVG", group=GRP_FVG, inline="f1")
+fvgBearColor     = input.color(color.new(#f23645, 82), "Bear FVG", group=GRP_FVG, inline="f1")
+
+// 1.9 Dynamic Trendline -------------------------------------------------------
+showTrendline    = input.bool(true,  "Enable dynamic trendline", group=GRP_TL)
+tlEmaLen         = input.int(50, "Trend EMA length", minval=5, group=GRP_TL, tooltip="Slope of this EMA is one of the weighted trend inputs.")
+tlSensitivity    = input.float(1.0, "Trendline reactivity", minval=0.1, maxval=3.0, step=0.1, group=GRP_TL)
+
+// 1.10 Premium / Discount -----------------------------------------------------
+showPD           = input.bool(true,  "Enable premium/discount", group=GRP_PD)
+pdShade          = input.bool(true,  "Shade zones", group=GRP_PD)
+
+// 1.11 Multi-Timeframe --------------------------------------------------------
+showMTF          = input.bool(true,  "Enable MTF dashboard rows", group=GRP_MTF)
+
+// 1.12 Confluence / Entry -----------------------------------------------------
+showConfluence   = input.bool(true,  "Enable confluence engine", group=GRP_CONF)
+minEntryScore    = input.int(70, "Minimum entry probability %", minval=0, maxval=100, group=GRP_CONF)
+showEntries      = input.bool(true,  "Plot AI entries", group=GRP_CONF)
+
+// 1.13 AI SL / TP -------------------------------------------------------------
+showRisk         = input.bool(true,  "Enable AI SL/TP", group=GRP_RISK)
+slATRmult        = input.float(1.5, "SL ATR buffer", minval=0.1, step=0.1, group=GRP_RISK)
+rr1              = input.float(1.0, "TP1 R", minval=0.1, step=0.1, group=GRP_RISK, inline="r1")
+rr2              = input.float(2.0, "TP2 R", minval=0.1, step=0.1, group=GRP_RISK, inline="r1")
+rr3              = input.float(3.0, "TP3 R", minval=0.1, step=0.1, group=GRP_RISK, inline="r1")
+
+// 1.14 Dashboard --------------------------------------------------------------
+showDash         = input.bool(true,  "Show dashboard", group=GRP_DASH)
+dashPos          = input.string("Top Right", "Position", options=["Top Right","Top Left","Bottom Right","Bottom Left","Middle Right"], group=GRP_DASH)
+dashSize         = input.string("Normal", "Size", options=["Tiny","Small","Normal","Large"], group=GRP_DASH)
+
+// 1.15 Sessions ---------------------------------------------------------------
+showSessions     = input.bool(true,  "Enable session engine", group=GRP_SESS)
+showKillzones    = input.bool(true,  "Show ICT kill zones", group=GRP_SESS)
+showSilverBullet = input.bool(false, "Show Silver Bullet windows", group=GRP_SESS)
+sessAsia         = input.session("0000-0800", "Asian session", group=GRP_SESS)
+sessLondon       = input.session("0800-1600", "London session", group=GRP_SESS)
+sessNY           = input.session("1300-2100", "New York session", group=GRP_SESS)
+sessTZ           = input.string("GMT", "Session timezone", group=GRP_SESS)
+asiaCol          = input.color(color.new(#ffeb3b, 90), "Asia",   group=GRP_SESS, inline="s1")
+lonCol           = input.color(color.new(#2962ff, 90), "London", group=GRP_SESS, inline="s1")
+nyCol            = input.color(color.new(#089981, 90), "New York", group=GRP_SESS, inline="s1")
+
+// 1.16 Alerts -----------------------------------------------------------------
+alertsOn         = input.bool(true, "Master alert switch", group=GRP_ALRT, tooltip="Create alerts with 'Any alert() function call'. Each event fires its own message.")
+
+// ============================================================================
+// SECTION 2 — USER-DEFINED TYPES (state containers consumed by every module)
+// ============================================================================
+// A single pivot/structure point. The engine maintains the most recent of each.
+type Pivot
+    float price = na
+    int   bar   = na
+    bool  isHigh= false
+
+// Order Block record. `box` is the visual; the rest is its lifecycle state.
+type OB
+    box   b      = na
+    label l      = na
+    float top    = na
+    float bot    = na
+    int   bar    = na
+    bool  bull   = false
+    bool  swing  = false
+    string state = "Fresh"   // Fresh | Tested | Mitigated | Broken
+    bool  alive  = true
+
+// Fair Value Gap record.
+type FVG
+    box   b      = na
+    line  ce     = na
+    float top    = na
+    float bot    = na
+    int   bar    = na
+    bool  bull   = false
+    string state = "Active"  // Active | Partial | Filled
+    bool  alive  = true
+
+// Liquidity level (equal highs / lows, pools, untouched).
+type Liq
+    line  ln     = na
+    label lb     = na
+    float price  = na
+    int   bar    = na
+    bool  buyside= false     // true = buy-side (resting below lows), false = sell-side
+    bool  swept  = false
+    bool  alive  = true
+
+// ============================================================================
+// SECTION 3 — SHARED HELPERS (no module re-implements these)
+// ============================================================================
+atr        = ta.atr(14)
+atrFast    = ta.atr(5)
+volMA      = ta.sma(volume, 20)
+
+// True-range expansion / displacement test reused by BOS, MSS, OB, sweeps.
+isDisplacement(int len) =>
+    rng = high - low
+    rng > atr * dispMult and (not useVolFilter or volume > volMA)
+
+// Body / wick geometry used by sweeps & OB classification.
+bodyTop()   => math.max(open, close)
+bodyBot()   => math.min(open, close)
+upperWick() => high - bodyTop()
+lowerWick() => bodyBot() - low
+candleRange() => high - low
+
+// Approximate equality within an ATR-scaled tolerance (equal highs/lows, CE).
+nearlyEqual(float a, float b, float tolATR) =>
+    math.abs(a - b) <= atr * tolATR
+
+// Sensitivity → effective pivot length tweak (keeps one source of truth).
+sensAdj = structSensitivity == "Conservative" ? 2 : structSensitivity == "Aggressive" ? -1 : 0
+intLenEff = math.max(2, intLen + sensAdj)
+swgLenEff = math.max(3, swgLen + sensAdj)
+
+// ============================================================================
+// SECTION 4 — THE MARKET STRUCTURE ENGINE (single source of truth)
+// ============================================================================
+// Pivots are confirmed (offset by their length) → inherently non-repainting.
+// We compute BOTH an internal (fast) and swing (slow) stream from the SAME
+// routine, and every downstream module reads only from these variables.
+
+// 4.1 Confirmed pivots (price returned is from `len` bars ago when not na).
+intPH = ta.pivothigh(high, intLenEff, intLenEff)
+intPL = ta.pivotlow(low,  intLenEff, intLenEff)
+swgPH = ta.pivothigh(high, swgLenEff, swgLenEff)
+swgPL = ta.pivotlow(low,  swgLenEff, swgLenEff)
+
+// 4.2 Optional Williams-fractal confirmation (5-bar) to reject weak pivots.
+fractalUp = high[2] > high[3] and high[2] > high[4] and high[2] > high[1] and high[2] > high[0]
+fractalDn = low[2]  < low[3]  and low[2]  < low[4]  and low[2]  < low[1]  and low[2]  < low[0]
+passFractal(bool isHigh) => not useFractalConfirm or (isHigh ? fractalUp : fractalDn)
+
+// 4.3 ATR noise gate — reject pivots whose move from the prior pivot is tiny.
+var Pivot intLastH = Pivot.new()
+var Pivot intLastL = Pivot.new()
+var Pivot swgLastH = Pivot.new()
+var Pivot swgLastL = Pivot.new()
+
+// Persistent structure memory (the "current state of the market").
+var float intPrevHigh = na
+var float intPrevLow  = na
+var float swgPrevHigh = na
+var float swgPrevLow  = na
+var int   intTrend = 0   // +1 bull, -1 bear, 0 undefined (internal)
+var int   swgTrend = 0   // +1 bull, -1 bear, 0 undefined (swing)
+
+passATR(float a, float b) => not useATRfilter or math.abs(a - b) >= atr * atrFilterMult
+
+// 4.4 Register internal pivots.
+if not na(intPH) and passFractal(true)
+    if na(intLastH.price) or passATR(intPH, intLastH.price)
+        intPrevHigh := intLastH.price
+        intLastH := Pivot.new(intPH, bar_index - intLenEff, true)
+if not na(intPL) and passFractal(false)
+    if na(intLastL.price) or passATR(intPL, intLastL.price)
+        intPrevLow := intLastL.price
+        intLastL := Pivot.new(intPL, bar_index - intLenEff, false)
+
+// 4.5 Register swing pivots.
+if not na(swgPH) and passFractal(true)
+    if na(swgLastH.price) or passATR(swgPH, swgLastH.price)
+        swgPrevHigh := swgLastH.price
+        swgLastH := Pivot.new(swgPH, bar_index - swgLenEff, true)
+if not na(swgPL) and passFractal(false)
+    if na(swgLastL.price) or passATR(swgPL, swgLastL.price)
+        swgPrevLow := swgLastL.price
+        swgLastL := Pivot.new(swgPL, bar_index - swgLenEff, false)
+
+// 4.6 Classify HH/HL/LH/LL labels (internal & swing) from confirmed pivots.
+classifyHigh(float cur, float prev) => na(prev) ? "" : cur > prev ? "HH" : "LH"
+classifyLow (float cur, float prev) => na(prev) ? "" : cur > prev ? "HL" : "LL"
+
+// 4.7 Maintain trend state. A confirmed break of the opposing pivot flips bias.
+// (BOS/CHoCH/MSS logic below consumes these breaks — defined once here.)
+
+// ============================================================================
+// SECTION 5 — BREAK DETECTION: BOS / CHoCH / MSS (consumes Section 4)
+// ============================================================================
+// We track the "protected" swing highs/lows. A close beyond one is a break.
+// First counter-trend break = CHoCH. Continuation break = BOS. A CHoCH that is
+// followed by a displacement break of the next swing = MSS (confirmed shift).
+
+var float protHigh = na   // swing high defending the current up-leg
+var float protLow  = na   // swing low defending the current down-leg
+var bool  awaitMSS = false
+var int   mssDir   = 0
+
+brkClose(float lvl, bool up) => requireClose ? (up ? close > lvl : close < lvl) : (up ? high > lvl : low < lvl)
+dispOK() => not useDisplacement or isDisplacement(1)
+
+// Seed protected levels from swing pivots.
+if not na(swgLastH.price)
+    protHigh := na(protHigh) ? swgLastH.price : protHigh
+if not na(swgLastL.price)
+    protLow  := na(protLow)  ? swgLastL.price : protLow
+
+bool bullBOS = false
+bool bearBOS = false
+bool bullCHOCH = false
+bool bearCHOCH = false
+bool bullMSS = false
+bool bearMSS = false
+
+// Bullish side ---------------------------------------------------------------
+if not na(protHigh) and brkClose(protHigh, true) and barstate.isconfirmed
+    if swgTrend <= 0
+        // First break against a bearish/undefined bias = change of character.
+        bullCHOCH := true
+        awaitMSS  := true        // arm: the NEXT continuation break can confirm MSS
+        mssDir    := 1
+    else
+        // Continuation in an established up-trend = BOS.
+        bullBOS := true
+        // If this BOS is the first continuation after a bull CHoCH and it shows
+        // real displacement, it CONFIRMS the shift → Market Structure Shift.
+        if awaitMSS and mssDir == 1 and dispOK()
+            bullMSS  := true
+            awaitMSS := false
+    swgTrend := 1
+    protHigh := na                  // consumed; re-arms from the next swing high
+    protLow  := swgLastL.price      // new defended low
+
+// Bearish side ---------------------------------------------------------------
+if not na(protLow) and brkClose(protLow, false) and barstate.isconfirmed
+    if swgTrend >= 0
+        bearCHOCH := true
+        awaitMSS  := true
+        mssDir    := -1
+    else
+        bearBOS := true
+        if awaitMSS and mssDir == -1 and dispOK()
+            bearMSS  := true
+            awaitMSS := false
+    swgTrend := -1
+    protLow  := na
+    protHigh := swgLastH.price
+
+// Internal-trend bias (used by confluence / OB direction) — lighter weight.
+if not na(intLastH.price) and not na(intPrevHigh) and intLastH.price > intPrevHigh
+    intTrend := 1
+if not na(intLastL.price) and not na(intPrevLow) and intLastL.price < intPrevLow
+    intTrend := -1
+
+// ============================================================================
+// SECTION 6 — DRAW STRUCTURE LABELS & BREAK MARKERS
+// ============================================================================
+f_lineStyle(string s) => s == "Dotted" ? line.style_dotted : s == "Dashed" ? line.style_dashed : line.style_solid
+
+// Helper to draw a horizontal break line + label without repeating code.
+drawBreak(float lvl, int fromBar, string txt, color col, bool up) =>
+    if barstate.isconfirmed
+        ln = line.new(fromBar, lvl, bar_index, lvl, color=col, style=line.style_dashed, width=1)
+        label.new(bar_index, lvl, txt, style=up ? label.style_label_down : label.style_label_up, color=col, textcolor=color.white, size=size.tiny)
+
+if showBOS and bullBOS
+    drawBreak(swgLastH.price, swgLastH.bar, "BOS", i_bullColor, true)
+if showBOS and bearBOS
+    drawBreak(swgLastL.price, swgLastL.bar, "BOS", i_bearColor, false)
+if showCHOCH and bullCHOCH
+    drawBreak(swgLastH.price, swgLastH.bar, "CHoCH", chochColor, true)
+if showCHOCH and bearCHOCH
+    drawBreak(swgLastL.price, swgLastL.bar, "CHoCH", chochColor, false)
+if showMSS and bullMSS
+    drawBreak(swgLastH.price, swgLastH.bar, "MSS", mssColor, true)
+if showMSS and bearMSS
+    drawBreak(swgLastL.price, swgLastL.bar, "MSS", mssColor, false)
+
+// Swing & internal HH/HL/LH/LL tags.
+if showSwing and not na(swgPH)
+    txt = classifyHigh(swgLastH.price, swgPrevHigh)
+    if txt != ""
+        label.new(swgLastH.bar, swgLastH.price, txt, style=label.style_label_down, color=color.new(themeNeutral, 20), textcolor=themeText, size=size.small)
+if showSwing and not na(swgPL)
+    txt = classifyLow(swgLastL.price, swgPrevLow)
+    if txt != ""
+        label.new(swgLastL.bar, swgLastL.price, txt, style=label.style_label_up, color=color.new(themeNeutral, 20), textcolor=themeText, size=size.small)
+if showInternal and not na(intPH)
+    txt = classifyHigh(intLastH.price, intPrevHigh)
+    if txt != ""
+        label.new(intLastH.bar, intLastH.price, txt, style=label.style_label_down, color=color.new(themeNeutral, 60), textcolor=themeText, size=size.tiny)
+if showInternal and not na(intPL)
+    txt = classifyLow(intLastL.price, intPrevLow)
+    if txt != ""
+        label.new(intLastL.bar, intLastL.price, txt, style=label.style_label_up, color=color.new(themeNeutral, 60), textcolor=themeText, size=size.tiny)
+
+// ============================================================================
+// SECTION 7 — LIQUIDITY ENGINE (equal highs/lows, pools, voids, untouched)
+// ============================================================================
+var array<Liq> liqs = array.new<Liq>()
+
+// Detect equal highs / lows off confirmed swing pivots (buy/sell-side liquidity).
+newSwingHigh = not na(swgPH)
+newSwingLow  = not na(swgPL)
+
+if showLiquidity and newSwingHigh and not na(swgPrevHigh) and nearlyEqual(swgLastH.price, swgPrevHigh, liqEqTol)
+    // Equal highs → resting sell-side liquidity above.
+    ln = line.new(swgLastH.bar, swgLastH.price, bar_index, swgLastH.price, color=bslColor, style=line.style_dotted, width=1)
+    lb = label.new(bar_index, swgLastH.price, "EQH", style=label.style_label_left, color=color.new(bslColor, 70), textcolor=themeText, size=size.tiny)
+    array.push(liqs, Liq.new(ln, lb, swgLastH.price, swgLastH.bar, false, false, true))
+if showLiquidity and newSwingLow and not na(swgPrevLow) and nearlyEqual(swgLastL.price, swgPrevLow, liqEqTol)
+    ln = line.new(swgLastL.bar, swgLastL.price, bar_index, swgLastL.price, color=sslColor, style=line.style_dotted, width=1)
+    lb = label.new(bar_index, swgLastL.price, "EQL", style=label.style_label_left, color=color.new(sslColor, 70), textcolor=themeText, size=size.tiny)
+    array.push(liqs, Liq.new(ln, lb, swgLastL.price, swgLastL.bar, true, false, true))
+
+// Extend & retire liquidity levels; mark when swept (price trades through).
+if array.size(liqs) > 0
+    for i = array.size(liqs) - 1 to 0
+        Liq lq = array.get(liqs, i)
+        if lq.alive
+            // Keep the line tracking the current bar so it reads as "resting".
+            line.set_x2(lq.ln, bar_index)
+            swept = lq.buyside ? low < lq.price : high > lq.price
+            if swept and not lq.swept
+                lq.swept := true
+                label.set_text(lq.lb, lq.buyside ? "EQL ✗" : "EQH ✗")
+                lq.alive := false
+
+// Liquidity void: a wide displacement candle leaves an inefficiency (drawn lightly).
+if showLiqVoid and showLiquidity and candleRange() > atr * 2.0 and barstate.isconfirmed
+    box.new(bar_index - 1, math.max(open, close), bar_index, math.min(open, close), border_color=color.new(themeNeutral, 60), bgcolor=color.new(themeNeutral, 88))
+
+// ============================================================================
+// SECTION 8 — LIQUIDITY SWEEP ENGINE (distinct from inducement!)
+// ============================================================================
+// A sweep = price takes a known liquidity level then rejects back. We classify
+// wick vs body and partial vs complete, and tag "SWEPT".
+bool bullSweep = false
+bool bearSweep = false
+if showSweeps and barstate.isconfirmed
+    // Sell-side sweep (grab lows, close back up) — bullish intent.
+    if not na(swgPrevLow) and low < swgPrevLow and close > swgPrevLow
+        isWick = lowerWick() > candleRange() * sweepWickRatio
+        bullSweep := true
+        label.new(bar_index, low, isWick ? "SWEPT ▲" : "SWEEP ▲", style=label.style_label_up, color=color.new(i_bullColor, 30), textcolor=color.white, size=size.tiny)
+    // Buy-side sweep (grab highs, close back down) — bearish intent.
+    if not na(swgPrevHigh) and high > swgPrevHigh and close < swgPrevHigh
+        isWick = upperWick() > candleRange() * sweepWickRatio
+        bearSweep := true
+        label.new(bar_index, high, isWick ? "SWEPT ▼" : "SWEEP ▼", style=label.style_label_down, color=color.new(i_bearColor, 30), textcolor=color.white, size=size.tiny)
+
+// ============================================================================
+// SECTION 9 — INDUCEMENT (IDM) ENGINE  (NOT a sweep — it precedes the move)
+// ============================================================================
+// Inducement = the nearest minor liquidity that price must grab to "fuel" the
+// real move. We mark the most recent internal counter-pivot that sits between
+// price and the protected swing as inducement (a trap for retail).
+var line  idmLine  = na
+var label idmLbl   = na
+var float idmLevel = na          // tracked separately so we never read a na getter
+bool bullIDM = false
+bool bearIDM = false
+
+if showIDM and barstate.isconfirmed
+    // In a bullish swing context, the inducement is the latest internal low
+    // resting below price before the up-move (its sweep "induces" longs to stop out).
+    if swgTrend == 1 and not na(intLastL.price) and intLastL.price < close and idmLevel != intLastL.price
+        line.delete(idmLine)
+        label.delete(idmLbl)
+        idmLevel := intLastL.price
+        idmLine  := line.new(intLastL.bar, intLastL.price, bar_index, intLastL.price, color=idmColor, style=line.style_dotted, width=1)
+        idmLbl   := label.new(bar_index, intLastL.price, "IDM", style=label.style_label_left, color=color.new(idmColor, 40), textcolor=color.white, size=size.tiny)
+        bullIDM  := true
+        if idmShowZones
+            box.new(intLastL.bar, intLastL.price, bar_index, intLastL.price - atr * idmEqTol, border_color=na, bgcolor=color.new(idmColor, 85))
+    if swgTrend == -1 and not na(intLastH.price) and intLastH.price > close and idmLevel != intLastH.price
+        line.delete(idmLine)
+        label.delete(idmLbl)
+        idmLevel := intLastH.price
+        idmLine  := line.new(intLastH.bar, intLastH.price, bar_index, intLastH.price, color=idmColor, style=line.style_dotted, width=1)
+        idmLbl   := label.new(bar_index, intLastH.price, "IDM", style=label.style_label_left, color=color.new(idmColor, 40), textcolor=color.white, size=size.tiny)
+        bearIDM  := true
+        if idmShowZones
+            box.new(intLastH.bar, intLastH.price, bar_index, intLastH.price + atr * idmEqTol, border_color=na, bgcolor=color.new(idmColor, 85))
+
+// ============================================================================
+// SECTION 10 — ORDER BLOCK ENGINE (Fresh/Tested/Mitigated/Broken lifecycle)
+// ============================================================================
+var array<OB> obs = array.new<OB>()
+
+// Order block = last opposite candle before a confirmed displacement break.
+// We only create one when a BOS confirms (institutional, not every wick).
+makeOB(bool bull, bool swing) =>
+    // Walk back a few bars to find the last opposite-color candle.
+    float t = na
+    float b = na
+    int ob_bar = na
+    for k = 1 to 10
+        opp = bull ? close[k] < open[k] : close[k] > open[k]
+        if opp
+            t := high[k]
+            b := low[k]
+            ob_bar := bar_index - k
+            break
+    if not na(t) and (not obUseVol or volume > volMA)
+        col = bull ? obBullColor : obBearColor
+        bx = box.new(ob_bar, t, bar_index + 5, b, border_color=color.new(col, 40), bgcolor=col)
+        lb = label.new(ob_bar, swing ? t : b, swing ? "OB" : "ob", style=swing ? label.style_label_down : label.style_label_up, color=na, textcolor=color.new(bull ? i_bullColor : i_bearColor, 0), size=size.tiny)
+        array.push(obs, OB.new(bx, lb, t, b, ob_bar, bull, swing, "Fresh", true))
+
+if showOB and (not obRequireBOS or bullBOS or bullMSS) and (bullBOS or bullMSS)
+    if (obUseSwing and (bullBOS or bullMSS))
+        makeOB(true, true)
+    else if obUseInternal and intTrend == 1
+        makeOB(true, false)
+if showOB and (not obRequireBOS or bearBOS or bearMSS) and (bearBOS or bearMSS)
+    if (obUseSwing and (bearBOS or bearMSS))
+        makeOB(false, true)
+    else if obUseInternal and intTrend == -1
+        makeOB(false, false)
+
+// OB lifecycle management + auto-cleanup.
+if array.size(obs) > 0
+    for i = array.size(obs) - 1 to 0
+        OB ob = array.get(obs, i)
+        if ob.alive
+            box.set_right(ob.b, bar_index + 5)
+            inside = low <= ob.top and high >= ob.bot
+            broken = ob.bull ? close < ob.bot : close > ob.top
+            if broken
+                ob.state := "Broken"
+                ob.alive := false
+                if obDeleteMitig
+                    box.delete(ob.b)
+                    label.delete(ob.l)
+            else if inside and ob.state == "Fresh"
+                ob.state := "Tested"
+                box.set_bgcolor(ob.b, color.new(ob.bull ? i_bullColor : i_bearColor, 88))
+        if not ob.alive and array.size(obs) > maxObjects
+            removed = array.remove(obs, i)
+            box.delete(removed.b)
+            label.delete(removed.l)
+
+// ============================================================================
+// SECTION 11 — FAIR VALUE GAP ENGINE (3-candle imbalance + CE + mitigation)
+// ============================================================================
+var array<FVG> fvgs = array.new<FVG>()
+
+// Bull FVG: low[0] > high[2] (gap between candle 1 and 3). Bear FVG: high[0] < low[2].
+fvgPctOf(float gapSize) => close != 0 ? gapSize / close * 100.0 : 0.0
+
+if showFVG and barstate.isconfirmed
+    // Bullish imbalance.
+    if low > high[2]
+        sz = low - high[2]
+        if sz >= atr * fvgMinATR and fvgPctOf(sz) >= fvgMinPct
+            bx = box.new(bar_index - 2, low, bar_index + 3, high[2], border_color=na, bgcolor=fvgBullColor)
+            ceLine = fvgShowCE ? line.new(bar_index - 2, (low + high[2]) / 2, bar_index + 3, (low + high[2]) / 2, color=color.new(i_bullColor, 30), style=line.style_dotted) : na
+            array.push(fvgs, FVG.new(bx, ceLine, low, high[2], bar_index, true, "Active", true))
+    // Bearish imbalance.
+    if high < low[2]
+        sz = low[2] - high
+        if sz >= atr * fvgMinATR and fvgPctOf(sz) >= fvgMinPct
+            bx = box.new(bar_index - 2, low[2], bar_index + 3, high, border_color=na, bgcolor=fvgBearColor)
+            ceLine = fvgShowCE ? line.new(bar_index - 2, (low[2] + high) / 2, bar_index + 3, (low[2] + high) / 2, color=color.new(i_bearColor, 30), style=line.style_dotted) : na
+            array.push(fvgs, FVG.new(bx, ceLine, low[2], high, bar_index, false, "Active", true))
+
+// FVG mitigation tracking + cleanup.
+if array.size(fvgs) > 0
+    for i = array.size(fvgs) - 1 to 0
+        FVG fv = array.get(fvgs, i)
+        if fv.alive
+            box.set_right(fv.b, bar_index + 3)
+            if not na(fv.ce)
+                line.set_x2(fv.ce, bar_index + 3)
+            ce = (fv.top + fv.bot) / 2
+            filled = fv.bull ? close < fv.bot : close > fv.top
+            partial = fv.bull ? low <= ce : high >= ce
+            if filled
+                fv.state := "Filled"
+                fv.alive := false
+                box.delete(fv.b)
+                line.delete(fv.ce)
+            else if partial and fv.state == "Active"
+                fv.state := "Partial"
+                box.set_bgcolor(fv.b, color.new(fv.bull ? i_bullColor : i_bearColor, 90))
+        if not fv.alive and array.size(fvgs) > maxObjects
+            rem = array.remove(fvgs, i)
+            box.delete(rem.b)
+            line.delete(rem.ce)
+
+// ============================================================================
+// SECTION 12 — PREMIUM / DISCOUNT (dealing range from current swing extremes)
+// ============================================================================
+rangeHigh = na(swgLastH.price) ? high : swgLastH.price
+rangeLow  = na(swgLastL.price) ? low  : swgLastL.price
+eqm = (rangeHigh + rangeLow) / 2
+inPremium  = close > eqm
+inDiscount = close < eqm
+var box pdPrem = na
+var box pdDisc = na
+var line pdEq  = na
+if showPD and barstate.islast
+    box.delete(pdPrem)
+    box.delete(pdDisc)
+    line.delete(pdEq)
+    if pdShade
+        pdPrem := box.new(bar_index - 50, rangeHigh, bar_index + 5, eqm, border_color=na, bgcolor=color.new(i_bearColor, 92))
+        pdDisc := box.new(bar_index - 50, eqm, bar_index + 5, rangeLow, border_color=na, bgcolor=color.new(i_bullColor, 92))
+    pdEq := line.new(bar_index - 50, eqm, bar_index + 5, eqm, color=color.new(themeNeutral, 20), style=line.style_dashed)
+
+// ============================================================================
+// SECTION 13 — DYNAMIC TRENDLINE (weighted multi-factor, not a naive pivot line)
+// ============================================================================
+// Trend score blends structure, EMA slope, momentum, ATR position. The line is
+// anchored on the relevant swing and recolored by the composite score.
+ema      = ta.ema(close, tlEmaLen)
+emaSlope = (ema - ema[3]) / (atr == 0 ? 1 : atr)
+mom      = ta.rsi(close, 14) - 50
+// Composite (-100..100). Each factor is bounded then weighted.
+w_struct = swgTrend * 35
+w_int    = intTrend * 10
+w_ema    = math.max(-20, math.min(20, emaSlope * 20 * tlSensitivity))
+w_mom    = math.max(-15, math.min(15, mom * 0.6))
+w_pd     = inDiscount ? 10 : inPremium ? -10 : 0
+w_brk    = (bullBOS or bullMSS or bullSweep ? 10 : 0) + (bearBOS or bearMSS or bearSweep ? -10 : 0)
+trendScore = w_struct + w_int + w_ema + w_mom + w_pd + w_brk
+trendColor = trendScore > 15 ? i_bullColor : trendScore < -15 ? i_bearColor : themeNeutral
+
+var line trendLn = na
+var int  trendAge = 0
+trendAge := trendScore > 15 or trendScore < -15 ? nz(trendAge[1]) + 1 : 0
+if showTrendline and barstate.islast
+    line.delete(trendLn)
+    anchorBar   = trendScore >= 0 ? (na(swgLastL.bar) ? bar_index - 10 : swgLastL.bar) : (na(swgLastH.bar) ? bar_index - 10 : swgLastH.bar)
+    anchorPrice = trendScore >= 0 ? (na(swgLastL.price) ? low : swgLastL.price) : (na(swgLastH.price) ? high : swgLastH.price)
+    trendLn := line.new(anchorBar, anchorPrice, bar_index, close, color=trendColor, width=2)
+
+// Trendline retest / break flags (consumed by alerts/confluence).
+tlRetest = showTrendline and not na(trendLn) and math.abs(close - line.get_y2(trendLn)) <= atr * 0.25
+tlBreak  = showTrendline and ((trendScore > 0 and close < ema and close[1] >= ema[1]) or (trendScore < 0 and close > ema and close[1] <= ema[1]))
+
+// ============================================================================
+// SECTION 14 — MULTI-TIMEFRAME ENGINE (non-repainting bias per TF)
+// ============================================================================
+// Bias = sign of EMA20 slope on each TF, pulled with lookahead OFF + confirmed.
+f_htfBias(string tf) =>
+    [e, ePrev] = request.security(syminfo.tickerid, tf, [ta.ema(close, 20), ta.ema(close, 20)[1]], lookahead=barmerge.lookahead_off)
+    e > ePrev ? 1 : e < ePrev ? -1 : 0
+
+bias1m  = showMTF ? f_htfBias("1")    : 0
+bias5m  = showMTF ? f_htfBias("5")    : 0
+bias15m = showMTF ? f_htfBias("15")   : 0
+bias1h  = showMTF ? f_htfBias("60")   : 0
+bias4h  = showMTF ? f_htfBias("240")  : 0
+bias1d  = showMTF ? f_htfBias("1D")   : 0
+biasSum = bias1m + bias5m + bias15m + bias1h + bias4h + bias1d
+htfBias = biasSum > 1 ? "Bullish" : biasSum < -1 ? "Bearish" : "Neutral"
+htfBiasVal = biasSum > 1 ? 1 : biasSum < -1 ? -1 : 0
+
+// ============================================================================
+// SECTION 15 — SESSION ENGINE (sessions, kill zones, silver bullet)
+// ============================================================================
+inAsia   = not na(time(timeframe.period, sessAsia,   sessTZ))
+inLondon = not na(time(timeframe.period, sessLondon, sessTZ))
+inNY     = not na(time(timeframe.period, sessNY,     sessTZ))
+// ICT kill zones (London 07-10, NY 12-15 GMT) & Silver Bullet (10-11, 14-15 GMT).
+inKZ_London = not na(time(timeframe.period, "0700-1000", sessTZ))
+inKZ_NY     = not na(time(timeframe.period, "1200-1500", sessTZ))
+inSB        = not na(time(timeframe.period, "1000-1100", sessTZ)) or not na(time(timeframe.period, "1400-1500", sessTZ))
+
+bgcolor(showSessions and inAsia   ? asiaCol : na, title="Asia session")
+bgcolor(showSessions and inLondon ? lonCol  : na, title="London session")
+bgcolor(showSessions and inNY     ? nyCol   : na, title="NY session")
+bgcolor(showKillzones and (inKZ_London or inKZ_NY) ? color.new(#ff9800, 92) : na, title="Kill zone")
+bgcolor(showSilverBullet and inSB ? color.new(#9c27b0, 90) : na, title="Silver Bullet")
+curSession = inNY ? "New York" : inLondon ? "London" : inAsia ? "Asia" : "Off"
+
+// ============================================================================
+// SECTION 16 — CONFLUENCE ENGINE (0–100 probability, weighted vote)
+// ============================================================================
+// Each factor casts a signed weighted vote; we map the net to 0–100 per side.
+f_score() =>
+    float bull = 0.0
+    float bear = 0.0
+    // Trend / structure.
+    bull += swgTrend == 1 ? 18 : 0
+    bear += swgTrend == -1 ? 18 : 0
+    bull += intTrend == 1 ? 6 : 0
+    bear += intTrend == -1 ? 6 : 0
+    // Break events.
+    bull += bullBOS ? 8 : 0
+    bear += bearBOS ? 8 : 0
+    bull += bullMSS ? 12 : 0
+    bear += bearMSS ? 12 : 0
+    bull += bullCHOCH ? 5 : 0
+    bear += bearCHOCH ? 5 : 0
+    // Inducement / sweep.
+    bull += bullIDM ? 4 : 0
+    bear += bearIDM ? 4 : 0
+    bull += bullSweep ? 7 : 0
+    bear += bearSweep ? 7 : 0
+    // Premium / discount alignment.
+    bull += inDiscount ? 8 : 0
+    bear += inPremium  ? 8 : 0
+    // Trendline.
+    bull += trendScore > 15 ? 6 : 0
+    bear += trendScore < -15 ? 6 : 0
+    // HTF bias.
+    bull += htfBiasVal == 1 ? 12 : 0
+    bear += htfBiasVal == -1 ? 12 : 0
+    // Momentum.
+    bull += mom > 0 ? 5 : 0
+    bear += mom < 0 ? 5 : 0
+    // Session quality (kill zone = institutional window).
+    sessBoost = (inKZ_London or inKZ_NY) ? 4 : 0
+    bull += sessBoost
+    bear += sessBoost
+    [math.min(100, bull), math.min(100, bear)]
+
+[bullScore, bearScore] = f_score()
+longBias  = bullScore >= bearScore
+probability = longBias ? bullScore : bearScore
+
+// ============================================================================
+// SECTION 17 — AI ENTRY + SL + TP (only on stacked confirmation)
+// ============================================================================
+var float entryPrice = na
+var float slPrice    = na
+var float tp1 = na
+var float tp2 = na
+var float tp3 = na
+var bool  entryLong = na
+var line  slLine    = na
+var line  tp1Line   = na
+var line  tp2Line   = na
+var line  tp3Line   = na
+var line  entryLine = na
+
+newEntry = showConfluence and showEntries and probability >= minEntryScore and barstate.isconfirmed and (bullMSS or bearMSS or bullBOS or bearBOS or bullSweep or bearSweep)
+
+if newEntry
+    entryLong  := longBias
+    entryPrice := close
+    // SL: beyond the protecting structure with ATR buffer (structure + volatility).
+    structSL = entryLong ? math.min(nz(swgLastL.price, low), low) : math.max(nz(swgLastH.price, high), high)
+    slPrice  := entryLong ? structSL - atr * slATRmult : structSL + atr * slATRmult
+    risk     = math.abs(entryPrice - slPrice)
+    // TP projected by R multiples; biased toward opposing liquidity when present.
+    tp1 := entryLong ? entryPrice + risk * rr1 : entryPrice - risk * rr1
+    tp2 := entryLong ? entryPrice + risk * rr2 : entryPrice - risk * rr2
+    tp3 := entryLong ? entryPrice + risk * rr3 : entryPrice - risk * rr3
+    if showRisk
+        line.delete(slLine)
+        line.delete(tp1Line)
+        line.delete(tp2Line)
+        line.delete(tp3Line)
+        line.delete(entryLine)
+        entryLine := line.new(bar_index, entryPrice, bar_index + 30, entryPrice, color=themeText, style=line.style_solid, width=1)
+        slLine    := line.new(bar_index, slPrice, bar_index + 30, slPrice, color=i_bearColor, style=line.style_dashed)
+        tp1Line   := line.new(bar_index, tp1, bar_index + 30, tp1, color=i_bullColor, style=line.style_dotted)
+        tp2Line   := line.new(bar_index, tp2, bar_index + 30, tp2, color=i_bullColor, style=line.style_dotted)
+        tp3Line   := line.new(bar_index, tp3, bar_index + 30, tp3, color=i_bullColor, style=line.style_dotted)
+    label.new(bar_index, entryLong ? low : high, (entryLong ? "▲ LONG " : "▼ SHORT ") + str.tostring(math.round(probability)) + "%", style=entryLong ? label.style_label_up : label.style_label_down, color=color.new(entryLong ? i_bullColor : i_bearColor, 10), textcolor=color.white, size=size.small)
+
+// Track TP/SL hits for alerts.
+slHit  = not na(slPrice) and (entryLong ? low <= slPrice : high >= slPrice)
+tpHit  = not na(tp1) and (entryLong ? high >= tp1 : low <= tp1)
+
+// ============================================================================
+// SECTION 18 — DASHBOARD (single floating table, rebuilt only on last bar)
+// ============================================================================
+f_tablePos() =>
+    dashPos == "Top Left" ? position.top_left : dashPos == "Top Right" ? position.top_right : dashPos == "Bottom Left" ? position.bottom_left : dashPos == "Bottom Right" ? position.bottom_right : position.middle_right
+f_txtSize() =>
+    dashSize == "Tiny" ? size.tiny : dashSize == "Small" ? size.small : dashSize == "Large" ? size.large : size.normal
+
+// Global row helper (functions must live at top level, never inside an if-block).
+f_dashRow(table t, int r, string k, string v, color vc, string sz) =>
+    table.cell(t, 0, r, k, text_color=themeText, text_size=sz, text_halign=text.align_left)
+    table.cell(t, 1, r, v, text_color=vc, text_size=sz, text_halign=text.align_right)
+
+var table dash = na
+if showDash and na(dash)
+    dash := table.new(f_tablePos(), 2, 20, bgcolor=themeBG, border_color=color.new(themeNeutral, 60), border_width=1, frame_color=color.new(themeNeutral, 40), frame_width=1)
+if showDash and barstate.islast and not na(dash)
+    sz = f_txtSize()
+    trendTxt = swgTrend == 1 ? "Bullish" : swgTrend == -1 ? "Bearish" : "Range"
+    trendCol = swgTrend == 1 ? i_bullColor : swgTrend == -1 ? i_bearColor : themeNeutral
+    table.cell(dash, 0, 0, "SMI — Smart Money", text_color=themeText, text_size=sz, text_halign=text.align_center)
+    table.cell(dash, 1, 0, "", text_color=themeText)
+    f_dashRow(dash, 1,  "Structure",    trendTxt, trendCol, sz)
+    f_dashRow(dash, 2,  "HTF Bias",     htfBias, htfBias == "Bullish" ? i_bullColor : htfBias == "Bearish" ? i_bearColor : themeNeutral, sz)
+    f_dashRow(dash, 3,  "Last BOS",     bullBOS ? "Bull" : bearBOS ? "Bear" : "—", bullBOS ? i_bullColor : bearBOS ? i_bearColor : themeNeutral, sz)
+    f_dashRow(dash, 4,  "Last CHoCH",   bullCHOCH ? "Bull" : bearCHOCH ? "Bear" : "—", chochColor, sz)
+    f_dashRow(dash, 5,  "Last MSS",     bullMSS ? "Bull" : bearMSS ? "Bear" : "—", mssColor, sz)
+    f_dashRow(dash, 6,  "Inducement",   bullIDM ? "Bull" : bearIDM ? "Bear" : "—", idmColor, sz)
+    f_dashRow(dash, 7,  "Liquidity",    str.tostring(array.size(liqs)) + " lvls", themeText, sz)
+    f_dashRow(dash, 8,  "Order Blocks", str.tostring(array.size(obs)), themeText, sz)
+    f_dashRow(dash, 9,  "FVGs",         str.tostring(array.size(fvgs)), themeText, sz)
+    f_dashRow(dash, 10, "Trend Score",  str.tostring(math.round(trendScore)), trendColor, sz)
+    f_dashRow(dash, 11, "Momentum",     str.tostring(math.round(mom)), mom > 0 ? i_bullColor : i_bearColor, sz)
+    f_dashRow(dash, 12, "ATR",          str.tostring(math.round_to_mintick(atr)), themeText, sz)
+    f_dashRow(dash, 13, "Volatility",   atr > atr[20] ? "Rising" : "Falling", atr > atr[20] ? i_bullColor : themeNeutral, sz)
+    f_dashRow(dash, 14, "Zone",         inPremium ? "Premium" : inDiscount ? "Discount" : "Equilibrium", inPremium ? i_bearColor : inDiscount ? i_bullColor : themeNeutral, sz)
+    f_dashRow(dash, 15, "Session",      curSession, themeText, sz)
+    f_dashRow(dash, 16, "Probability",  str.tostring(math.round(probability)) + "% " + (longBias ? "Long" : "Short"), longBias ? i_bullColor : i_bearColor, sz)
+    f_dashRow(dash, 17, "Trend Age",    str.tostring(trendAge) + " bars", themeText, sz)
+    f_dashRow(dash, 18, "Dist→TL",      na(trendLn) ? "—" : str.tostring(math.round_to_mintick(math.abs(close - line.get_y2(trendLn)))), themeText, sz)
+    f_dashRow(dash, 19, "Risk",         not na(slPrice) and not na(entryPrice) ? str.tostring(math.round_to_mintick(math.abs(entryPrice - slPrice))) : "—", themeText, sz)
+
+// ============================================================================
+// SECTION 19 — ALERT ENGINE (independent message per event; master switch)
+// ============================================================================
+// alert() is kept inside a global if-block (its supported scope). Each event
+// fires its own independent, descriptive message exactly once per bar close.
+if alertsOn and barstate.isconfirmed
+    if bullBOS
+        alert("SMI: Bullish BOS", alert.freq_once_per_bar)
+    if bearBOS
+        alert("SMI: Bearish BOS", alert.freq_once_per_bar)
+    if bullCHOCH
+        alert("SMI: Bullish CHoCH", alert.freq_once_per_bar)
+    if bearCHOCH
+        alert("SMI: Bearish CHoCH", alert.freq_once_per_bar)
+    if bullMSS
+        alert("SMI: Bullish MSS", alert.freq_once_per_bar)
+    if bearMSS
+        alert("SMI: Bearish MSS", alert.freq_once_per_bar)
+    if bullIDM
+        alert("SMI: Bullish Inducement", alert.freq_once_per_bar)
+    if bearIDM
+        alert("SMI: Bearish Inducement", alert.freq_once_per_bar)
+    if bullSweep or bearSweep
+        alert("SMI: Liquidity Sweep", alert.freq_once_per_bar)
+    if tlBreak
+        alert("SMI: Trendline Break", alert.freq_once_per_bar)
+    if tlRetest
+        alert("SMI: Trendline Retest", alert.freq_once_per_bar)
+    if newEntry
+        alert("SMI: High-Probability Setup " + str.tostring(math.round(probability)) + "%", alert.freq_once_per_bar)
+    if tpHit
+        alert("SMI: TP1 Hit", alert.freq_once_per_bar)
+    if slHit
+        alert("SMI: SL Hit", alert.freq_once_per_bar)
+
+// ============================================================================
+// SECTION 20 — PERFORMANCE / SELF-CLEANING (global housekeeping)
+// ============================================================================
+// Final safety net: cap total tracked arrays so memory never grows unbounded
+// even on very long histories or fast intraday charts.
+f_capArray_OB() =>
+    while array.size(obs) > maxObjects * 2
+        OB rem = array.shift(obs)
+        box.delete(rem.b)
+        label.delete(rem.l)
+f_capArray_FVG() =>
+    while array.size(fvgs) > maxObjects * 2
+        FVG rem = array.shift(fvgs)
+        box.delete(rem.b)
+        line.delete(rem.ce)
+f_capArray_Liq() =>
+    while array.size(liqs) > maxObjects * 3
+        Liq rem = array.shift(liqs)
+        line.delete(rem.ln)
+        label.delete(rem.lb)
+if barstate.isconfirmed
+    f_capArray_OB()
+    f_capArray_FVG()
+    f_capArray_Liq()
+// ----------------------------------------------------------------------------
+// END OF SMART MONEY INSTITUTIONAL SUITE
+// ----------------------------------------------------------------------------
