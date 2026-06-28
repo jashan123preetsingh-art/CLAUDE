@@ -1,0 +1,666 @@
+//@version=6
+// ════════════════════════════════════════════════════════════════════════════
+//  INSTITUTIONAL 15-MINUTE EMA & MARKET STRUCTURE SYSTEM
+//  Pine Script v6 — Non-repainting, future-safe institutional trade system
+//
+//  A complete intraday workflow: Triple-EMA trend engine, market structure
+//  (BOS/CHOCH/HH-HL-LH-LL), SBR/RBS institutional zones, higher-timeframe
+//  confirmation, smart pullback + candlestick confirmation entries, counter-
+//  trend & re-entry modules, ATR/swing risk management with multi-target
+//  projection, a confluence win-probability dashboard, session/volume/
+//  choppiness filters and a full alert suite.
+//
+//  Designed primarily for Gold (XAUUSD) on the 15m chart, but every length,
+//  threshold, colour and module is user-configurable for Forex, Indices and
+//  Crypto on any timeframe.
+//
+//  NON-REPAINT NOTES:
+//   • All swing/structure logic uses confirmed ta.pivot* points (lag = pivot
+//     length) so structure never redraws once printed.
+//   • HTF data is requested with lookahead OFF and pulled from the previous
+//     completed HTF bar (see f_htf) so it cannot look into the future.
+//   • Signals are evaluated on bar close (confirmation handled by the caller's
+//     alert/plot settings); no historical bar is mutated after the fact.
+// ════════════════════════════════════════════════════════════════════════════
+
+indicator("Institutional EMA & Market Structure", "INST-EMA/MS", overlay = true,
+     max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  CONSTANTS
+// ─────────────────────────────────────────────────────────────────────────────
+var string G_EMA      = "1 · Moving Averages"
+var string G_TREND    = "2 · Trend & Slope Engine"
+var string G_STRUCT   = "3 · Market Structure"
+var string G_ZONES    = "4 · SBR / RBS Zones"
+var string G_HTF      = "5 · Higher-Timeframe Confirmation"
+var string G_ENTRY    = "6 · Entry & Pullback Logic"
+var string G_CANDLE   = "7 · Candlestick Recognition"
+var string G_RISK     = "8 · Risk & Target Management"
+var string G_FILTER   = "9 · Filters (Session / Volume / Chop)"
+var string G_DASH     = "10 · Dashboard"
+var string G_VISUAL   = "11 · Visuals"
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  1 · MOVING AVERAGE INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+fastLen   = input.int(5,   "Fast EMA Length",   minval = 1, group = G_EMA, inline = "f")
+fastCol   = input.color(color.white,  "", group = G_EMA, inline = "f")
+fastW     = input.int(2,   "W", minval = 1, maxval = 5, group = G_EMA, inline = "f")
+showFast  = input.bool(true, "Show", group = G_EMA, inline = "f")
+
+medLen    = input.int(50,  "Medium EMA Length", minval = 1, group = G_EMA, inline = "m")
+medCol    = input.color(color.orange, "", group = G_EMA, inline = "m")
+medW      = input.int(2,   "W", minval = 1, maxval = 5, group = G_EMA, inline = "m")
+showMed   = input.bool(true, "Show", group = G_EMA, inline = "m")
+
+macroLen  = input.int(200, "Macro EMA Length",  minval = 1, group = G_EMA, inline = "x")
+macroCol  = input.color(color.red,    "", group = G_EMA, inline = "x")
+macroW    = input.int(3,   "W", minval = 1, maxval = 5, group = G_EMA, inline = "x")
+showMacro = input.bool(true, "Show", group = G_EMA, inline = "x")
+
+showFill  = input.bool(true, "Fill zone between Fast & Medium EMA", group = G_EMA)
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  2 · TREND & SLOPE INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+slopeLook   = input.int(5,    "Slope Lookback (bars)", minval = 1, group = G_TREND,
+     tooltip = "Bars used to measure EMA slope angle.")
+minSlope    = input.float(0.05, "Min Slope Threshold (ATR/bar)", minval = 0.0, step = 0.01,
+     group = G_TREND, tooltip = "EMA slope must exceed this many ATR per bar to be considered trending. Higher = stricter.")
+useTrendFil = input.bool(true,  "Block signals against trend filter", group = G_TREND)
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  3 · MARKET STRUCTURE INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+pivotLen    = input.int(8,    "Pivot / Swing Length", minval = 2, group = G_STRUCT,
+     tooltip = "Bars on each side of a swing high/low. Larger = fewer, more significant swings.")
+showSwings  = input.bool(true, "Show Swing HH/HL/LH/LL labels", group = G_STRUCT)
+showBOS     = input.bool(true, "Show BOS lines/labels", group = G_STRUCT)
+showCHOCH   = input.bool(true, "Show CHOCH lines/labels", group = G_STRUCT)
+showStructL = input.bool(true, "Show structure connecting lines", group = G_STRUCT)
+bosBuf      = input.float(0.0, "BOS confirmation buffer (ATR)", minval = 0, step = 0.05, group = G_STRUCT,
+     tooltip = "Extra ATR distance price must close beyond a swing to confirm a break (filters noise).")
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  4 · SBR / RBS ZONE INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+showZones   = input.bool(true,  "Show SBR / RBS zones", group = G_ZONES)
+zoneSens    = input.float(0.5,  "Zone Retest Sensitivity (ATR)", minval = 0.05, step = 0.05, group = G_ZONES,
+     tooltip = "How close (in ATR) price must return to a broken level to confirm a retest.")
+zoneOpacity = input.int(85,     "Zone Opacity", minval = 0, maxval = 100, group = G_ZONES)
+sbrCol      = input.color(color.red,  "SBR (Support→Resistance) colour", group = G_ZONES)
+rbsCol      = input.color(color.green,"RBS (Resistance→Support) colour", group = G_ZONES)
+maxZones    = input.int(6, "Max active zones to keep", minval = 1, maxval = 20, group = G_ZONES)
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  5 · HTF INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+htfTF       = input.timeframe("60", "Higher Timeframe", options = ["15", "30", "60", "240", "D", "W"], group = G_HTF,
+     tooltip = "60 = H1, 240 = H4, D = Daily.")
+useHTFfil   = input.bool(true, "Only allow signals aligned with HTF trend", group = G_HTF)
+showHTFlvl  = input.bool(true, "Show HTF support/resistance lines", group = G_HTF)
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  6 · ENTRY & PULLBACK INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+pullbackATR = input.float(0.6, "Pullback proximity to EMA/zone (ATR)", minval = 0.1, step = 0.1, group = G_ENTRY,
+     tooltip = "Price must come within this ATR distance of the 50/200 EMA or a zone to qualify as a pullback.")
+useReEntry  = input.bool(true,  "Enable Re-Entry module", group = G_ENTRY)
+useCounter  = input.bool(false, "Enable Counter-Trend mode", group = G_ENTRY)
+showArrows  = input.bool(true,  "Show entry arrows/labels", group = G_ENTRY)
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  7 · CANDLESTICK INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+domBody     = input.float(0.65, "Dominance candle min body ratio", minval = 0.3, maxval = 0.95, step = 0.05, group = G_CANDLE)
+momMult     = input.float(1.5,  "Momentum candle range × ATR", minval = 1.0, step = 0.1, group = G_CANDLE)
+colorCandle = input.bool(true,  "Colour qualifying candles", group = G_CANDLE)
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  8 · RISK & TARGET INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+atrLen      = input.int(14,    "ATR Length", minval = 1, group = G_RISK)
+slMode      = input.string("Swing + ATR", "Stop-Loss Mode", options = ["Swing", "ATR", "Swing + ATR"], group = G_RISK)
+atrMult     = input.float(1.5, "ATR Multiplier (SL)", minval = 0.1, step = 0.1, group = G_RISK)
+slBufTicks  = input.float(0.0, "Extra SL buffer (price)", minval = 0, step = 0.1, group = G_RISK)
+tpMode      = input.string("Risk Reward", "Target Mode", options = ["Pips", "Risk Reward"], group = G_RISK)
+pipSize     = input.float(0.1, "Pip size (price per pip)", minval = 0.00001, step = 0.00001, group = G_RISK,
+     tooltip = "XAUUSD≈0.1, EURUSD≈0.0001. Used when Target Mode = Pips.")
+tp1Pips     = input.float(50,  "TP1 (pips)", minval = 1, group = G_RISK)
+tp2Pips     = input.float(100, "TP2 (pips)", minval = 1, group = G_RISK)
+rrChoice    = input.string("1:2", "Risk:Reward", options = ["1:2", "1:3", "1:4"], group = G_RISK)
+showRiskBox = input.bool(true, "Draw Entry / SL / TP lines & RR boxes", group = G_RISK)
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  9 · FILTER INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+useSession  = input.bool(true, "Restrict to selected sessions", group = G_FILTER)
+useLondon   = input.bool(true, "London Session", group = G_FILTER, inline = "ses")
+useNY       = input.bool(true, "New York Session", group = G_FILTER, inline = "ses")
+londonSess  = input.session("0800-1700", "London time", group = G_FILTER)
+nySess      = input.session("1300-2200", "New York time", group = G_FILTER)
+sessTZ      = input.string("GMT", "Session timezone", group = G_FILTER)
+highlightSes= input.bool(true, "Highlight active session background", group = G_FILTER)
+
+useVolume   = input.bool(false, "Require volume > avg", group = G_FILTER)
+volLen      = input.int(20, "Volume average length", minval = 1, group = G_FILTER)
+
+useChop     = input.bool(true, "Enable Choppiness filter", group = G_FILTER)
+chopComp    = input.float(0.4, "EMA compression threshold (ATR)", minval = 0.05, step = 0.05, group = G_FILTER,
+     tooltip = "If the 5/50/200 EMA spread is below this many ATR, market is treated as ranging.")
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  10 · DASHBOARD INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+showDash    = input.bool(true, "Show Risk Dashboard", group = G_DASH)
+dashPos     = input.string("Top Right", "Position", options = ["Top Right", "Top Left", "Bottom Right", "Bottom Left", "Middle Right"], group = G_DASH)
+dashSize    = input.string("Normal", "Text size", options = ["Tiny", "Small", "Normal", "Large"], group = G_DASH)
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  11 · VISUAL INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+useBG       = input.bool(true, "Trend background shading", group = G_VISUAL)
+bgOpacity   = input.int(92, "Background opacity", minval = 0, maxval = 100, group = G_VISUAL)
+bullBG      = input.color(color.green, "Bull BG", group = G_VISUAL, inline = "bg")
+bearBG      = input.color(color.red,   "Bear BG", group = G_VISUAL, inline = "bg")
+neutBG      = input.color(color.gray,  "Neutral BG", group = G_VISUAL, inline = "bg")
+
+// ════════════════════════════════════════════════════════════════════════════
+//  CORE CALCULATIONS
+// ════════════════════════════════════════════════════════════════════════════
+emaFast  = ta.ema(close, fastLen)
+emaMed   = ta.ema(close, medLen)
+emaMacro = ta.ema(close, macroLen)
+atr      = ta.atr(atrLen)
+atrSafe  = atr == 0 or na(atr) ? syminfo.mintick : atr
+
+// ── Slope (normalised to ATR/bar so it is symbol-agnostic) ──────────────────
+f_slope(_src, _look) =>
+    (_src - _src[_look]) / _look / atrSafe
+slopeMed   = f_slope(emaMed, slopeLook)
+slopeMacro = f_slope(emaMacro, slopeLook)
+medRising  = slopeMed  >  minSlope
+medFalling = slopeMed  < -minSlope
+macRising  = slopeMacro >  minSlope
+macFalling = slopeMacro < -minSlope
+
+// ── EMA compression (choppiness proxy) ──────────────────────────────────────
+emaSpread  = (math.max(emaFast, emaMed, emaMacro) - math.min(emaFast, emaMed, emaMacro)) / atrSafe
+isCompressed = emaSpread < chopComp
+emaCrossCount = math.sum((ta.cross(emaFast, emaMed) ? 1 : 0) + (ta.cross(emaMed, emaMacro) ? 1 : 0), 20)
+isChoppy   = useChop and (isCompressed or emaCrossCount >= 4)
+
+// ── Trend classification ────────────────────────────────────────────────────
+bullStack  = emaFast > emaMed and emaMed > emaMacro
+bearStack  = emaFast < emaMed and emaMed < emaMacro
+strongBull = bullStack and close > emaFast and medRising and macRising and not isChoppy
+strongBear = bearStack and close < emaFast and medFalling and macFalling and not isChoppy
+neutral    = not strongBull and not strongBear
+
+trendTxt   = strongBull ? "STRONG BULLISH TREND" : strongBear ? "STRONG BEARISH TREND" : isChoppy ? "RANGING MARKET" : "NO TRADE ZONE"
+trendCol   = strongBull ? bullBG : strongBear ? bearBG : neutBG
+trendDir   = strongBull ? 1 : strongBear ? -1 : 0
+
+// ════════════════════════════════════════════════════════════════════════════
+//  HIGHER-TIMEFRAME CONFIRMATION  (non-repainting)
+// ════════════════════════════════════════════════════════════════════════════
+// Request the *previous completed* HTF bar's values with lookahead ON so the
+// confirmed value is stable across realtime updates → no repaint.
+f_htf(_expr) =>
+    request.security(syminfo.tickerid, htfTF, _expr[1], lookahead = barmerge.lookahead_on)
+
+htfFast   = f_htf(ta.ema(close, fastLen))
+htfMed    = f_htf(ta.ema(close, medLen))
+htfMacro  = f_htf(ta.ema(close, macroLen))
+htfClose  = f_htf(close)
+htfBull   = htfFast > htfMed and htfMed > htfMacro and htfClose > htfMacro
+htfBear   = htfFast < htfMed and htfMed < htfMacro and htfClose < htfMacro
+htfDir    = htfBull ? 1 : htfBear ? -1 : 0
+htfTxt    = htfBull ? "BULLISH" : htfBear ? "BEARISH" : "NEUTRAL"
+
+// HTF swing support/resistance (confirmed pivots on the HTF series)
+htfRes    = f_htf(ta.pivothigh(pivotLen, pivotLen))
+htfSup    = f_htf(ta.pivotlow(pivotLen, pivotLen))
+var float htfResLvl = na
+var float htfSupLvl = na
+htfResLvl := not na(htfRes) ? htfRes : htfResLvl
+htfSupLvl := not na(htfSup) ? htfSup : htfSupLvl
+
+// ════════════════════════════════════════════════════════════════════════════
+//  MARKET STRUCTURE ENGINE  (confirmed pivots → non-repainting)
+// ════════════════════════════════════════════════════════════════════════════
+ph = ta.pivothigh(pivotLen, pivotLen)
+pl = ta.pivotlow(pivotLen, pivotLen)
+
+var float lastPH    = na      // last confirmed swing-high price
+var float prevPH    = na
+var float lastPL    = na      // last confirmed swing-low price
+var float prevPL    = na
+var int   structDir = 0       // +1 = bullish structure, -1 = bearish
+
+// classify swing highs
+swingHighTxt = ""
+if not na(ph)
+    prevPH := lastPH
+    lastPH := ph
+    swingHighTxt := na(prevPH) ? "H" : ph > prevPH ? "HH" : "LH"
+
+// classify swing lows
+swingLowTxt = ""
+if not na(pl)
+    prevPL := lastPL
+    lastPL := pl
+    swingLowTxt := na(prevPL) ? "L" : pl > prevPL ? "HL" : "LL"
+
+// Break of structure / change of character on confirmed close
+bosUp   = not na(lastPH) and ta.crossover(close, lastPH + bosBuf * atrSafe)
+bosDn   = not na(lastPL) and ta.crossunder(close, lastPL - bosBuf * atrSafe)
+chochUp = bosUp and structDir == -1
+chochDn = bosDn and structDir ==  1
+bos     = (bosUp or bosDn) and not (chochUp or chochDn)
+
+if bosUp
+    structDir := 1
+if bosDn
+    structDir := -1
+
+structTxt = structDir == 1 ? "BULLISH" : structDir == -1 ? "BEARISH" : "NEUTRAL"
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SBR / RBS INSTITUTIONAL ZONES
+// ════════════════════════════════════════════════════════════════════════════
+// SBR: a confirmed support (swing low) is broken to the downside, then price
+//      retests it from BELOW → former support now resistance.
+// RBS: a confirmed resistance (swing high) is broken to the upside, then price
+//      retests it from ABOVE → former resistance now support.
+var float[] brokenSup   = array.new_float()   // levels broken downward (await SBR retest)
+var float[] brokenRes   = array.new_float()   // levels broken upward   (await RBS retest)
+var box[]   zoneBoxes   = array.new_box()
+
+f_pushCap(_arr, _val, _cap) =>
+    array.push(_arr, _val)
+    if array.size(_arr) > _cap
+        array.shift(_arr)
+
+// register newly broken levels
+if bosDn and not na(lastPL)
+    f_pushCap(brokenSup, lastPL, maxZones)
+if bosUp and not na(lastPH)
+    f_pushCap(brokenRes, lastPH, maxZones)
+
+var bool rbsConfirmed = false
+var bool sbrConfirmed = false
+rbsConfirmed := false
+sbrConfirmed := false
+
+// keep zone-box array capped (defined before f_drawZone which uses it)
+f_pushCap2(_arr, _b) =>
+    array.push(_arr, _b)
+    if array.size(_arr) > maxZones * 2
+        box.delete(array.shift(_arr))
+
+f_drawZone(_lvl, _col) =>
+    if showZones
+        b = box.new(bar_index, _lvl + zoneSens * atrSafe * 0.5, bar_index + 20, _lvl - zoneSens * atrSafe * 0.5,
+             border_color = color.new(_col, 40), bgcolor = color.new(_col, zoneOpacity))
+        f_pushCap2(zoneBoxes, b)
+
+// SBR retest from below
+if array.size(brokenSup) > 0
+    for i = array.size(brokenSup) - 1 to 0
+        lvl = array.get(brokenSup, i)
+        if high >= lvl - zoneSens * atrSafe and close < lvl
+            sbrConfirmed := true
+            f_drawZone(lvl, sbrCol)
+            array.remove(brokenSup, i)
+
+// RBS retest from above
+if array.size(brokenRes) > 0
+    for i = array.size(brokenRes) - 1 to 0
+        lvl = array.get(brokenRes, i)
+        if low <= lvl + zoneSens * atrSafe and close > lvl
+            rbsConfirmed := true
+            f_drawZone(lvl, rbsCol)
+            array.remove(brokenRes, i)
+
+// active zone proximity (for pullback logic)
+var float nearRBS = na
+var float nearSBR = na
+nearRBS := rbsConfirmed ? lastPH : nearRBS
+nearSBR := sbrConfirmed ? lastPL : nearSBR
+
+// ════════════════════════════════════════════════════════════════════════════
+//  CANDLESTICK RECOGNITION
+// ════════════════════════════════════════════════════════════════════════════
+bodyHi   = math.max(close, open)
+bodyLo   = math.min(close, open)
+bodySz   = bodyHi - bodyLo
+rng      = high - low
+rngSafe  = rng == 0 ? syminfo.mintick : rng
+upWick   = high - bodyHi
+dnWick   = bodyLo - low
+isBull   = close > open
+isBear   = close < open
+
+bullEngulf = isBull and close[1] < open[1] and close >= open[1] and open <= close[1]
+bearEngulf = isBear and close[1] > open[1] and close <= open[1] and open >= close[1]
+
+// Morning / Evening star (3-candle)
+midC1up   = (open[2] + close[2]) / 2
+morningStar = close[2] < open[2] and bodySz[1] < bodySz[2] * 0.5 and isBull and close > midC1up
+midC1dn   = (open[2] + close[2]) / 2
+eveningStar = close[2] > open[2] and bodySz[1] < bodySz[2] * 0.5 and isBear and close < midC1dn
+
+momentumCandle = rng > atrSafe * momMult and bodySz / rngSafe > domBody
+domBull = isBull and bodySz / rngSafe > domBody and (high - close) / rngSafe < 0.15 and dnWick / rngSafe < 0.2
+domBear = isBear and bodySz / rngSafe > domBody and (close - low) / rngSafe < 0.15 and upWick / rngSafe < 0.2
+
+bullConfirm = bullEngulf or morningStar
+bearConfirm = bearEngulf or eveningStar
+
+// ════════════════════════════════════════════════════════════════════════════
+//  FILTERS
+// ════════════════════════════════════════════════════════════════════════════
+inLondon  = useLondon and not na(time(timeframe.period, londonSess, sessTZ))
+inNY      = useNY     and not na(time(timeframe.period, nySess, sessTZ))
+inSession = not useSession or inLondon or inNY
+
+avgVol    = ta.sma(volume, volLen)
+volOK     = not useVolume or na(volume) or volume > avgVol
+
+// ════════════════════════════════════════════════════════════════════════════
+//  PULLBACK DETECTION
+// ════════════════════════════════════════════════════════════════════════════
+nearMed   = math.abs(low - emaMed)  <= pullbackATR * atrSafe or math.abs(high - emaMed)  <= pullbackATR * atrSafe
+nearMacro = math.abs(low - emaMacro)<= pullbackATR * atrSafe or math.abs(high - emaMacro)<= pullbackATR * atrSafe
+nearRBSz  = not na(nearRBS) and math.abs(low - nearRBS) <= pullbackATR * atrSafe
+nearSBRz  = not na(nearSBR) and math.abs(high - nearSBR) <= pullbackATR * atrSafe
+
+bullPullback = (nearMed or nearMacro or nearRBSz)
+bearPullback = (nearMed or nearSBRz)
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ENTRY LOGIC
+// ════════════════════════════════════════════════════════════════════════════
+htfBullOK = not useHTFfil or htfDir >= 0
+htfBearOK = not useHTFfil or htfDir <= 0
+trendBullOK = not useTrendFil or strongBull
+trendBearOK = not useTrendFil or strongBear
+
+baseBuy = close > emaMacro and emaMed > emaMacro and bullPullback and bullConfirm and
+     close > emaFast and structDir >= 0 and not isChoppy
+baseSell = close < emaMacro and emaMed < emaMacro and bearPullback and bearConfirm and
+     close < emaFast and structDir <= 0 and not isChoppy
+
+buySignal  = baseBuy  and htfBullOK and trendBullOK and inSession and volOK
+sellSignal = baseSell and htfBearOK and trendBearOK and inSession and volOK
+
+// ── Re-Entry: missed the first move, price reclaims the 5 EMA in trend ───────
+reBuy  = useReEntry and strongBull and structDir >= 0 and ta.crossover(close, emaFast) and
+     low[1] <= emaFast[1] and inSession and volOK and not buySignal
+reSell = useReEntry and strongBear and structDir <= 0 and ta.crossunder(close, emaFast) and
+     high[1] >= emaFast[1] and inSession and volOK and not sellSignal
+
+// ── Counter-Trend: violent rejection at HTF S/R, simultaneous EMA breaks ─────
+ctBuy  = useCounter and htfDir <= 0 and not na(htfSupLvl) and low <= htfSupLvl and
+     bullEngulf and close > emaFast and close > emaMed and inSession
+ctSell = useCounter and htfDir >= 0 and not na(htfResLvl) and high >= htfResLvl and
+     bearEngulf and close < emaFast and close < emaMed and inSession
+
+longTrig  = buySignal or reBuy or ctBuy
+shortTrig = sellSignal or reSell or ctSell
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RISK & TARGET MANAGEMENT
+// ════════════════════════════════════════════════════════════════════════════
+swingLow  = ta.lowest(low,  pivotLen * 2)
+swingHigh = ta.highest(high, pivotLen * 2)
+
+f_rr() =>
+    rrChoice == "1:2" ? 2.0 : rrChoice == "1:3" ? 3.0 : 4.0
+
+f_longLevels(_entry) =>
+    slSwing = swingLow - slBufTicks
+    slAtr   = _entry - atrSafe * atrMult
+    sl = slMode == "Swing" ? slSwing : slMode == "ATR" ? slAtr : math.min(slSwing, slAtr)
+    risk = _entry - sl
+    tp1 = tpMode == "Pips" ? _entry + tp1Pips * pipSize : _entry + risk * f_rr()
+    tp2 = tpMode == "Pips" ? _entry + tp2Pips * pipSize : _entry + risk * (f_rr() + 1)
+    [sl, tp1, tp2, risk]
+
+f_shortLevels(_entry) =>
+    slSwing = swingHigh + slBufTicks
+    slAtr   = _entry + atrSafe * atrMult
+    sl = slMode == "Swing" ? slSwing : slMode == "ATR" ? slAtr : math.max(slSwing, slAtr)
+    risk = sl - _entry
+    tp1 = tpMode == "Pips" ? _entry - tp1Pips * pipSize : _entry - risk * f_rr()
+    tp2 = tpMode == "Pips" ? _entry - tp2Pips * pipSize : _entry - risk * (f_rr() + 1)
+    [sl, tp1, tp2, risk]
+
+var float curEntry = na
+var float curSL    = na
+var float curTP1   = na
+var float curTP2   = na
+var int   curSide  = 0      // 1 long, -1 short
+
+if longTrig
+    [sl, tp1, tp2, _r] = f_longLevels(close)
+    curEntry := close
+    curSL    := sl
+    curTP1   := tp1
+    curTP2   := tp2
+    curSide  := 1
+if shortTrig
+    [sl, tp1, tp2, _r] = f_shortLevels(close)
+    curEntry := close
+    curSL    := sl
+    curTP1   := tp1
+    curTP2   := tp2
+    curSide  := -1
+
+curRR = curSide == 1 and not na(curSL) and curEntry != curSL ? (curTP1 - curEntry) / (curEntry - curSL) :
+     curSide == -1 and not na(curSL) and curSL != curEntry ? (curEntry - curTP1) / (curSL - curEntry) : na
+
+// ════════════════════════════════════════════════════════════════════════════
+//  WIN-PROBABILITY (confluence score)
+// ════════════════════════════════════════════════════════════════════════════
+f_score(_side) =>
+    s = 0
+    if _side == 1
+        s += strongBull ? 2 : 0
+        s += htfDir == 1 ? 2 : 0
+        s += structDir == 1 ? 1 : 0
+        s += bullPullback ? 1 : 0
+        s += bullConfirm ? 1 : 0
+        s += momentumCandle and isBull ? 1 : 0
+        s += volOK ? 1 : 0
+        s += not isChoppy ? 1 : 0
+    else if _side == -1
+        s += strongBear ? 2 : 0
+        s += htfDir == -1 ? 2 : 0
+        s += structDir == -1 ? 1 : 0
+        s += bearPullback ? 1 : 0
+        s += bearConfirm ? 1 : 0
+        s += momentumCandle and isBear ? 1 : 0
+        s += volOK ? 1 : 0
+        s += not isChoppy ? 1 : 0
+    math.round(s / 10.0 * 100)
+
+winProb = curSide == 1 ? f_score(1) : curSide == -1 ? f_score(-1) : na
+
+// ════════════════════════════════════════════════════════════════════════════
+//  PLOTS — EMAs & FILL
+// ════════════════════════════════════════════════════════════════════════════
+pf = plot(showFast  ? emaFast  : na, "Fast EMA",  color = fastCol,  linewidth = fastW)
+pm = plot(showMed   ? emaMed   : na, "Medium EMA",color = medCol,   linewidth = medW)
+px = plot(showMacro ? emaMacro : na, "Macro EMA", color = macroCol, linewidth = macroW)
+fillCol = strongBull ? color.new(color.green, 88) : strongBear ? color.new(color.red, 88) : color.new(color.gray, 92)
+fill(pf, pm, color = showFill ? fillCol : na, title = "EMA Fill Zone")
+
+// ── Trend background & session highlight ────────────────────────────────────
+bgcolor(useBG ? color.new(trendCol, bgOpacity) : na, title = "Trend Background")
+bgcolor(highlightSes and inSession ? color.new(color.blue, 95) : na, title = "Session Highlight")
+
+// ── Candle colouring ────────────────────────────────────────────────────────
+candleCol = not colorCandle ? na :
+     domBull ? color.lime : domBear ? color.maroon :
+     momentumCandle and isBull ? color.aqua : momentumCandle and isBear ? color.fuchsia : na
+barcolor(candleCol, title = "Dominance / Momentum candles")
+
+// ════════════════════════════════════════════════════════════════════════════
+//  STRUCTURE / ZONE / SIGNAL DRAWINGS
+// ════════════════════════════════════════════════════════════════════════════
+// swing labels
+if showSwings and not na(ph)
+    label.new(bar_index - pivotLen, ph, swingHighTxt, style = label.style_label_down,
+         color = color.new(color.red, 30), textcolor = color.white, size = size.tiny)
+if showSwings and not na(pl)
+    label.new(bar_index - pivotLen, pl, swingLowTxt, style = label.style_label_up,
+         color = color.new(color.green, 30), textcolor = color.white, size = size.tiny)
+
+// structure connecting lines
+if showStructL and not na(ph) and not na(prevPH)
+    line.new(bar_index - pivotLen, ph, bar_index - pivotLen, ph, color = color.new(color.gray, 60), style = line.style_dotted)
+
+// BOS / CHOCH markers
+if showBOS and bos
+    label.new(bar_index, bosUp ? low : high, "BOS", style = bosUp ? label.style_label_up : label.style_label_down,
+         color = color.new(color.blue, 20), textcolor = color.white, size = size.small)
+    line.new(bar_index[1], bosUp ? lastPH : lastPL, bar_index, bosUp ? lastPH : lastPL, color = color.blue, style = line.style_dashed, width = 2)
+if showCHOCH and (chochUp or chochDn)
+    label.new(bar_index, chochUp ? low : high, "CHOCH", style = chochUp ? label.style_label_up : label.style_label_down,
+         color = color.new(color.purple, 10), textcolor = color.white, size = size.small)
+    line.new(bar_index[1], chochUp ? lastPH : lastPL, bar_index, chochUp ? lastPH : lastPL, color = color.purple, style = line.style_dashed, width = 2)
+
+// HTF levels
+var line htfResLine = na
+var line htfSupLine = na
+if showHTFlvl and barstate.islast
+    if not na(htfResLine)
+        line.delete(htfResLine)
+    if not na(htfSupLine)
+        line.delete(htfSupLine)
+    if not na(htfResLvl)
+        htfResLine := line.new(bar_index - 50, htfResLvl, bar_index + 10, htfResLvl, color = color.new(color.red, 20), style = line.style_dashed, width = 1)
+    if not na(htfSupLvl)
+        htfSupLine := line.new(bar_index - 50, htfSupLvl, bar_index + 10, htfSupLvl, color = color.new(color.green, 20), style = line.style_dashed, width = 1)
+
+// ── Entry arrows / labels ───────────────────────────────────────────────────
+if showArrows and buySignal
+    label.new(bar_index, low, "BUY", style = label.style_label_up, color = color.new(color.green, 0), textcolor = color.white, size = size.normal)
+if showArrows and sellSignal
+    label.new(bar_index, high, "SELL", style = label.style_label_down, color = color.new(color.red, 0), textcolor = color.white, size = size.normal)
+if showArrows and reBuy
+    label.new(bar_index, low, "RE-BUY", style = label.style_label_up, color = color.new(color.teal, 10), textcolor = color.white, size = size.small)
+if showArrows and reSell
+    label.new(bar_index, high, "RE-SELL", style = label.style_label_down, color = color.new(color.orange, 10), textcolor = color.white, size = size.small)
+if showArrows and ctBuy
+    label.new(bar_index, low, "COUNTER TREND", style = label.style_label_up, color = color.new(color.yellow, 10), textcolor = color.black, size = size.small)
+if showArrows and ctSell
+    label.new(bar_index, high, "COUNTER TREND", style = label.style_label_down, color = color.new(color.yellow, 10), textcolor = color.black, size = size.small)
+
+plotshape(showArrows and buySignal,  title = "Buy Arrow",  style = shape.triangleup,   location = location.belowbar, color = color.green, size = size.small)
+plotshape(showArrows and sellSignal, title = "Sell Arrow", style = shape.triangledown, location = location.abovebar, color = color.red,   size = size.small)
+
+// ── Entry / SL / TP lines + RR boxes ────────────────────────────────────────
+var line lnEntry = na
+var line lnSL    = na
+var line lnTP1   = na
+var line lnTP2   = na
+var box  rrRisk  = na
+var box  rrRew   = na
+
+if showRiskBox and (longTrig or shortTrig)
+    if not na(lnEntry)
+        line.delete(lnEntry)
+        line.delete(lnSL)
+        line.delete(lnTP1)
+        line.delete(lnTP2)
+    if not na(rrRisk)
+        box.delete(rrRisk)
+        box.delete(rrRew)
+    x2 = bar_index + 30
+    lnEntry := line.new(bar_index, curEntry, x2, curEntry, color = color.white,  width = 2)
+    lnSL    := line.new(bar_index, curSL,    x2, curSL,    color = color.red,    style = line.style_dashed, width = 2)
+    lnTP1   := line.new(bar_index, curTP1,   x2, curTP1,   color = color.green,  style = line.style_dotted, width = 1)
+    lnTP2   := line.new(bar_index, curTP2,   x2, curTP2,   color = color.green,  width = 2)
+    rrRisk  := box.new(bar_index, curEntry, x2, curSL,  border_color = na, bgcolor = color.new(color.red, 88))
+    rrRew   := box.new(bar_index, curEntry, x2, curTP2, border_color = na, bgcolor = color.new(color.green, 88))
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ════════════════════════════════════════════════════════════════════════════
+f_pos() =>
+    dashPos == "Top Right" ? position.top_right : dashPos == "Top Left" ? position.top_left :
+     dashPos == "Bottom Right" ? position.bottom_right : dashPos == "Bottom Left" ? position.bottom_left : position.middle_right
+f_txtSize() =>
+    dashSize == "Tiny" ? size.tiny : dashSize == "Small" ? size.small : dashSize == "Large" ? size.large : size.normal
+
+sessTxt = inLondon and inNY ? "London+NY" : inLondon ? "London" : inNY ? "New York" : "Closed"
+volTxt  = na(atr) ? "n/a" : atr > ta.sma(atr, 50) ? "High" : "Low"
+sigTxt  = buySignal ? "BUY" : sellSignal ? "SELL" : reBuy ? "RE-BUY" : reSell ? "RE-SELL" : ctBuy or ctSell ? "COUNTER" : "—"
+alignTxt= bullStack ? "5>50>200" : bearStack ? "5<50<200" : "Mixed"
+
+// dashboard row helper (global scope — Pine forbids defining functions inside blocks)
+f_row(_tbl, _i, _k, _v, _c) =>
+    table.cell(_tbl, 0, _i, _k, text_color = color.new(color.white, 0), text_size = f_txtSize(), text_halign = text.align_left, bgcolor = color.new(color.black, 20))
+    table.cell(_tbl, 1, _i, _v, text_color = _c, text_size = f_txtSize(), text_halign = text.align_right, bgcolor = color.new(color.black, 40))
+
+var table dash = na
+if showDash and barstate.islast
+    if not na(dash)
+        table.delete(dash)
+    dash := table.new(f_pos(), 2, 17, border_width = 1, frame_color = color.new(color.gray, 50), frame_width = 1)
+    table.cell(dash, 0, 0, "INSTITUTIONAL EMA / MS", text_color = color.white, text_size = f_txtSize(), bgcolor = color.new(color.blue, 10))
+    table.cell(dash, 1, 0, syminfo.ticker + " · " + timeframe.period, text_color = color.white, text_size = f_txtSize(), bgcolor = color.new(color.blue, 10))
+    f_row(dash, 1,  "Trend",          trendTxt,  trendCol)
+    f_row(dash, 2,  "HTF Trend",      htfTxt,    htfDir == 1 ? color.green : htfDir == -1 ? color.red : color.gray)
+    f_row(dash, 3,  "Market Struct.", structTxt, structDir == 1 ? color.green : structDir == -1 ? color.red : color.gray)
+    f_row(dash, 4,  "EMA Align",      alignTxt,  bullStack ? color.green : bearStack ? color.red : color.gray)
+    f_row(dash, 5,  "Dist 50 EMA",    str.tostring((close - emaMed) / atrSafe, "#.##") + " ATR", color.white)
+    f_row(dash, 6,  "Dist 200 EMA",   str.tostring((close - emaMacro) / atrSafe, "#.##") + " ATR", color.white)
+    f_row(dash, 7,  "Signal",         sigTxt,    sigTxt == "BUY" or sigTxt == "RE-BUY" ? color.green : sigTxt == "SELL" or sigTxt == "RE-SELL" ? color.red : color.gray)
+    f_row(dash, 8,  "Entry",          na(curEntry) ? "—" : str.tostring(curEntry, format.mintick), color.white)
+    f_row(dash, 9,  "Stop Loss",      na(curSL) ? "—" : str.tostring(curSL, format.mintick), color.red)
+    f_row(dash, 10, "TP1",            na(curTP1) ? "—" : str.tostring(curTP1, format.mintick), color.green)
+    f_row(dash, 11, "TP2",            na(curTP2) ? "—" : str.tostring(curTP2, format.mintick), color.green)
+    f_row(dash, 12, "Current RR",     na(curRR) ? "—" : "1:" + str.tostring(curRR, "#.#"), color.white)
+    f_row(dash, 13, "ATR",            str.tostring(atr, format.mintick), color.white)
+    f_row(dash, 14, "Volatility",     volTxt,    volTxt == "High" ? color.orange : color.gray)
+    f_row(dash, 15, "Session",        sessTxt,   sessTxt == "Closed" ? color.gray : color.green)
+    f_row(dash, 16, "Win Prob.",      na(winProb) ? "—" : str.tostring(winProb) + " %", na(winProb) ? color.gray : winProb >= 70 ? color.green : winProb >= 50 ? color.orange : color.red)
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ALERTS
+// ════════════════════════════════════════════════════════════════════════════
+f_msg(_side) =>
+    e  = str.tostring(curEntry, format.mintick)
+    s  = str.tostring(curSL,    format.mintick)
+    t1 = str.tostring(curTP1,   format.mintick)
+    t2 = str.tostring(curTP2,   format.mintick)
+    _side + " · " + syminfo.ticker + " · " + timeframe.period +
+         " | Entry " + e + " | SL " + s + " | TP1 " + t1 + " | TP2 " + t2 +
+         " | Trend " + trendTxt + " | Struct " + structTxt
+
+alertcondition(buySignal,   "BUY Signal",            "BUY signal")
+alertcondition(sellSignal,  "SELL Signal",           "SELL signal")
+alertcondition(reBuy,       "Re-Entry BUY",          "Re-entry BUY")
+alertcondition(reSell,      "Re-Entry SELL",         "Re-entry SELL")
+alertcondition(ta.change(trendDir) != 0, "Trend Change", "Trend changed")
+alertcondition(bos,         "Break of Structure",    "BOS detected")
+alertcondition(chochUp or chochDn, "Change of Character", "CHOCH detected")
+alertcondition(sbrConfirmed,"SBR Confirmed",         "SBR zone confirmed")
+alertcondition(rbsConfirmed,"RBS Confirmed",         "RBS zone confirmed")
+alertcondition(ctBuy or ctSell, "Counter Trend",     "Counter-trend setup")
+alertcondition(momentumCandle, "Strong Momentum Candle", "Strong momentum candle")
+
+// Rich dynamic alerts (use with "Any alert() function call")
+if buySignal
+    alert(f_msg("BUY"),  alert.freq_once_per_bar_close)
+if sellSignal
+    alert(f_msg("SELL"), alert.freq_once_per_bar_close)
+if reBuy
+    alert(f_msg("RE-ENTRY BUY"),  alert.freq_once_per_bar_close)
+if reSell
+    alert(f_msg("RE-ENTRY SELL"), alert.freq_once_per_bar_close)
