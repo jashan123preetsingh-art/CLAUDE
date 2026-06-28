@@ -67,6 +67,7 @@ maxObjects   = perfMode == "Lite" ? 8 : perfMode == "Balanced" ? 16 : 30
 // 1.2 Market Structure Engine -------------------------------------------------
 showInternal     = input.bool(true,  "Show internal structure", group=GRP_MS)
 showSwing        = input.bool(true,  "Show swing structure",    group=GRP_MS)
+showHPLabels     = input.bool(true,  "Show HP reversal labels (HP-UP / HP-DOWN)", group=GRP_MS, tooltip="Tags high-probability reversal swings instead of plain HH/HL/LH/LL text for a cleaner chart.")
 intLen           = input.int(5,  "Internal swing length", minval=2, maxval=50, group=GRP_MS, tooltip="Pivot lookback for fast internal structure. Lower = more sensitive.")
 swgLen           = input.int(25, "Swing structure length", minval=5, maxval=100, group=GRP_MS, tooltip="Pivot lookback for major swing structure.")
 useATRfilter     = input.bool(true,  "ATR noise filter", group=GRP_MS, tooltip="Ignore micro-swings smaller than a fraction of ATR.")
@@ -95,6 +96,8 @@ idmEqTol         = input.float(0.1, "Equal-level tolerance (ATR)", minval=0.01, 
 showLiquidity    = input.bool(true,  "Enable liquidity engine", group=GRP_LIQ)
 liqEqTol         = input.float(0.1, "Equal high/low tolerance (ATR)", minval=0.01, step=0.01, group=GRP_LIQ)
 showLiqVoid      = input.bool(true,  "Show liquidity voids", group=GRP_LIQ)
+showLiqBalls     = input.bool(true,  "Show liquidity balls (pending pools)", group=GRP_LIQ, tooltip="Blue markers on resting/uncollected liquidity — handy as logical take-profit targets.")
+liqBallColor     = input.color(#2962ff, "Liquidity ball color", group=GRP_LIQ)
 bslColor         = input.color(#f23645, "Sell-side liq (highs)", group=GRP_LIQ, inline="l1")
 sslColor         = input.color(#089981, "Buy-side liq (lows)",  group=GRP_LIQ, inline="l1")
 
@@ -149,6 +152,11 @@ rr3              = input.float(3.0, "TP3 R", minval=0.1, step=0.1, group=GRP_RIS
 showDash         = input.bool(true,  "Show dashboard", group=GRP_DASH)
 dashPos          = input.string("Top Right", "Position", options=["Top Right","Top Left","Bottom Right","Bottom Left","Middle Right"], group=GRP_DASH)
 dashSize         = input.string("Normal", "Size", options=["Tiny","Small","Normal","Large"], group=GRP_DASH)
+dashAccent       = input.color(#ff9800, "Header accent", group=GRP_DASH, inline="d1")
+dashHeaderTxt    = input.color(#ffffff, "Header text", group=GRP_DASH, inline="d1")
+dashTitle        = input.string("Smart AI 🔥", "Dashboard title", group=GRP_DASH)
+dashShowTimers   = input.bool(true,  "Show Volatility Timer column", group=GRP_DASH)
+dashShowDetail   = input.bool(true,  "Show detailed SMC rows", group=GRP_DASH, tooltip="Adds structure / liquidity / OB / FVG / probability rows under the MTF panel.")
 
 // 1.15 Sessions ---------------------------------------------------------------
 showSessions     = input.bool(true,  "Enable session engine", group=GRP_SESS)
@@ -388,15 +396,22 @@ if showMSS and bullMSS
 if showMSS and bearMSS
     drawBreak(swgLastL.price, swgLastL.bar, "MSS", mssColor, false)
 
-// Swing & internal HH/HL/LH/LL tags.
+// Swing tags — either clean "HP-DOWN / HP-UP" reversal labels (institutional
+// look) or the classic HH/HL/LH/LL classification text.
 if showSwing and not na(swgPH)
-    txt = classifyHigh(swgLastH.price, swgPrevHigh)
-    if txt != ""
-        label.new(swgLastH.bar, swgLastH.price, txt, style=label.style_label_down, color=color.new(themeNeutral, 20), textcolor=themeText, size=size.small)
+    if showHPLabels
+        label.new(swgLastH.bar, swgLastH.price, "HP-DOWN", style=label.style_label_down, color=color.new(i_bearColor, 10), textcolor=color.white, size=size.tiny)
+    else
+        txt = classifyHigh(swgLastH.price, swgPrevHigh)
+        if txt != ""
+            label.new(swgLastH.bar, swgLastH.price, txt, style=label.style_label_down, color=color.new(themeNeutral, 20), textcolor=themeText, size=size.small)
 if showSwing and not na(swgPL)
-    txt = classifyLow(swgLastL.price, swgPrevLow)
-    if txt != ""
-        label.new(swgLastL.bar, swgLastL.price, txt, style=label.style_label_up, color=color.new(themeNeutral, 20), textcolor=themeText, size=size.small)
+    if showHPLabels
+        label.new(swgLastL.bar, swgLastL.price, "HP-UP", style=label.style_label_up, color=color.new(i_bullColor, 10), textcolor=color.white, size=size.tiny)
+    else
+        txt = classifyLow(swgLastL.price, swgPrevLow)
+        if txt != ""
+            label.new(swgLastL.bar, swgLastL.price, txt, style=label.style_label_up, color=color.new(themeNeutral, 20), textcolor=themeText, size=size.small)
 if showInternal and not na(intPH)
     txt = classifyHigh(intLastH.price, intPrevHigh)
     if txt != ""
@@ -414,6 +429,13 @@ var array<Liq> liqs = array.new<Liq>()
 // Detect equal highs / lows off confirmed swing pivots (buy/sell-side liquidity).
 newSwingHigh = not na(swgPH)
 newSwingLow  = not na(swgPL)
+
+// Liquidity balls — blue markers on resting swing liquidity (logical TP magnets,
+// since price tends to seek out these uncollected pools). Pruned by max_labels.
+if showLiqBalls and showLiquidity and newSwingHigh
+    label.new(swgLastH.bar, swgLastH.price, "", style=label.style_circle, color=liqBallColor, size=size.tiny, yloc=yloc.price)
+if showLiqBalls and showLiquidity and newSwingLow
+    label.new(swgLastL.bar, swgLastL.price, "", style=label.style_circle, color=liqBallColor, size=size.tiny, yloc=yloc.price)
 
 if showLiquidity and newSwingHigh and not na(swgPrevHigh) and nearlyEqual(swgLastH.price, swgPrevHigh, liqEqTol)
     // Equal highs → resting sell-side liquidity above.
@@ -653,22 +675,51 @@ tlRetest = showTrendline and not na(trendLn) and math.abs(close - line.get_y2(tr
 tlBreak  = showTrendline and ((trendScore > 0 and close < ema and close[1] >= ema[1]) or (trendScore < 0 and close > ema and close[1] <= ema[1]))
 
 // ============================================================================
-// SECTION 14 — MULTI-TIMEFRAME ENGINE (non-repainting bias per TF)
+// SECTION 14 — MULTI-TIMEFRAME ENGINE (non-repainting bias per TF + timers)
 // ============================================================================
-// Bias = sign of EMA20 slope on each TF, pulled with lookahead OFF + confirmed.
+// Per-TF trend = sign of EMA20 slope, pulled with lookahead OFF (no future data).
+// Trend is combined with that TF's faster EMA to give a crisp Bullish/Bearish read
+// that matches an institutional MTF panel.
 f_htfBias(string tf) =>
-    [e, ePrev] = request.security(syminfo.tickerid, tf, [ta.ema(close, 20), ta.ema(close, 20)[1]], lookahead=barmerge.lookahead_off)
-    e > ePrev ? 1 : e < ePrev ? -1 : 0
+    [eS, ePrev, eF] = request.security(syminfo.tickerid, tf, [ta.ema(close, 50), ta.ema(close, 50)[1], ta.ema(close, 20)], lookahead=barmerge.lookahead_off)
+    slopeUp = eS > ePrev
+    // Price-above-fast-EMA agreement sharpens the call; ties fall back to slope.
+    eF > eS and slopeUp ? 1 : eF < eS and not slopeUp ? -1 : slopeUp ? 1 : -1
 
-bias1m  = showMTF ? f_htfBias("1")    : 0
-bias5m  = showMTF ? f_htfBias("5")    : 0
-bias15m = showMTF ? f_htfBias("15")   : 0
-bias1h  = showMTF ? f_htfBias("60")   : 0
-bias4h  = showMTF ? f_htfBias("240")  : 0
-bias1d  = showMTF ? f_htfBias("1D")   : 0
-biasSum = bias1m + bias5m + bias15m + bias1h + bias4h + bias1d
+biasD   = f_htfBias("1D")
+bias12h = f_htfBias("720")
+bias4h  = f_htfBias("240")
+bias1h  = f_htfBias("60")
+bias30  = f_htfBias("30")
+bias15  = f_htfBias("15")
+bias5   = f_htfBias("5")
+bias1m  = f_htfBias("1")
+biasSum = biasD + bias12h + bias4h + bias1h + bias30 + bias15 + bias5 + bias1m
 htfBias = biasSum > 1 ? "Bullish" : biasSum < -1 ? "Bearish" : "Neutral"
 htfBiasVal = biasSum > 1 ? 1 : biasSum < -1 ? -1 : 0
+
+// Volatility Timer — countdown to each timeframe's next candle close. Computed
+// from the wall clock so it is robust on any chart TF (no lower-TF security).
+f_fmtTimer(float ms) =>
+    string outp = ""
+    if not na(ms) and ms > 0
+        int tot = int(ms / 1000)
+        int hh  = int(tot / 3600)
+        int mm  = int((tot % 3600) / 60)
+        int sc  = tot % 60
+        string sStr = (sc < 10 ? "0" : "") + str.tostring(sc)
+        string mStr = (mm < 10 and hh > 0 ? "0" : "") + str.tostring(mm)
+        outp := hh > 0 ? str.tostring(hh) + ":" + mStr + ":" + sStr : str.tostring(mm) + ":" + sStr
+    outp
+f_tfTimer(float periodMs) => f_fmtTimer(periodMs - (timenow % periodMs))
+
+tmr12h = f_tfTimer(43200000.0)
+tmr4h  = f_tfTimer(14400000.0)
+tmr1h  = f_tfTimer(3600000.0)
+tmr30  = f_tfTimer(1800000.0)
+tmr15  = f_tfTimer(900000.0)
+tmr5   = f_tfTimer(300000.0)
+tmr1m  = f_tfTimer(60000.0)
 
 // ============================================================================
 // SECTION 15 — SESSION ENGINE (sessions, kill zones, silver bullet)
@@ -787,39 +838,58 @@ f_tablePos() =>
 f_txtSize() =>
     dashSize == "Tiny" ? size.tiny : dashSize == "Small" ? size.small : dashSize == "Large" ? size.large : size.normal
 
-// Global row helper (functions must live at top level, never inside an if-block).
-f_dashRow(table t, int r, string k, string v, color vc, string sz) =>
+// ---- Dashboard row helpers (functions must live at top level) --------------
+// A multi-timeframe row: TF label | Bullish/Bearish (colored) | countdown timer.
+f_tfRow(table t, int r, string lbl, int bias, string tmr, string sz) =>
+    bullish = bias >= 0
+    rowBG   = color.new(bullish ? i_bullColor : i_bearColor, 90)
+    table.cell(t, 0, r, lbl, text_color=themeText, text_size=sz, text_halign=text.align_left, bgcolor=rowBG)
+    table.cell(t, 1, r, bullish ? "Bullish" : "Bearish", text_color=bullish ? i_bullColor : i_bearColor, text_size=sz, text_halign=text.align_center, bgcolor=rowBG)
+    table.cell(t, 2, r, dashShowTimers ? tmr : "", text_color=themeNeutral, text_size=sz, text_halign=text.align_right, bgcolor=rowBG)
+
+// A generic detail row: label | value (colored) | (optional 3rd value).
+f_infoRow(table t, int r, string k, string v, color vc, string extra, string sz) =>
     table.cell(t, 0, r, k, text_color=themeText, text_size=sz, text_halign=text.align_left)
-    table.cell(t, 1, r, v, text_color=vc, text_size=sz, text_halign=text.align_right)
+    table.cell(t, 1, r, v, text_color=vc, text_size=sz, text_halign=text.align_center)
+    table.cell(t, 2, r, extra, text_color=themeNeutral, text_size=sz, text_halign=text.align_right)
 
 var table dash = na
 if showDash and na(dash)
-    dash := table.new(f_tablePos(), 2, 20, bgcolor=themeBG, border_color=color.new(themeNeutral, 60), border_width=1, frame_color=color.new(themeNeutral, 40), frame_width=1)
+    dash := table.new(f_tablePos(), 3, 24, bgcolor=themeBG, border_color=color.new(themeNeutral, 70), border_width=1, frame_color=color.new(themeNeutral, 30), frame_width=1)
 if showDash and barstate.islast and not na(dash)
     sz = f_txtSize()
-    trendTxt = swgTrend == 1 ? "Bullish" : swgTrend == -1 ? "Bearish" : "Range"
-    trendCol = swgTrend == 1 ? i_bullColor : swgTrend == -1 ? i_bearColor : themeNeutral
-    table.cell(dash, 0, 0, "SMI — Smart Money", text_color=themeText, text_size=sz, text_halign=text.align_center)
-    table.cell(dash, 1, 0, "", text_color=themeText)
-    f_dashRow(dash, 1,  "Structure",    trendTxt, trendCol, sz)
-    f_dashRow(dash, 2,  "HTF Bias",     htfBias, htfBias == "Bullish" ? i_bullColor : htfBias == "Bearish" ? i_bearColor : themeNeutral, sz)
-    f_dashRow(dash, 3,  "Last BOS",     bullBOS ? "Bull" : bearBOS ? "Bear" : "—", bullBOS ? i_bullColor : bearBOS ? i_bearColor : themeNeutral, sz)
-    f_dashRow(dash, 4,  "Last CHoCH",   bullCHOCH ? "Bull" : bearCHOCH ? "Bear" : "—", chochColor, sz)
-    f_dashRow(dash, 5,  "Last MSS",     bullMSS ? "Bull" : bearMSS ? "Bear" : "—", mssColor, sz)
-    f_dashRow(dash, 6,  "Inducement",   bullIDM ? "Bull" : bearIDM ? "Bear" : "—", idmColor, sz)
-    f_dashRow(dash, 7,  "Liquidity",    str.tostring(array.size(liqs)) + " lvls", themeText, sz)
-    f_dashRow(dash, 8,  "Order Blocks", str.tostring(array.size(obs)), themeText, sz)
-    f_dashRow(dash, 9,  "FVGs",         str.tostring(array.size(fvgs)), themeText, sz)
-    f_dashRow(dash, 10, "Trend Score",  str.tostring(math.round(trendScore)), trendColor, sz)
-    f_dashRow(dash, 11, "Momentum",     str.tostring(math.round(mom)), mom > 0 ? i_bullColor : i_bearColor, sz)
-    f_dashRow(dash, 12, "ATR",          str.tostring(math.round_to_mintick(atr)), themeText, sz)
-    f_dashRow(dash, 13, "Volatility",   atr > atr[20] ? "Rising" : "Falling", atr > atr[20] ? i_bullColor : themeNeutral, sz)
-    f_dashRow(dash, 14, "Zone",         inPremium ? "Premium" : inDiscount ? "Discount" : "Equilibrium", inPremium ? i_bearColor : inDiscount ? i_bullColor : themeNeutral, sz)
-    f_dashRow(dash, 15, "Session",      curSession, themeText, sz)
-    f_dashRow(dash, 16, "Probability",  str.tostring(math.round(probability)) + "% " + (longBias ? "Long" : "Short"), longBias ? i_bullColor : i_bearColor, sz)
-    f_dashRow(dash, 17, "Trend Age",    str.tostring(trendAge) + " bars", themeText, sz)
-    f_dashRow(dash, 18, "Dist→TL",      na(trendLn) ? "—" : str.tostring(math.round_to_mintick(math.abs(close - line.get_y2(trendLn)))), themeText, sz)
-    f_dashRow(dash, 19, "Risk",         not na(slPrice) and not na(entryPrice) ? str.tostring(math.round_to_mintick(math.abs(entryPrice - slPrice))) : "—", themeText, sz)
+    // Header row (accent-colored, three columns: Title | Active | Volatility Timer).
+    table.cell(dash, 0, 0, dashTitle, text_color=dashHeaderTxt, text_size=sz, text_halign=text.align_left, bgcolor=dashAccent)
+    table.cell(dash, 1, 0, "Active", text_color=dashHeaderTxt, text_size=sz, text_halign=text.align_center, bgcolor=dashAccent)
+    table.cell(dash, 2, 0, dashShowTimers ? "Volatility Timer" : "", text_color=dashHeaderTxt, text_size=sz, text_halign=text.align_right, bgcolor=dashAccent)
+    // Multi-timeframe trend panel (Daily → 1min) with per-candle countdowns.
+    if showMTF
+        f_tfRow(dash, 1, "Daily Trend", biasD,   "",      sz)
+        f_tfRow(dash, 2, "12H Trend",   bias12h, tmr12h,  sz)
+        f_tfRow(dash, 3, "4H Trend",    bias4h,  tmr4h,   sz)
+        f_tfRow(dash, 4, "1H Trend",    bias1h,  tmr1h,   sz)
+        f_tfRow(dash, 5, "30min Trend", bias30,  tmr30,   sz)
+        f_tfRow(dash, 6, "15min Trend", bias15,  tmr15,   sz)
+        f_tfRow(dash, 7, "5min Trend",  bias5,   tmr5,    sz)
+        f_tfRow(dash, 8, "1min Trend",  bias1m,  tmr1m,   sz)
+    // Signal Status + Active position rows (mirrors the reference layout).
+    signalTxt = probability >= minEntryScore ? (longBias ? "Long" : "Short") : "Waiting"
+    signalCol = probability >= minEntryScore ? (longBias ? i_bullColor : i_bearColor) : dashAccent
+    chartMs   = nz(timeframe.in_seconds(), 60) * 1000.0
+    f_infoRow(dash, 9,  "Signal Status", signalTxt, signalCol, f_tfTimer(chartMs), sz)
+    f_infoRow(dash, 10, "Active PL [1M]", not na(entryPrice) ? (entryLong ? "Long" : "Short") : "None", not na(entryPrice) ? (entryLong ? i_bullColor : i_bearColor) : themeNeutral, "", sz)
+    // Optional detailed SMC rows.
+    if dashShowDetail
+        trendTxt = swgTrend == 1 ? "Bullish" : swgTrend == -1 ? "Bearish" : "Range"
+        trendCol = swgTrend == 1 ? i_bullColor : swgTrend == -1 ? i_bearColor : themeNeutral
+        f_infoRow(dash, 11, "Structure",   trendTxt, trendCol, "", sz)
+        f_infoRow(dash, 12, "HTF Bias",    htfBias, htfBias == "Bullish" ? i_bullColor : htfBias == "Bearish" ? i_bearColor : themeNeutral, "", sz)
+        f_infoRow(dash, 13, "Probability", str.tostring(math.round(probability)) + "%", longBias ? i_bullColor : i_bearColor, longBias ? "Long" : "Short", sz)
+        f_infoRow(dash, 14, "Zone",        inPremium ? "Premium" : inDiscount ? "Discount" : "Equilibrium", inPremium ? i_bearColor : inDiscount ? i_bullColor : themeNeutral, "", sz)
+        f_infoRow(dash, 15, "Liquidity",   str.tostring(array.size(liqs)) + " lvls", themeText, "", sz)
+        f_infoRow(dash, 16, "Order Blocks",str.tostring(array.size(obs)), themeText, "", sz)
+        f_infoRow(dash, 17, "FVGs",        str.tostring(array.size(fvgs)), themeText, "", sz)
+        f_infoRow(dash, 18, "Session",     curSession, themeText, "", sz)
 
 // ============================================================================
 // SECTION 19 — ALERT ENGINE (independent message per event; master switch)

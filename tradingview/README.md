@@ -79,15 +79,30 @@ script.
     line); reports trend score, age and distance.
 11. **Premium / Discount** — dealing range with equilibrium (Fib 50%) and
     optional shading.
-12. **Multi-Timeframe** — non-repainting bias for 1m→Daily, aggregated to a
-    single HTF bias.
+12. **Multi-Timeframe** — non-repainting bias across **8 timeframes**
+    (Daily · 12H · 4H · 1H · 30m · 15m · 5m · 1m), shown in a clean 3-column
+    panel with a **Volatility Timer** countdown to each candle close, plus an
+    aggregated HTF bias. Timers are computed from the wall clock so they work on
+    any chart timeframe.
 13. **Confluence Engine** — weighted 0–100 probability per side
     (e.g. *93% Long*).
 14. **AI Entry** — only fires when probability ≥ a user threshold *and* a
     structural trigger (MSS/BOS/sweep) is present.
 15. **AI Stop Loss** — structure + ATR volatility buffer.
 16. **AI Take Profit** — TP1/TP2/TP3 by configurable risk-reward.
-17. **Dashboard** — floating, theme-aware table summarising the whole engine.
+17. **Dashboard** — floating, theme-aware table with an accent header, the
+    8-timeframe trend + Volatility Timer panel, Signal Status, Active position,
+    and optional detailed SMC rows (structure, liquidity, OB, FVG, probability).
+
+### Visual polish
+
+- **HP-UP / HP-DOWN** high-probability reversal tags on confirmed swing points
+  (toggle in the Market Structure group) for a clean chart instead of dense
+  HH/HL/LH/LL text.
+- **Liquidity balls** — blue circle markers on resting/uncollected liquidity
+  pools, useful as logical take-profit magnets.
+- **Extended order-block zones** that grow with price for the long, clean
+  institutional look.
 18. **Session Engine** — Asia / London / New York, ICT kill zones, optional
     Silver Bullet windows.
 19. **Alert Engine** — independent message for every event.
