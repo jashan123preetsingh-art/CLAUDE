@@ -57,21 +57,36 @@ Works on any symbol/timeframe, but it is tuned for **intraday day trading**
 | **Volume Delta Approximation** | Buyers % vs Sellers % and a "Buyers/Sellers Dominating" read, estimated from bar location × volume (Pine has no true bid/ask tape) |
 | **AI Morning Brief** | A pre-trade panel: bias, day type, preferred buy zone (VAL–POC), preferred sell zone (POC–VAH), expected range, best session, plan and confidence |
 
-### AI Trading Assistant (v3)
+### The Brain — Five-Layer Auction Intelligence (v4)
 
-The intelligence layer that turns the data above into plain-English guidance.
-No new indicators, no target/probability prediction — these read the signals
-already computed.
+The intelligence is **not** a pile of indicators. There are **no EMAs, no RSI,
+no MACD** in the decision path. Trend is derived from auction + structure, and
+every status flows through one fixed hierarchy that mirrors how a discretionary
+futures trader actually thinks:
 
-| Module | What it does |
-|--------|--------------|
-| **AI Market GPS** | A dedicated panel showing exactly where price sits in today's auction — above/below Daily/Weekly/Anchored VWAP & POC, position inside the Value Area, vs previous day, and whether price is sitting at an HVN (acceptance) or LVN (fast-move) node. Updates live. |
-| **Institutional Confluence** | Counts how many institutional factors agree with the active bias — VWAP, POC, Trend, Volume, Momentum, Price Action — as an `X / 6` score with a ★ rating, so the strongest locations are obvious. |
-| **AI Decision Engine** | One clear instruction instead of arrows: WAIT / WATCH / BUY PULLBACK / SELL RETEST / NO TRADE, plus MANAGE / MOVE STOP / TAKE PARTIAL / EXIT once you set *Active Position* (advisory only — it doesn't track fills). |
-| **Market Energy** | A Very-Low→Very-High read built from relative volume, VWAP slope, ATR expansion, trend strength and momentum — tells you whether the market is even worth trading. |
-| **AI Market Personality** | One active label for the day: Runner / Trend Day / Expansion / Compression / Balanced / Slow Grind / Low Participation / Choppy. |
-| **AI Reasoning** | Every decision explains itself in plain English (the on-chart tag and panels). |
-| **Smart Level Importance** | The ranked Key Levels panel (top-5, ★ rated) — institutional levels outrank intraday ones. |
+```
+Market Phase  →  Auction (40%)  →  Structure (30%)  →  VWAP (20%)  →  Participation (10%)  →  Decision
+```
+
+| Layer | Role | What it reads |
+|-------|------|---------------|
+| **1 · Market Phase** (top priority) | "What environment is this?" — gates confidence and whether trend trades are even allowed | Opening Drive · Trend Day · Pullback · Reversal · Expansion · Compression · Balanced Auction · Continuation · Rotational |
+| **2 · Auction Intelligence** (40%) | "Where is value and who controls it?" | Price vs VAH/VAL/POC, acceptance/rejection, POC migration, balance vs imbalance |
+| **3 · Market Structure** (30%) | "Does price action confirm?" — pure HH/HL/LH/LL, breakouts, expansion/compression (no ICT terms) | swing structure + breakouts |
+| **4 · VWAP Context** (20%) | "Cheap, fair or expensive?" | above/below, slope, distance, Daily/Weekly/Monthly/Anchored |
+| **5 · Participation** (10%) | "Is the move supported?" | relative volume, expansion/contraction, buy/sell pressure |
+
+The **composite Trend** (Strong Bullish → Strong Bearish) is a weighted blend of
+layers 2–5 (40/30/20/10), with Phase governing confidence — never a moving
+average. The **Decision Engine** (WAIT / WATCH / BUY PULLBACK / SELL RETEST /
+NO TRADE, plus MANAGE / MOVE STOP / TAKE PARTIAL / EXIT when *Active Position*
+is set) is produced strictly in that order and **explains itself** in plain
+English: Phase → Auction → Structure → VWAP → Volume → conclusion.
+
+Supporting panels: **Market GPS** (live price location), **Institutional
+Confluence** (`X/6` pillar agreement, ★ rated), **Market Energy**, **Risk**
+read, and the ranked **Key Levels** panel (top-5, institutional levels first).
+The AI only explains — it never predicts a target or prints buy/sell arrows.
 
 ---
 

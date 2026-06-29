@@ -106,8 +106,7 @@ avwapAnchorTime = input.time(timestamp("01 Jan 2024 00:00 +0000"), "Anchor Point
 //  M9 — PRICE ACTION / TREND  (inputs)
 // ============================================================================
 grpPA = "◈  Price Action & Trend (M9 / M12)"
-swingLen  = input.int(10, "Swing Pivot Strength", minval=2, maxval=50, group=grpPA)
-trendLen  = input.int(50, "Trend EMA Length", minval=5, maxval=400, group=grpPA)
+swingLen  = input.int(10, "Swing Pivot Strength", minval=2, maxval=50, group=grpPA, tooltip="Higher = fewer, more significant swing points for market structure.")
 volMaLen  = input.int(20, "Relative Volume Length", minval=5, maxval=200, group=grpPA)
 
 // ============================================================================
@@ -248,29 +247,42 @@ plot(showVwapM ? vwapM : na, "Monthly VWAP", color=color.new(#7e57c2, 20), linew
 plot(showAnchored ? vwapA : na, "Anchored VWAP", color=color.new(#ffb74d, 10), linewidth=2, style=plot.style_line)
 
 // ============================================================================
-//  M9 — PRICE ACTION: trend, swings, support/resistance
+//  PILLAR 2 — MARKET STRUCTURE ENGINE  (pure price action, NO moving averages)
+// ----------------------------------------------------------------------------
+//  Trend is derived from swing structure (HH/HL/LH/LL) + breakouts — never
+//  from EMAs/RSI. This is one input to the composite Trend Engine below.
 // ============================================================================
-emaTrend = ta.ema(close, trendLen)
-trendUp  = close > emaTrend and emaTrend > emaTrend[3]
-trendDn  = close < emaTrend and emaTrend < emaTrend[3]
-trendStr = math.abs(close - emaTrend) / (atr14 == 0 ? syminfo.mintick : atr14)
-
 ph = ta.pivothigh(high, swingLen, swingLen)
 pl = ta.pivotlow(low, swingLen, swingLen)
-var float lastResistance = na
-var float lastSupport    = na
-var float prevPH = na
-var float prevPL = na
+var float sH1 = na   // most recent confirmed swing high
+var float sH2 = na   // previous swing high
+var float sL1 = na   // most recent confirmed swing low
+var float sL2 = na   // previous swing low
 if not na(ph)
-    prevPH := lastResistance
-    lastResistance := ph[0]
+    sH2 := sH1
+    sH1 := ph
 if not na(pl)
-    prevPL := lastSupport
-    lastSupport := pl[0]
+    sL2 := sL1
+    sL1 := pl
+lastResistance = sH1   // kept for level drawing + decision proximity
+lastSupport    = sL1
 
-// Higher-high / lower-low structure for trend confirmation
-structBull = not na(lastSupport) and not na(prevPL) and lastSupport > prevPL
-structBear = not na(lastResistance) and not na(prevPH) and lastResistance < prevPH
+HH = not na(sH1) and not na(sH2) and sH1 > sH2
+LH = not na(sH1) and not na(sH2) and sH1 < sH2
+HL = not na(sL1) and not na(sL2) and sL1 > sL2
+LL = not na(sL1) and not na(sL2) and sL1 < sL2
+breakoutUp = not na(sH1) and close > sH1
+breakoutDn = not na(sL1) and close < sL1
+
+structBull = HH and HL
+structBear = LL and LH
+structureTxt = HH and HL ? "HH · HL" : LL and LH ? "LH · LL" : breakoutUp ? "Breakout ↑" : breakoutDn ? "Breakout ↓" : (HH and LL) ? "Expansion" : (LH and HL) ? "Compression" : "Transition"
+structScore = (HH ? 1.0 : 0.0) + (HL ? 1.0 : 0.0) - (LH ? 1.0 : 0.0) - (LL ? 1.0 : 0.0) + (breakoutUp ? 0.5 : 0.0) - (breakoutDn ? 0.5 : 0.0)
+
+// Structure-derived trend booleans (consumed by scoring + decision layers)
+trendUp  = structBull or (breakoutUp and not LL)
+trendDn  = structBear or (breakoutDn and not HH)
+trendStr = math.min(math.abs(structScore), 3.0)
 
 // ============================================================================
 //  M8 — VOLUME FLOW ENGINE
@@ -572,37 +584,17 @@ if barstate.islast and showSR
         lnRes := line.new(bar_index - 60, lastResistance, bar_index + 6, lastResistance, color=color.new(cRes, 45), width=1, xloc=xloc.bar_index)
 
 // ============================================================================
-//  M12 — MARKET CONDITION ENGINE
+//  MARKET CONDITION PRIMITIVES  (volatility + value membership; feed the brain)
 // ============================================================================
 atrPct = atr14 / close * 100
 atrPctMa = ta.sma(atrPct, 50)
 volState = atrPct > atrPctMa * 1.3 ? "High Volatility" : atrPct < atrPctMa * 0.7 ? "Low Volatility" : "Normal"
 inValueArea = not na(vahPrice) and not na(valPrice) and close <= vahPrice and close >= valPrice
 
-marketState = trendStr > 1.5 and trendUp ? "Trending Up" : trendStr > 1.5 and trendDn ? "Trending Down" : inValueArea and atrPct < atrPctMa ? "Balanced" : atrPct < atrPctMa * 0.7 ? "Compression" : atrPct > atrPctMa * 1.3 ? "Expansion" : "Range"
-marketStateColor = marketState == "Trending Up" ? cBull : marketState == "Trending Down" ? cBear : cTextDim
-
 // ============================================================================
-//  M14 / M21 — AI MARKET BIAS  (institutional lean from VWAP / POC / trend)
+//  PRO ENGINES — MTF POC · Session Intelligence · Flow %
 // ============================================================================
-biasScore = 0.0
-biasScore += close > vwapD ? 1 : -1
-biasScore += showVwapW and not na(vwapW) ? (close > vwapW ? 1 : -1) : 0
-biasScore += not na(pocPrice) and close > pocPrice ? 1 : (not na(pocPrice) ? -1 : 0)
-biasScore += trendUp ? 1.5 : trendDn ? -1.5 : 0
-biasScore += structBull ? 1 : structBear ? -1 : 0
-biasScore += pressure > 0.05 ? 1 : pressure < -0.05 ? -1 : 0
-
-marketBias = biasScore >= 3.5 ? "Strong Bullish" : biasScore >= 1.5 ? "Bullish" : biasScore <= -3.5 ? "Strong Bearish" : biasScore <= -1.5 ? "Bearish" : "Neutral"
-biasColor = biasScore >= 1.5 ? cBull : biasScore <= -1.5 ? cBear : cTextDim
-
-// ============================================================================
-//  PRO ENGINES — MTF POC · Session Intelligence · Auction Day-Type · Flow %
-// ============================================================================
-// ---- Day type (Auction Market Theory, M12-ext) ----
-dayType = trendStr > 2 and (trendUp or trendDn) ? "Trend Day" : marketState == "Expansion" ? "Expansion Day" : (inValueArea and volState != "High Volatility") ? "Balanced Day" : marketState == "Compression" ? "Compression" : "Normal Day"
-
-// ---- Buyers vs Sellers participation (M14 — delta approximation from bar location) ----
+// ---- Buyers vs Sellers participation (delta approximation from bar location) ----
 buyersPct  = math.round(math.max(0, math.min(100, ta.ema(buyP, 14) * 100)))
 sellersPct = 100 - buyersPct
 flowColor  = buyersPct >= 60 ? cBull : buyersPct <= 40 ? cBear : cTextDim
@@ -653,6 +645,74 @@ expLow       = not na(adr) ? dayOpen - adr / 2 : na
 expHigh      = not na(adr) ? dayOpen + adr / 2 : na
 
 // ============================================================================
+//  ███  THE BRAIN — Five-Layer Auction Intelligence Hierarchy  ███
+//  Phase  →  Auction (40%)  →  Structure (30%)  →  VWAP (20%)  →  Participation (10%)
+//  Every status and decision flows through this order. The job is to EXPLAIN the
+//  current auction context in plain English — never to predict price.
+// ============================================================================
+
+// ---- LAYER 5: PARTICIPATION (10%) — is the move supported by real volume? ----
+volExpand   = relVol >= 1.3
+volContract = relVol <= 0.7
+partBias    = pressure > 0.05 ? 1.0 : pressure < -0.05 ? -1.0 : 0.0
+partConfirm = relVol >= 1.0
+partTxt     = volExpand ? "Expanding" : volContract ? "Contracting" : "Steady"
+
+// ---- LAYER 2: AUCTION INTELLIGENCE (40%) — where is value & who controls it? ----
+priceVsValue = na(vahPrice) ? "—" : close > vahPrice ? "Above Value" : close < valPrice ? "Below Value" : "Inside Value"
+acceptUp = not na(vahPrice) and close > vahPrice and relVol >= 0.9
+acceptDn = not na(valPrice) and close < valPrice and relVol >= 0.9
+rejUp    = not na(vahPrice) and high > vahPrice and close <= vahPrice
+rejDn    = not na(valPrice) and low  < valPrice and close >= valPrice
+valueMid = not na(pdh) and not na(pdl) ? (pdh + pdl) / 2 : na
+pocMigUp = not na(dPOC) and not na(valueMid) and dPOC > valueMid
+pocMigDn = not na(dPOC) and not na(valueMid) and dPOC < valueMid
+aScore = 0.0
+aScore += not na(pocPrice) and close > pocPrice ? 1.0 : not na(pocPrice) and close < pocPrice ? -1.0 : 0.0
+aScore += acceptUp ? 1.0 : acceptDn ? -1.0 : 0.0
+aScore += pocMigUp ? 0.7 : pocMigDn ? -0.7 : 0.0
+aScore += rejUp ? -0.7 : rejDn ? 0.7 : 0.0
+aScore := math.max(math.min(aScore, 2.0), -2.0)
+auctionState = aScore >= 1.0 ? "Bullish" : aScore <= -1.0 ? "Bearish" : "Balanced"
+auctionTxt   = acceptUp ? "Acceptance ↑" : acceptDn ? "Acceptance ↓" : rejUp ? "Rejection (high)" : rejDn ? "Rejection (low)" : inValueArea ? "Balanced" : "Rotation"
+auctionColor = aScore >= 1.0 ? cBull : aScore <= -1.0 ? cBear : cTextDim
+
+// ---- LAYER 4: VWAP INTELLIGENCE (20%) — cheap / fair / expensive vs fair value ----
+vScore = 0.0
+vScore += close > vwapD ? 1.0 : -1.0
+vScore += not na(vwapW) ? (close > vwapW ? 0.5 : -0.5) : 0.0
+vScore += vwapDir == "Rising" ? 0.5 : vwapDir == "Falling" ? -0.5 : 0.0
+vScore := math.max(math.min(vScore, 2.0), -2.0)
+vwapDist     = (close - vwapD) / (atr14 == 0 ? syminfo.mintick : atr14)
+vwapContext  = vwapDist > 1.5 ? "Expensive" : vwapDist < -1.5 ? "Cheap" : "Fair Value"
+vwapStateTxt = (close > vwapD ? "Above" : "Below") + " Daily"
+
+// ---- LAYER 1: MARKET PHASE (highest priority) — what environment are we in? ----
+openingWindow  = nz(ta.barssince(newDay), bar_index) < barsPerOR
+expandingMkt   = atrPct > atrPctMa * 1.25 or breakoutUp or breakoutDn
+compressingMkt = atrPct < atrPctMa * 0.75
+strongTrend    = (structBull or structBear) and trendStr >= 2 and partConfirm
+marketPhase = openingWindow and not na(orH) and (close > orH or close < orL) ? "Opening Drive" : strongTrend and (acceptUp or acceptDn) ? "Trend Day" : (structBull and HL and close > vwapD and not breakoutUp) ? "Pullback" : (structBear and LH and close < vwapD and not breakoutDn) ? "Pullback" : (rejUp or rejDn) ? "Reversal" : expandingMkt and (structBull or structBear) ? "Expansion" : compressingMkt ? "Compression" : (inValueArea and not expandingMkt) ? "Balanced Auction" : (structBull or structBear) ? "Continuation" : "Rotational"
+marketPhaseColor = marketPhase == "Trend Day" or marketPhase == "Opening Drive" or marketPhase == "Continuation" ? cBull : marketPhase == "Reversal" ? cVah : (marketPhase == "Balanced Auction" or marketPhase == "Rotational" or marketPhase == "Compression") ? cTextDim : cText
+// Phase governs confidence and whether trend trades are allowed at all
+phaseMult        = marketPhase == "Trend Day" or marketPhase == "Opening Drive" ? 1.1 : (marketPhase == "Balanced Auction" or marketPhase == "Rotational" or marketPhase == "Compression") ? 0.7 : marketPhase == "Reversal" ? 0.8 : 1.0
+phaseAllowsTrend = not (marketPhase == "Balanced Auction" or marketPhase == "Rotational" or marketPhase == "Compression")
+
+// ---- COMPOSITE TREND ENGINE — weighted blend of the four pillars (no MAs) ----
+aN = aScore / 2.0
+sN = math.max(math.min(structScore / 2.0, 1.0), -1.0)
+vN = vScore / 2.0
+pN = partBias
+composite  = aN * 0.40 + sN * 0.30 + vN * 0.20 + pN * 0.10   // -1 .. +1
+biasScore  = composite
+marketBias = composite >= 0.5 ? "Strong Bullish" : composite >= 0.18 ? "Bullish" : composite <= -0.5 ? "Strong Bearish" : composite <= -0.18 ? "Bearish" : "Neutral"
+biasColor  = composite >= 0.18 ? cBull : composite <= -0.18 ? cBear : cTextDim
+
+// ---- RISK READ (is this a high- or low-quality location to act?) ----
+riskTxt   = (marketPhase == "Balanced Auction" or marketPhase == "Rotational" or inValueArea) ? "High" : (strongTrend and partConfirm) ? "Low" : "Medium"
+riskColor = riskTxt == "Low" ? cBull : riskTxt == "High" ? cBear : cTextDim
+
+// ============================================================================
 //  M13 — TRADE QUALITY ENGINE (0-100)
 // ----------------------------------------------------------------------------
 //  Long and short are scored independently; the higher conviction side wins,
@@ -685,7 +745,7 @@ gradeTxt = tradeScore >= 90 ? "A+" : tradeScore >= 80 ? "A" : tradeScore >= 70 ?
 // Market Quality (is the market worth trading at all — separate from setup) M21
 mktQ = 0.0
 mktQ += relVol >= 1.0 ? 30 : relVol >= 0.7 ? 15 : 0
-mktQ += marketState == "Trending Up" or marketState == "Trending Down" ? 30 : marketState == "Range" or marketState == "Balanced" ? 10 : 20
+mktQ += marketPhase == "Trend Day" or marketPhase == "Opening Drive" ? 30 : (marketPhase == "Balanced Auction" or marketPhase == "Rotational") ? 10 : 20
 mktQ += volState == "Normal" ? 20 : volState == "High Volatility" ? 12 : 8
 mktQ += not inValueArea ? 20 : 5
 mktQText = mktQ >= 80 ? "Excellent" : mktQ >= 65 ? "Good" : mktQ >= 45 ? "Average" : mktQ >= 30 ? "Poor" : "Very Poor"
@@ -693,74 +753,55 @@ mktQText = mktQ >= 80 ? "Excellent" : mktQ >= 65 ? "Good" : mktQ >= 45 ? "Averag
 // ============================================================================
 //  M14 / M21 — AI TRADE PLAN (WAIT / BUY ZONE / SELL ZONE)
 // ============================================================================
-bool armLong  = longSide and longScore >= scoreThreshold and trendUp and not inValueArea
-bool armShort = (not longSide) and shortScore >= scoreThreshold and trendDn and not inValueArea
+bool armLong  = longSide and longScore >= scoreThreshold and trendUp and not inValueArea and phaseAllowsTrend
+bool armShort = (not longSide) and shortScore >= scoreThreshold and trendDn and not inValueArea and phaseAllowsTrend
 
 planStatus = armLong ? "BUY PLAN READY" : armShort ? "SELL PLAN READY" : (longScore >= scoreThreshold - 12 and trendUp) ? "BUY SETUP FORMING" : (shortScore >= scoreThreshold - 12 and trendDn) ? "SELL SETUP FORMING" : "WAIT"
 
 // ============================================================================
-//  AI ASSISTANT ENGINES — Confluence · Energy · Personality · Decision
-//  Presentation / intelligence layer over data already computed above.
-//  No new indicators, no target/probability prediction.
+//  DECISION ENGINE — flows Phase → Auction → Structure → VWAP → Participation
+//  Pure explanation, never prediction; no new indicators.
 // ============================================================================
-// ---- Momentum (feeds Confluence + Energy) ----
-momRSI = ta.rsi(close, 14)
-momUp  = momRSI > 55
-momDn  = momRSI < 45
-
-// ---- MODULE 2: Institutional Confluence (factors agreeing with active bias) ----
+// ---- Institutional Confluence (how many pillars agree with the active bias) ----
 biasBull  = biasScore >= 0
 cfVWAP    = (close > vwapD) == biasBull
 cfPOC     = not na(pocPrice) and ((close > pocPrice) == biasBull)
 cfTrend   = biasBull ? trendUp : trendDn
 cfVol     = relVol >= 1.0
-cfMom     = biasBull ? momUp : momDn
+cfMom     = biasBull ? (pressure > 0.05) : (pressure < -0.05)
 cfPA      = biasBull ? structBull : structBear
 confCount = (cfVWAP ? 1 : 0) + (cfPOC ? 1 : 0) + (cfTrend ? 1 : 0) + (cfVol ? 1 : 0) + (cfMom ? 1 : 0) + (cfPA ? 1 : 0)
 confStars = math.max(math.round(confCount / 6.0 * 5), confCount > 0 ? 1 : 0)
 confColor = confCount >= 5 ? cBull : confCount >= 3 ? cText : cTextDim
 
-// ---- MODULE 4: Market Energy (0-100) ----
+// ---- Market Energy (0-100): participation, VWAP slope, ATR expansion, trend, pressure ----
 energy = 0.0
 energy += relVol >= 1.5 ? 25 : relVol >= 1.0 ? 16 : relVol >= 0.7 ? 8 : 0
 energy += math.abs(vwapSlope) > 0.15 ? 20 : math.abs(vwapSlope) > 0.06 ? 12 : 4
 energy += atrPct > atrPctMa * 1.2 ? 20 : atrPct > atrPctMa * 0.9 ? 12 : 5
-energy += trendStr > 2 ? 20 : trendStr > 1 ? 12 : 5
-energy += math.abs(momRSI - 50) > 20 ? 15 : math.abs(momRSI - 50) > 10 ? 9 : 3
+energy += trendStr >= 2.5 ? 20 : trendStr >= 1.5 ? 12 : 5
+energy += math.abs(pressure) > 0.4 ? 15 : math.abs(pressure) > 0.15 ? 9 : 3
 energyTxt   = energy >= 80 ? "Very High" : energy >= 60 ? "High" : energy >= 40 ? "Normal" : energy >= 25 ? "Low" : "Very Low"
 energyColor = energy >= 60 ? cBull : energy >= 40 ? cText : cTextDim
 
-// ---- MODULE 5: AI Market Personality (one active classification) ----
-personality = energy >= 80 and (trendUp or trendDn) and trendStr > 2 ? "Runner (Strong Trend)" : trendStr > 1.5 and (trendUp or trendDn) ? "Trend Day" : marketState == "Expansion" ? "Expansion Day" : marketState == "Compression" or volState == "Low Volatility" ? "Compression Day" : relVol < 0.7 ? "Low Participation" : inValueArea and atrPct < atrPctMa ? "Balanced Day" : energy < 35 ? "Slow Grind" : "Choppy Day"
-
-// ---- MODULE 3: AI Decision Engine (guidance, never BUY/SELL arrows) ----
+// ---- AI Decision (guidance, never BUY/SELL arrows); phase gates everything ----
 nearRes = not na(lastResistance) and lastResistance > close and (lastResistance - close) / (atr14 == 0 ? syminfo.mintick : atr14) < 0.6
 nearSup = not na(lastSupport)    and lastSupport    < close and (close - lastSupport)    / (atr14 == 0 ? syminfo.mintick : atr14) < 0.6
-decisionTxt = posState == "Long" ? ((trendDn or pressure < -0.1) ? "EXIT POSITION" : (nearRes or (not na(vahPrice) and close >= vahPrice)) ? "TAKE PARTIAL" : (close > vwapD and trendUp) ? "MANAGE POSITION" : "MOVE STOP") : posState == "Short" ? ((trendUp or pressure > 0.1) ? "EXIT POSITION" : (nearSup or (not na(valPrice) and close <= valPrice)) ? "TAKE PARTIAL" : (close < vwapD and trendDn) ? "MANAGE POSITION" : "MOVE STOP") : armLong ? "BUY PULLBACK" : armShort ? "SELL RETEST" : str.contains(planStatus, "SETUP") ? "WATCH" : (energy < 25 or marketState == "Range") ? "NO TRADE" : "WAIT"
+decisionTxt = posState == "Long" ? ((trendDn or pressure < -0.1) ? "EXIT POSITION" : (nearRes or (not na(vahPrice) and close >= vahPrice)) ? "TAKE PARTIAL" : (close > vwapD and trendUp) ? "MANAGE POSITION" : "MOVE STOP") : posState == "Short" ? ((trendUp or pressure > 0.1) ? "EXIT POSITION" : (nearSup or (not na(valPrice) and close <= valPrice)) ? "TAKE PARTIAL" : (close < vwapD and trendDn) ? "MANAGE POSITION" : "MOVE STOP") : armLong ? "BUY PULLBACK" : armShort ? "SELL RETEST" : str.contains(planStatus, "SETUP") ? "WATCH" : (energy < 25 or not phaseAllowsTrend) ? "NO TRADE" : "WAIT"
 decisionColor = str.contains(decisionTxt, "BUY") or decisionTxt == "MANAGE POSITION" ? cBull : str.contains(decisionTxt, "SELL") or decisionTxt == "EXIT POSITION" ? cBear : (str.contains(decisionTxt, "PARTIAL") or decisionTxt == "MOVE STOP" or decisionTxt == "WATCH") ? cVah : cTextDim
-confidenceTxt = tradeScore >= 80 ? "High" : tradeScore >= 65 ? "Medium" : "Low"
+// Confidence blends trade quality with the phase multiplier (phase = top priority)
+adjConfidence = math.min(tradeScore * phaseMult, 100)
+confidenceTxt = adjConfidence >= 80 ? "High" : adjConfidence >= 60 ? "Medium" : "Low"
 
-// MODULE 6: AI Reasoning for the current decision (plain English)
+// AI Reasoning — the layered explanation, exactly the trader's thinking process
 f_decisionReason() =>
-    string r = ""
-    if decisionTxt == "BUY PULLBACK"
-        r := (close > vwapD ? "✔ Price above Daily VWAP\n" : "") + (not na(pocPrice) and close > pocPrice ? "✔ Holding above POC\n" : "") + "✔ Trend intact\n" + (relVol >= 1.0 ? "✔ Strong relative volume\n" : "• Volume light\n") + "→ Buy into a healthy pullback."
-    else if decisionTxt == "SELL RETEST"
-        r := (close < vwapD ? "✔ Price below Daily VWAP\n" : "") + (not na(pocPrice) and close < pocPrice ? "✔ Below POC\n" : "") + "✔ Bearish trend\n" + (relVol >= 1.0 ? "✔ Strong relative volume\n" : "• Volume light\n") + "→ Sell into a retest."
-    else if decisionTxt == "WATCH"
-        r := "Setup forming but not yet confirmed.\nWait for the trigger candle."
-    else if decisionTxt == "MANAGE POSITION"
-        r := "Trend still supports the position.\nHold and trail your stop."
-    else if decisionTxt == "TAKE PARTIAL"
-        r := "Price is at a key level / value edge.\nBook part and reduce risk."
-    else if decisionTxt == "MOVE STOP"
-        r := "Momentum is cooling.\nTighten the stop to protect gains."
-    else if decisionTxt == "EXIT POSITION"
-        r := "Context has turned against the trade.\nStand aside."
-    else if decisionTxt == "NO TRADE"
-        r := "Low energy / rotational market.\nNo edge right now."
-    else
-        r := (nearRes ? "Approaching resistance — risk outweighs reward.\n" : "") + (inValueArea ? "Inside value, balanced auction.\n" : "") + (energy < 40 ? "Energy is low.\n" : "") + "Wait for confirmation."
+    string r = "Phase: " + marketPhase + "\n"
+    r += "Auction: " + auctionTxt + " · " + priceVsValue + " (" + auctionShape + ")\n"
+    r += "Structure: " + structureTxt + "\n"
+    r += "VWAP: " + vwapStateTxt + " · " + vwapContext + "\n"
+    r += "Volume: " + partTxt + (partConfirm ? "" : " (light)") + "\n"
+    r += "──────────────\n"
+    r += decisionTxt == "BUY PULLBACK" ? "→ Buyers control value; buy the pullback." : decisionTxt == "SELL RETEST" ? "→ Sellers control value; sell the retest." : decisionTxt == "WATCH" ? "→ Setup forming; wait for the trigger." : decisionTxt == "MANAGE POSITION" ? "→ Context supports the trade; hold & trail." : decisionTxt == "TAKE PARTIAL" ? "→ At a key level; book part, cut risk." : decisionTxt == "MOVE STOP" ? "→ Momentum cooling; tighten the stop." : decisionTxt == "EXIT POSITION" ? "→ Context turned against you; step aside." : decisionTxt == "NO TRADE" ? "→ Rotational / low energy; no edge here." : "→ Mixed context; wait for confirmation."
     r
 
 // ============================================================================
@@ -774,9 +815,9 @@ f_row(tbl, sz, row, k, v, vcol) =>
     table.cell(tbl, 0, row, k, text_color=cTextDim, text_size=sz, text_halign=text.align_left)
     table.cell(tbl, 1, row, v, text_color=vcol, text_size=sz, text_halign=text.align_right)
 
-// Auction display (shape + any poor-high/low warning), color-coded by lean
-auctionCol  = str.startswith(auctionShape, "P") ? cBull : str.startswith(auctionShape, "b") ? cBear : cTextDim
-auctionDisp = auctionShape + (poorHigh ? "  ⚠PH" : "") + (poorLow ? "  ⚠PL" : "")
+// Auction display (acceptance/rejection state + any poor-high/low warning)
+auctionCol  = auctionColor
+auctionDisp = auctionState + " · " + auctionTxt + (poorHigh ? "  ⚠PH" : "") + (poorLow ? "  ⚠PL" : "")
 
 var table dash = na
 if barstate.islast and showDash
@@ -789,14 +830,14 @@ if barstate.islast and showDash
 
     f_hdr(dash, sz, r, "◆  VOLUME FLOW PRO X AI")
     r += 1
-    f_row(dash, sz, r, "Market Bias", marketBias, biasColor)
+    f_row(dash, sz, r, "Trend (composite)", marketBias, biasColor)
     r += 1
     if showAuction
-        f_row(dash, sz, r, "Day Type", dayType, marketStateColor)
+        f_row(dash, sz, r, "Phase", marketPhase, marketPhaseColor)
         r += 1
         f_row(dash, sz, r, "Auction", auctionDisp, auctionCol)
         r += 1
-    f_row(dash, sz, r, "Trend", trendUp ? "Bullish" : trendDn ? "Bearish" : "Neutral", trendUp ? cBull : trendDn ? cBear : cTextDim)
+    f_row(dash, sz, r, "Structure", structureTxt, structBull ? cBull : structBear ? cBear : cTextDim)
     r += 1
 
     f_hdr(dash, sz, r, "◆  VWAP")
@@ -859,9 +900,9 @@ if barstate.islast and showDash
     r += 1
     f_row(dash, sz, r, "Energy", energyTxt, energyColor)
     r += 1
-    f_row(dash, sz, r, "Personality", personality, marketStateColor)
+    f_row(dash, sz, r, "Risk", riskTxt, riskColor)
     r += 1
-    f_row(dash, sz, r, "Confidence", str.tostring(math.round(tradeScore)) + "%  " + gradeTxt, tradeScore >= 70 ? cBull : tradeScore >= 55 ? cText : cTextDim)
+    f_row(dash, sz, r, "Confidence", str.tostring(math.round(adjConfidence)) + "%  " + gradeTxt, adjConfidence >= 70 ? cBull : adjConfidence >= 55 ? cText : cTextDim)
 
 // ---- On-chart decision tag (minimal — decision + confidence + reasons) ----
 var label planLbl = na
@@ -882,7 +923,7 @@ if barstate.islast and showBrief
     brief := table.new(f_tblPos(briefPos), 2, 9, bgcolor=cPanelBg, frame_color=cFrame, frame_width=1, border_color=cGrid, border_width=0)
     f_hdr(brief, bsz, 0, "◆  AI MORNING BRIEF")
     f_row(brief, bsz, 1, "Bias", marketBias, biasColor)
-    f_row(brief, bsz, 2, "Day Type", dayType, marketStateColor)
+    f_row(brief, bsz, 2, "Phase", marketPhase, marketPhaseColor)
     f_row(brief, bsz, 3, "Preferred Buy", (na(valPrice) or na(pocPrice)) ? "—" : f_px(valPrice) + "–" + f_px(pocPrice), cBull)
     f_row(brief, bsz, 4, "Preferred Sell", (na(pocPrice) or na(vahPrice)) ? "—" : f_px(pocPrice) + "–" + f_px(vahPrice), cBear)
     f_row(brief, bsz, 5, "Expected Range", (na(expLow) or na(expHigh)) ? "—" : f_px(expLow) + "–" + f_px(expHigh), cText)
