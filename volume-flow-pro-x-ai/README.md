@@ -88,6 +88,21 @@ Confluence** (`X/6` pillar agreement, ★ rated), **Market Energy**, **Risk**
 read, and the ranked **Key Levels** panel (top-5, institutional levels first).
 The AI only explains — it never predicts a target or prints buy/sell arrows.
 
+### Intelligence refinements (v5)
+
+Depth, not breadth — these sharpen the existing brain; no new indicators.
+
+| Engine | What it adds |
+|--------|--------------|
+| **Market Memory** | Compares today's auction with yesterday's — today's POC/Value vs yesterday's, value migration, where today opened relative to yesterday's value, and PDH/PDL + PWH/PWL acceptance/rejection. |
+| **Auction Shift** | Describes how the auction is *evolving* (Value Migrating Higher/Lower, Acceptance Above/Below Value, Trend/Rotational/Balanced) rather than just bull/bear. |
+| **Profile Shape** | Classifies the profile (P / b / D, wide/thin) and *explains* it in a hover tooltip on the Auction row. |
+| **Structure Quality** | Measures structure, not just labels it: Healthy / Trending Cleanly / Weak / Exhausted / Unstable / Choppy, from a 0-100 trend-confidence score. |
+| **Participation Quality** | Very Strong / Healthy / Average / Weak — quality of volume behind the move, not just its size. |
+| **Adaptive Market Logic** | Pillar weights shift with the phase — Trend Day trusts structure more (35/35/20/10); Balanced Day trusts value more (50/20/20/10); low volatility trims confidence. |
+| **Dynamic Confidence** | A transparent weighted score — Auction 35% · Structure 25% · Participation 20% · VWAP 20% — scaled by phase, never a random number. |
+| **Professional Context** | The on-chart tag is a concise plain-English auction summary: Phase → Memory → Value/VWAP → Auction → Structure/Participation → conclusion. |
+
 ---
 
 ## Design principles

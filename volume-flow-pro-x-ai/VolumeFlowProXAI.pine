@@ -289,8 +289,6 @@ trendStr = math.min(math.abs(structScore), 3.0)
 // ============================================================================
 volMa = ta.sma(volume, volMaLen)
 relVol = volMa > 0 ? volume / volMa : 1.0
-volRating = relVol >= 2.0 ? "Very High" : relVol >= 1.4 ? "High" : relVol >= 0.8 ? "Normal" : relVol >= 0.5 ? "Low" : "Very Low"
-volRColor = relVol >= 1.4 ? cBull : relVol < 0.8 ? cTextDim : cText
 // Buying vs selling pressure from where price closes within the bar, weighted by volume
 barRange = high - low
 buyP  = barRange > 0 ? (close - low) / barRange : 0.5
@@ -376,6 +374,56 @@ f_pocBin(topP, botP, lb, bins) =>
         int pidx = array.indexof(arr, mx)
         poc := botP + (pidx + 0.5) * bs
     poc
+
+// Full profile (POC + Value Area) over a bar window at a history offset.
+// Used by the Market Memory Engine to read today's vs yesterday's auction.
+f_profileOff(topP, botP, startOff, lb, bins) =>
+    float poc = na
+    float vah = na
+    float val = na
+    if topP > botP and lb >= 2
+        float bs = (topP - botP) / bins
+        arr = array.new_float(bins, 0.0)
+        for i = 0 to lb - 1
+            int off = startOff + i
+            float bh = high[off]
+            float bl = low[off]
+            float bv = nz(volume[off])
+            float br = bh - bl
+            if br <= 0
+                idx = math.min(math.max(int((close[off] - botP) / bs), 0), bins - 1)
+                array.set(arr, idx, array.get(arr, idx) + bv)
+            else
+                lo = math.min(math.max(int((bl - botP) / bs), 0), bins - 1)
+                hi = math.min(math.max(int((bh - botP) / bs), 0), bins - 1)
+                for j = lo to hi
+                    float bb = botP + j * bs
+                    float bt = bb + bs
+                    float ov = math.min(bh, bt) - math.max(bl, bb)
+                    if ov > 0
+                        array.set(arr, j, array.get(arr, j) + bv * ov / br)
+        float mx = array.max(arr)
+        int pidx = array.indexof(arr, mx)
+        poc := botP + (pidx + 0.5) * bs
+        float totV = array.sum(arr)
+        float target = totV * vaPercent / 100.0
+        float acc = mx
+        int up = pidx
+        int dn = pidx
+        int g = 0
+        while acc < target and (up < bins - 1 or dn > 0) and g < bins * 2
+            float vUp = up < bins - 1 ? array.get(arr, up + 1) : -1.0
+            float vDn = dn > 0 ? array.get(arr, dn - 1) : -1.0
+            if vUp >= vDn
+                up += 1
+                acc += vUp
+            else
+                dn -= 1
+                acc += vDn
+            g += 1
+        vah := botP + (up + 1) * bs
+        val := botP + dn * bs
+    [poc, vah, val]
 
 // Push a ranked key-level candidate into the working arrays (skips na prices)
 f_addLvl(parr, narr, sarr, p, n, s) =>
@@ -599,7 +647,14 @@ buyersPct  = math.round(math.max(0, math.min(100, ta.ema(buyP, 14) * 100)))
 sellersPct = 100 - buyersPct
 flowColor  = buyersPct >= 60 ? cBull : buyersPct <= 40 ? cBear : cTextDim
 
-// ---- Multi-Timeframe POC (approximate; lookback capped for performance) ----
+// ---- Multi-Timeframe POC + Market Memory (today's vs yesterday's auction) ----
+// Track the bar index of the last two session opens to window the profiles.
+var int dOpen1 = na   // today's first bar index
+var int dOpen0 = na   // yesterday's first bar index
+if newDay
+    dOpen0 := dOpen1
+    dOpen1 := bar_index
+
 int mtfCap = 1000
 dPocLen = math.max(math.min(nz(ta.barssince(newDay),   bar_index) + 1, mtfCap), 1)
 wPocLen = math.max(math.min(nz(ta.barssince(newWeek),  bar_index) + 1, mtfCap), 1)
@@ -610,13 +665,29 @@ wPocTop = ta.highest(high, wPocLen)
 wPocBot = ta.lowest(low,  wPocLen)
 mPocTop = ta.highest(high, mPocLen)
 mPocBot = ta.lowest(low,  mPocLen)
+// Window lengths capped so the yesterday offset stays inside the history buffer
+memTodayLen = math.min(dPocLen, 720)
+memYestLen  = (na(dOpen0) or na(dOpen1)) ? 0 : math.max(math.min(dOpen1 - dOpen0, 720), 0)
 var float dPOC = na
+var float dVAH = na
+var float dVAL = na
+var float yPOC = na   // yesterday's POC / value area (Market Memory)
+var float yVAH = na
+var float yVAL = na
 var float wPOC = na
 var float mPOC = na
 if barstate.islast and showMTFpoc
-    dPOC := f_pocBin(dPocTop, dPocBot, dPocLen, vpBins)
+    [tp, tvh, tvl] = f_profileOff(dPocTop, dPocBot, 0, memTodayLen, vpBins)
+    dPOC := tp
+    dVAH := tvh
+    dVAL := tvl
     wPOC := f_pocBin(wPocTop, wPocBot, wPocLen, vpBins)
     mPOC := f_pocBin(mPocTop, mPocBot, mPocLen, vpBins)
+    if memYestLen >= 2 and not na(pdh) and not na(pdl) and pdh > pdl
+        [yp, yvh, yvl] = f_profileOff(pdh, pdl, memTodayLen, memYestLen, vpBins)
+        yPOC := yp
+        yVAH := yvh
+        yVAL := yvl
 
 // ---- Session Intelligence: active session, ADR, today's range, expected range ----
 inAsia   = not na(time(timeframe.period, asiaSess, sessTz))
@@ -639,6 +710,7 @@ adr          = request.security(syminfo.tickerid, "D", ta.sma(high - low, adrLen
 todayH       = request.security(syminfo.tickerid, "D", high)
 todayL       = request.security(syminfo.tickerid, "D", low)
 dayOpen      = request.security(syminfo.tickerid, "D", open)
+[pwh, pwl]   = request.security(syminfo.tickerid, "W", [high[1], low[1]], lookahead=barmerge.lookahead_on)  // prev week H/L (Market Memory)
 todayRange   = todayH - todayL
 rangeUsedPct = not na(adr) and adr > 0 ? math.round(todayRange / adr * 100) : na
 expLow       = not na(adr) ? dayOpen - adr / 2 : na
@@ -673,7 +745,6 @@ aScore += acceptUp ? 1.0 : acceptDn ? -1.0 : 0.0
 aScore += pocMigUp ? 0.7 : pocMigDn ? -0.7 : 0.0
 aScore += rejUp ? -0.7 : rejDn ? 0.7 : 0.0
 aScore := math.max(math.min(aScore, 2.0), -2.0)
-auctionState = aScore >= 1.0 ? "Bullish" : aScore <= -1.0 ? "Bearish" : "Balanced"
 auctionTxt   = acceptUp ? "Acceptance ↑" : acceptDn ? "Acceptance ↓" : rejUp ? "Rejection (high)" : rejDn ? "Rejection (low)" : inValueArea ? "Balanced" : "Rotation"
 auctionColor = aScore >= 1.0 ? cBull : aScore <= -1.0 ? cBear : cTextDim
 
@@ -698,12 +769,20 @@ marketPhaseColor = marketPhase == "Trend Day" or marketPhase == "Opening Drive" 
 phaseMult        = marketPhase == "Trend Day" or marketPhase == "Opening Drive" ? 1.1 : (marketPhase == "Balanced Auction" or marketPhase == "Rotational" or marketPhase == "Compression") ? 0.7 : marketPhase == "Reversal" ? 0.8 : 1.0
 phaseAllowsTrend = not (marketPhase == "Balanced Auction" or marketPhase == "Rotational" or marketPhase == "Compression")
 
+// ---- ADAPTIVE MARKET LOGIC (M6): weight pillars by the active phase ----
+trendPhase = marketPhase == "Trend Day" or marketPhase == "Opening Drive" or marketPhase == "Continuation"
+balPhase   = marketPhase == "Balanced Auction" or marketPhase == "Rotational"
+wA = balPhase ? 0.50 : trendPhase ? 0.35 : 0.40   // balanced day → trust value more
+wS = balPhase ? 0.20 : trendPhase ? 0.35 : 0.30   // trend day → trust structure more
+wV = 0.20
+wP = 0.10
+
 // ---- COMPOSITE TREND ENGINE — weighted blend of the four pillars (no MAs) ----
 aN = aScore / 2.0
 sN = math.max(math.min(structScore / 2.0, 1.0), -1.0)
 vN = vScore / 2.0
 pN = partBias
-composite  = aN * 0.40 + sN * 0.30 + vN * 0.20 + pN * 0.10   // -1 .. +1
+composite  = aN * wA + sN * wS + vN * wV + pN * wP   // -1 .. +1
 biasScore  = composite
 marketBias = composite >= 0.5 ? "Strong Bullish" : composite >= 0.18 ? "Bullish" : composite <= -0.5 ? "Strong Bearish" : composite <= -0.18 ? "Bearish" : "Neutral"
 biasColor  = composite >= 0.18 ? cBull : composite <= -0.18 ? cBear : cTextDim
@@ -711,6 +790,49 @@ biasColor  = composite >= 0.18 ? cBull : composite <= -0.18 ? cBear : cTextDim
 // ---- RISK READ (is this a high- or low-quality location to act?) ----
 riskTxt   = (marketPhase == "Balanced Auction" or marketPhase == "Rotational" or inValueArea) ? "High" : (strongTrend and partConfirm) ? "Low" : "Medium"
 riskColor = riskTxt == "Low" ? cBull : riskTxt == "High" ? cBear : cTextDim
+
+// ============================================================================
+//  M1 — MARKET MEMORY ENGINE  (today's auction vs yesterday's)
+// ============================================================================
+todayVAmid = (not na(dVAH) and not na(dVAL)) ? (dVAH + dVAL) / 2 : na
+yestVAmid  = (not na(yVAH) and not na(yVAL)) ? (yVAH + yVAL) / 2 : na
+memOpenLoc = na(yVAH) ? "—" : dayOpen > yVAH ? "Opened above yest. value" : dayOpen < yVAL ? "Opened below yest. value" : "Opened inside yest. value"
+memPOCdir  = (na(dPOC) or na(yPOC)) ? "—" : dPOC > yPOC + syminfo.mintick ? "POC higher" : dPOC < yPOC - syminfo.mintick ? "POC lower" : "POC flat"
+valueMigration = (na(todayVAmid) or na(yestVAmid)) ? "—" : todayVAmid > yestVAmid + syminfo.mintick ? "Value migrating higher" : todayVAmid < yestVAmid - syminfo.mintick ? "Value migrating lower" : "Value unchanged"
+memColor   = valueMigration == "Value migrating higher" ? cBull : valueMigration == "Value migrating lower" ? cBear : cTextDim
+pdAccept   = na(pdh) ? "—" : (close > pdh and relVol >= 0.9) ? "PDH accepted" : (high > pdh and close < pdh) ? "PDH rejected" : (close < pdl and relVol >= 0.9) ? "PDL accepted" : (low < pdl and close > pdl) ? "PDL rejected" : "Inside prev day"
+pwAccept   = na(pwh) ? "—" : close > pwh ? "Above PWH" : close < pwl ? "Below PWL" : "Inside prev week"
+
+// ============================================================================
+//  M4 — AUCTION SHIFT ENGINE  (describe how the auction is evolving)
+// ============================================================================
+auctionShift = (valueMigration == "Value migrating higher" and acceptUp) ? "Acceptance Above Value" : (valueMigration == "Value migrating lower" and acceptDn) ? "Acceptance Below Value" : valueMigration == "Value migrating higher" ? "Value Migrating Higher" : valueMigration == "Value migrating lower" ? "Value Migrating Lower" : inValueArea ? "Balanced Auction" : strongTrend ? "Trend Auction" : "Rotational Auction"
+
+// ============================================================================
+//  M5 — PROFILE SHAPE ENGINE  (classify + explain the volume profile)
+// ============================================================================
+vaWidthRatio  = (not na(vahPrice) and not na(valPrice) and (rngTop - rngBot) > 0) ? (vahPrice - valPrice) / (rngTop - rngBot) : na
+profileWidth  = na(vaWidthRatio) ? "" : vaWidthRatio > 0.65 ? " · Wide (broad acceptance)" : vaWidthRatio < 0.30 ? " · Thin (low acceptance)" : ""
+profileShapeExpl = str.startswith(auctionShape, "P") ? "P-shape: often short-covering / accumulation; continuation higher if value holds." : str.startswith(auctionShape, "b") ? "b-shape: often long-liquidation / distribution; continuation lower if value holds." : "D-shape: balanced two-sided auction; expect rotation around POC."
+
+// ============================================================================
+//  M2 — STRUCTURE QUALITY ENGINE  (measure, don't just label, structure)
+// ============================================================================
+structConsistent = structBull or structBear
+trendConfidence  = 0.0
+trendConfidence += structConsistent ? 35 : 0
+trendConfidence += partConfirm ? 20 : 0
+trendConfidence += (breakoutUp and structBull) or (breakoutDn and structBear) ? 15 : 0
+trendConfidence += (math.abs(vScore) >= 1) and ((vScore >= 0) == (composite >= 0)) ? 15 : 0
+trendConfidence += not inValueArea ? 15 : 0
+structQualityTxt = not structConsistent ? "Unstable Structure" : trendConfidence >= 80 ? "Healthy Trend" : trendConfidence >= 60 ? "Trending Cleanly" : trendConfidence >= 45 ? "Weak Trend" : volState == "High Volatility" ? "Choppy Structure" : "Exhausted Trend"
+structQualityCol = trendConfidence >= 60 and structConsistent ? cBull : not structConsistent ? cTextDim : cBear
+
+// ============================================================================
+//  M7 — VOLUME PARTICIPATION QUALITY
+// ============================================================================
+partQuality    = relVol >= 1.8 ? "Very Strong" : relVol >= 1.2 ? "Healthy" : relVol >= 0.8 ? "Average" : "Weak"
+partQualityCol = relVol >= 1.2 ? cBull : relVol < 0.8 ? cBear : cText
 
 // ============================================================================
 //  M13 — TRADE QUALITY ENGINE (0-100)
@@ -789,19 +911,26 @@ nearRes = not na(lastResistance) and lastResistance > close and (lastResistance 
 nearSup = not na(lastSupport)    and lastSupport    < close and (close - lastSupport)    / (atr14 == 0 ? syminfo.mintick : atr14) < 0.6
 decisionTxt = posState == "Long" ? ((trendDn or pressure < -0.1) ? "EXIT POSITION" : (nearRes or (not na(vahPrice) and close >= vahPrice)) ? "TAKE PARTIAL" : (close > vwapD and trendUp) ? "MANAGE POSITION" : "MOVE STOP") : posState == "Short" ? ((trendUp or pressure > 0.1) ? "EXIT POSITION" : (nearSup or (not na(valPrice) and close <= valPrice)) ? "TAKE PARTIAL" : (close < vwapD and trendDn) ? "MANAGE POSITION" : "MOVE STOP") : armLong ? "BUY PULLBACK" : armShort ? "SELL RETEST" : str.contains(planStatus, "SETUP") ? "WATCH" : (energy < 25 or not phaseAllowsTrend) ? "NO TRADE" : "WAIT"
 decisionColor = str.contains(decisionTxt, "BUY") or decisionTxt == "MANAGE POSITION" ? cBull : str.contains(decisionTxt, "SELL") or decisionTxt == "EXIT POSITION" ? cBear : (str.contains(decisionTxt, "PARTIAL") or decisionTxt == "MOVE STOP" or decisionTxt == "WATCH") ? cVah : cTextDim
-// Confidence blends trade quality with the phase multiplier (phase = top priority)
-adjConfidence = math.min(tradeScore * phaseMult, 100)
-confidenceTxt = adjConfidence >= 80 ? "High" : adjConfidence >= 60 ? "Medium" : "Low"
+// ---- M9: DYNAMIC CONFIDENCE — weighted Auction 35 / Structure 25 / Participation 20 / VWAP 20 ----
+biasSign = composite >= 0 ? 1.0 : -1.0
+agA = ((aScore >= 0 ? 1.0 : -1.0) == biasSign) ? math.min(math.abs(aScore) / 2.0, 1.0) : 0.0
+agS = ((structScore >= 0 ? 1.0 : -1.0) == biasSign) ? math.min(math.abs(structScore) / 2.0, 1.0) : 0.0
+agV = ((vScore >= 0 ? 1.0 : -1.0) == biasSign) ? math.min(math.abs(vScore) / 2.0, 1.0) : 0.0
+agP = (partConfirm and ((partBias >= 0 ? 1.0 : -1.0) == biasSign)) ? 1.0 : (partConfirm ? 0.4 : 0.2)
+confidenceRaw = agA * 35 + agS * 25 + agP * 20 + agV * 20
+confidencePct = math.round(math.min(confidenceRaw * (volState == "Low Volatility" ? 0.85 : 1.0) * phaseMult, 100))
+confidenceTxt = confidencePct >= 70 ? "High" : confidencePct >= 50 ? "Medium" : "Low"
 
-// AI Reasoning — the layered explanation, exactly the trader's thinking process
+// ---- M8: PROFESSIONAL CONTEXT ENGINE — concise plain-English auction summary ----
 f_decisionReason() =>
     string r = "Phase: " + marketPhase + "\n"
-    r += "Auction: " + auctionTxt + " · " + priceVsValue + " (" + auctionShape + ")\n"
-    r += "Structure: " + structureTxt + "\n"
-    r += "VWAP: " + vwapStateTxt + " · " + vwapContext + "\n"
-    r += "Volume: " + partTxt + (partConfirm ? "" : " (light)") + "\n"
+    r += "Memory: " + memOpenLoc + " · " + memPOCdir + "\n"
+    r += valueMigration != "—" ? valueMigration + " · " + pdAccept + " · " + pwAccept + "\n" : pdAccept + " · " + pwAccept + "\n"
+    r += "Price " + priceVsValue + " · VWAP " + vwapStateTxt + " (" + vwapContext + ").\n"
+    r += "Auction: " + auctionShift + " (" + auctionTxt + ").\n"
+    r += "Structure: " + structQualityTxt + " · Participation: " + partQuality + " (" + partTxt + ").\n"
     r += "──────────────\n"
-    r += decisionTxt == "BUY PULLBACK" ? "→ Buyers control value; buy the pullback." : decisionTxt == "SELL RETEST" ? "→ Sellers control value; sell the retest." : decisionTxt == "WATCH" ? "→ Setup forming; wait for the trigger." : decisionTxt == "MANAGE POSITION" ? "→ Context supports the trade; hold & trail." : decisionTxt == "TAKE PARTIAL" ? "→ At a key level; book part, cut risk." : decisionTxt == "MOVE STOP" ? "→ Momentum cooling; tighten the stop." : decisionTxt == "EXIT POSITION" ? "→ Context turned against you; step aside." : decisionTxt == "NO TRADE" ? "→ Rotational / low energy; no edge here." : "→ Mixed context; wait for confirmation."
+    r += composite >= 0.18 ? "→ Environment favors upside continuation." : composite <= -0.18 ? "→ Environment favors downside continuation." : "→ Two-sided auction; no clear edge."
     r
 
 // ============================================================================
@@ -815,16 +944,16 @@ f_row(tbl, sz, row, k, v, vcol) =>
     table.cell(tbl, 0, row, k, text_color=cTextDim, text_size=sz, text_halign=text.align_left)
     table.cell(tbl, 1, row, v, text_color=vcol, text_size=sz, text_halign=text.align_right)
 
-// Auction display (acceptance/rejection state + any poor-high/low warning)
+// Auction display — how the auction is evolving (+ any poor-high/low warning)
 auctionCol  = auctionColor
-auctionDisp = auctionState + " · " + auctionTxt + (poorHigh ? "  ⚠PH" : "") + (poorLow ? "  ⚠PL" : "")
+auctionDisp = auctionShift + (poorHigh ? "  ⚠PH" : "") + (poorLow ? "  ⚠PL" : "")
 
 var table dash = na
 if barstate.islast and showDash
     if not na(dash)
         table.delete(dash)
     sz = f_txtSize(dashSize)
-    int nRows = (3 + (showAuction ? 2 : 0)) + 4 + 6 + 5 + 6 + (showMTFpoc ? 4 : 0) + (showSession ? 3 : 0)
+    int nRows = (3 + (showAuction ? 2 : 0)) + 4 + 6 + 5 + 6 + (showMTFpoc ? 4 : 0) + (showSession ? 4 : 0)
     dash := table.new(f_tblPos(dashPos), 2, nRows, bgcolor=cPanelBg, frame_color=cFrame, frame_width=1, border_color=cGrid, border_width=0)
     int r = 0
 
@@ -835,9 +964,10 @@ if barstate.islast and showDash
     if showAuction
         f_row(dash, sz, r, "Phase", marketPhase, marketPhaseColor)
         r += 1
-        f_row(dash, sz, r, "Auction", auctionDisp, auctionCol)
+        table.cell(dash, 0, r, "Auction", text_color=cTextDim, text_size=sz, text_halign=text.align_left)
+        table.cell(dash, 1, r, auctionDisp, text_color=auctionCol, text_size=sz, text_halign=text.align_right, tooltip="Profile " + auctionShape + profileWidth + " — " + profileShapeExpl)
         r += 1
-    f_row(dash, sz, r, "Structure", structureTxt, structBull ? cBull : structBear ? cBear : cTextDim)
+    f_row(dash, sz, r, "Structure", structureTxt, structQualityCol)
     r += 1
 
     f_hdr(dash, sz, r, "◆  VWAP")
@@ -874,7 +1004,7 @@ if barstate.islast and showDash
 
     f_hdr(dash, sz, r, "◆  FLOW")
     r += 1
-    f_row(dash, sz, r, "Volume", volRating, volRColor)
+    f_row(dash, sz, r, "Participation", partQuality, partQualityCol)
     r += 1
     f_row(dash, sz, r, "Buyers / Sellers", str.tostring(buyersPct) + "% / " + str.tostring(sellersPct) + "%", flowColor)
     r += 1
@@ -890,6 +1020,8 @@ if barstate.islast and showDash
         r += 1
         f_row(dash, sz, r, "ADR / Used", (na(adr) ? "—" : f_px(adr)) + (na(rangeUsedPct) ? "" : "  " + str.tostring(rangeUsedPct) + "%"), na(rangeUsedPct) ? cTextDim : rangeUsedPct >= 100 ? cBear : cText)
         r += 1
+        f_row(dash, sz, r, "vs Yesterday", valueMigration == "—" ? "—" : valueMigration, memColor)
+        r += 1
 
     f_hdr(dash, sz, r, "◆  AI DECISION")
     r += 1
@@ -902,7 +1034,7 @@ if barstate.islast and showDash
     r += 1
     f_row(dash, sz, r, "Risk", riskTxt, riskColor)
     r += 1
-    f_row(dash, sz, r, "Confidence", str.tostring(math.round(adjConfidence)) + "%  " + gradeTxt, adjConfidence >= 70 ? cBull : adjConfidence >= 55 ? cText : cTextDim)
+    f_row(dash, sz, r, "Confidence", str.tostring(confidencePct) + "%  " + confidenceTxt, confidencePct >= 70 ? cBull : confidencePct >= 50 ? cText : cTextDim)
 
 // ---- On-chart decision tag (minimal — decision + confidence + reasons) ----
 var label planLbl = na
@@ -929,7 +1061,7 @@ if barstate.islast and showBrief
     f_row(brief, bsz, 5, "Expected Range", (na(expLow) or na(expHigh)) ? "—" : f_px(expLow) + "–" + f_px(expHigh), cText)
     f_row(brief, bsz, 6, "Best Session", bestSession, cText)
     f_row(brief, bsz, 7, "Decision", decisionTxt, decisionColor)
-    f_row(brief, bsz, 8, "Confidence", str.tostring(math.round(tradeScore)) + "%", tradeScore >= 70 ? cBull : cTextDim)
+    f_row(brief, bsz, 8, "Confidence", str.tostring(confidencePct) + "%  " + confidenceTxt, confidencePct >= 70 ? cBull : confidencePct >= 50 ? cText : cTextDim)
 
 // ============================================================================
 //  RANKED KEY LEVELS  (top 5 strongest, by strength then proximity)
