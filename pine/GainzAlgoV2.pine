@@ -1,0 +1,318 @@
+//@version=5
+// =============================================================================
+// GainzAlgo V2 Alpha — Multi-Confirmation Trade Filter
+// =============================================================================
+// Philosophy: this is NOT a prediction engine. Its job is to FILTER OUT
+// low-quality trades and only fire when several INDEPENDENT factors align.
+// If fewer than the required confirmations are present -> NO TRADE.
+// Capital preservation > finding opportunities.  Quality > Quantity.
+//
+// Each candle is scored against 9 independent filters:
+//   1. Trend        (HTF EMA structure)
+//   2. Structure    (Higher-High/Higher-Low  vs  Lower-High/Lower-Low)
+//   3. Momentum     (impulsive body vs ATR)
+//   4. Volume       (above-average participation)
+//   5. Volatility   (ATR expansion, not dead tape)
+//   6. Liquidity    (sweep of prior swing then reclaim)
+//   7. Supply/Demand(reaction from a fresh zone)
+//   8. BOS          (Break of Structure in trade direction)
+//   9. CHOCH        (Change of Character confirming the turn)
+//
+// A signal is only produced when confirmations >= minConfirms AND the
+// resulting 0-100 quality score >= minScore.
+// =============================================================================
+
+strategy(title              = "GainzAlgo V2 Alpha — Multi-Confirmation Filter",
+         shorttitle         = "GainzAlgo V2",
+         overlay            = true,
+         initial_capital    = 10000,
+         default_qty_type   = strategy.percent_of_equity,
+         default_qty_value  = 100,
+         pyramiding         = 0,
+         calc_on_every_tick = false,
+         commission_type    = strategy.commission.percent,
+         commission_value   = 0.02)
+
+// -----------------------------------------------------------------------------
+// INPUTS
+// -----------------------------------------------------------------------------
+grpCore   = "Core Filter Settings"
+minConfirms = input.int(6,  "Minimum confirmations required", minval=1, maxval=9, group=grpCore,
+     tooltip="Fewer than this many aligned factors => NO TRADE.")
+minScore    = input.int(70, "Minimum trade quality score (0-100)", minval=0, maxval=100, group=grpCore,
+     tooltip="Below 70 the spec treats it as NO TRADE.")
+
+grpTrend  = "Trend Filter"
+htfTF       = input.timeframe("240", "Higher-timeframe for trend", group=grpTrend,
+     tooltip="Never trade against the HTF trend unless a reversal is confirmed.")
+emaFastLen  = input.int(20,  "Fast EMA length", minval=1, group=grpTrend)
+emaSlowLen  = input.int(50,  "Slow EMA length", minval=1, group=grpTrend)
+
+grpStruct = "Structure"
+pivotLen    = input.int(5,  "Swing pivot lookback (bars each side)", minval=1, group=grpStruct)
+
+grpMom    = "Momentum Filter"
+impulseMult = input.float(1.2, "Impulsive body >= ATR x", minval=0.1, step=0.1, group=grpMom)
+
+grpVol    = "Volume Filter"
+volLen      = input.int(20,  "Volume average length", minval=1, group=grpVol)
+volMult     = input.float(1.5, "Volume spike >= avg x", minval=0.1, step=0.1, group=grpVol)
+
+grpVlty   = "Volatility Filter"
+atrLen      = input.int(14,  "ATR length", minval=1, group=grpVlty)
+atrAvgLen   = input.int(50,  "ATR baseline length", minval=1, group=grpVlty)
+atrExpMult  = input.float(1.05, "Expansion: ATR >= baseline x", minval=0.5, step=0.05, group=grpVlty)
+
+grpLiq    = "Liquidity Filter"
+sweepLookback = input.int(10, "Swing lookback for sweep detection", minval=2, group=grpLiq)
+
+grpRisk   = "Risk / Targets"
+slBufferATR = input.float(0.5, "SL buffer beyond swing (ATR x)", minval=0.0, step=0.1, group=grpRisk)
+rrTP1       = input.float(2.0, "TP1 risk:reward", minval=0.5, step=0.5, group=grpRisk)
+rrTP2       = input.float(3.0, "TP2 risk:reward", minval=0.5, step=0.5, group=grpRisk)
+rrTP3       = input.float(4.0, "TP3 risk:reward", minval=0.5, step=0.5, group=grpRisk)
+
+grpShow   = "Display"
+showZones   = input.bool(true,  "Show supply/demand zones", group=grpShow)
+showLabels  = input.bool(true,  "Show signal labels", group=grpShow)
+
+// -----------------------------------------------------------------------------
+// CORE SERIES
+// -----------------------------------------------------------------------------
+atr      = ta.atr(atrLen)
+atrBase  = ta.sma(atr, atrAvgLen)
+volAvg   = ta.sma(volume, volLen)
+body     = math.abs(close - open)
+
+// HTF trend (non-repainting: request completed HTF bars)
+[htfFast, htfSlow] = request.security(syminfo.tickerid, htfTF,
+     [ta.ema(close, emaFastLen), ta.ema(close, emaSlowLen)],
+     lookahead = barmerge.lookahead_off)
+
+trendBull = htfFast > htfSlow and close > htfSlow
+trendBear = htfFast < htfSlow and close < htfSlow
+
+// -----------------------------------------------------------------------------
+// MARKET STRUCTURE  (swing pivots -> HH / HL / LH / LL)
+// -----------------------------------------------------------------------------
+ph = ta.pivothigh(high, pivotLen, pivotLen)
+pl = ta.pivotlow(low,  pivotLen, pivotLen)
+
+var float lastPH  = na   // most recent confirmed swing high
+var float prevPH  = na
+var float lastPL  = na   // most recent confirmed swing low
+var float prevPL  = na
+
+if not na(ph)
+    prevPH := lastPH
+    lastPH := ph
+if not na(pl)
+    prevPL := lastPL
+    lastPL := pl
+
+higherHigh = not na(lastPH) and not na(prevPH) and lastPH > prevPH
+higherLow  = not na(lastPL) and not na(prevPL) and lastPL > prevPL
+lowerHigh  = not na(lastPH) and not na(prevPH) and lastPH < prevPH
+lowerLow   = not na(lastPL) and not na(prevPL) and lastPL < prevPL
+
+structBull = higherHigh and higherLow
+structBear = lowerHigh  and lowerLow
+
+// Trend classification (for information / dashboard)
+trendState = trendBull and structBull ? "Strong Bullish" :
+             trendBull                ? "Bullish"        :
+             trendBear and structBear ? "Strong Bearish" :
+             trendBear                ? "Bearish"        : "Sideways"
+
+// -----------------------------------------------------------------------------
+// BREAK OF STRUCTURE (BOS) & CHANGE OF CHARACTER (CHOCH)
+// -----------------------------------------------------------------------------
+// BOS: price closes beyond the most recent swing in the direction of trend.
+bosBull = not na(lastPH) and close > lastPH
+bosBear = not na(lastPL) and close < lastPL
+
+// CHOCH: first break against the prior structure (character change / early reversal).
+var int lastStructDir = 0   // 1 = bullish structure, -1 = bearish
+chochBull = bosBull and lastStructDir == -1
+chochBear = bosBear and lastStructDir == 1
+if bosBull
+    lastStructDir := 1
+if bosBear
+    lastStructDir := -1
+
+// -----------------------------------------------------------------------------
+// MOMENTUM  (impulsive candle vs ATR)
+// -----------------------------------------------------------------------------
+impulseUp   = close > open and body >= atr * impulseMult
+impulseDown = close < open and body >= atr * impulseMult
+
+// -----------------------------------------------------------------------------
+// VOLUME  (above-average participation)
+// -----------------------------------------------------------------------------
+volSpike = volume >= volAvg * volMult
+buyPressure  = close > open and volSpike
+sellPressure = close < open and volSpike
+
+// -----------------------------------------------------------------------------
+// VOLATILITY  (expansion, not dead tape)
+// -----------------------------------------------------------------------------
+volExpansion = atr >= atrBase * atrExpMult
+
+// -----------------------------------------------------------------------------
+// LIQUIDITY SWEEP  (grab prior swing liquidity then reclaim)
+// -----------------------------------------------------------------------------
+priorHigh = ta.highest(high, sweepLookback)[1]
+priorLow  = ta.lowest(low,  sweepLookback)[1]
+
+// Bullish sweep: wick below prior low (stops hunted) but close back above it.
+sweepBull = low  < priorLow  and close > priorLow
+// Bearish sweep: wick above prior high but close back below it.
+sweepBear = high > priorHigh and close < priorHigh
+
+// -----------------------------------------------------------------------------
+// SUPPLY / DEMAND ZONES  (fresh reaction from last swing)
+// -----------------------------------------------------------------------------
+// Demand: last swing low still valid & price reacting up from near it.
+nearDemand = not na(lastPL) and low <= lastPL + atr and close > lastPL
+// Supply: last swing high still valid & price reacting down from near it.
+nearSupply = not na(lastPH) and high >= lastPH - atr and close < lastPH
+
+// -----------------------------------------------------------------------------
+// CONFIRMATION SCORING
+// -----------------------------------------------------------------------------
+// Long confirmations
+cL_trend  = trendBull
+cL_struct = structBull
+cL_mom    = impulseUp
+cL_vol    = buyPressure
+cL_vlty   = volExpansion
+cL_liq    = sweepBull
+cL_zone   = nearDemand
+cL_bos    = bosBull
+cL_choch  = chochBull
+
+longConfirms = (cL_trend ? 1 : 0) + (cL_struct ? 1 : 0) + (cL_mom ? 1 : 0) +
+     (cL_vol ? 1 : 0) + (cL_vlty ? 1 : 0) + (cL_liq ? 1 : 0) +
+     (cL_zone ? 1 : 0) + (cL_bos ? 1 : 0) + (cL_choch ? 1 : 0)
+
+// Short confirmations
+cS_trend  = trendBear
+cS_struct = structBear
+cS_mom    = impulseDown
+cS_vol    = sellPressure
+cS_vlty   = volExpansion
+cS_liq    = sweepBear
+cS_zone   = nearSupply
+cS_bos    = bosBear
+cS_choch  = chochBear
+
+shortConfirms = (cS_trend ? 1 : 0) + (cS_struct ? 1 : 0) + (cS_mom ? 1 : 0) +
+     (cS_vol ? 1 : 0) + (cS_vlty ? 1 : 0) + (cS_liq ? 1 : 0) +
+     (cS_zone ? 1 : 0) + (cS_bos ? 1 : 0) + (cS_choch ? 1 : 0)
+
+// Quality score 0-100 (each of 9 filters worth ~11.1 pts)
+longScore  = math.round(longConfirms  / 9 * 100)
+shortScore = math.round(shortConfirms / 9 * 100)
+
+// Only trade with the dominant, non-conflicting side.
+longValid  = longConfirms  >= minConfirms and longScore  >= minScore and longConfirms > shortConfirms
+shortValid = shortConfirms >= minConfirms and shortScore >= minScore and shortConfirms > longConfirms
+
+// -----------------------------------------------------------------------------
+// ENTRY / STOP / TARGETS
+// -----------------------------------------------------------------------------
+longEntry  = close
+longSL     = (na(lastPL) ? low  - atr : lastPL) - atr * slBufferATR
+longRisk   = longEntry - longSL
+longTP1    = longEntry + longRisk * rrTP1
+longTP2    = longEntry + longRisk * rrTP2
+longTP3    = longEntry + longRisk * rrTP3
+
+shortEntry = close
+shortSL    = (na(lastPH) ? high + atr : lastPH) + atr * slBufferATR
+shortRisk  = shortSL - shortEntry
+shortTP1   = shortEntry - shortRisk * rrTP1
+shortTP2   = shortEntry - shortRisk * rrTP2
+shortTP3   = shortEntry - shortRisk * rrTP3
+
+// Guard against degenerate risk (zero/negative stop distance).
+longOK  = longValid  and longRisk  > 0
+shortOK = shortValid and shortRisk > 0
+
+// -----------------------------------------------------------------------------
+// STRATEGY EXECUTION
+// -----------------------------------------------------------------------------
+if longOK and strategy.position_size <= 0
+    strategy.entry("Long", strategy.long)
+    strategy.exit("L-TP1", "Long", stop=longSL, limit=longTP1, qty_percent=40)
+    strategy.exit("L-TP2", "Long", stop=longSL, limit=longTP2, qty_percent=35)
+    strategy.exit("L-TP3", "Long", stop=longSL, limit=longTP3)
+
+if shortOK and strategy.position_size >= 0
+    strategy.entry("Short", strategy.short)
+    strategy.exit("S-TP1", "Short", stop=shortSL, limit=shortTP1, qty_percent=40)
+    strategy.exit("S-TP2", "Short", stop=shortSL, limit=shortTP2, qty_percent=35)
+    strategy.exit("S-TP3", "Short", stop=shortSL, limit=shortTP3)
+
+// Exit immediately if market structure flips against an open position.
+if strategy.position_size > 0 and structBear
+    strategy.close("Long", comment="Structure flip")
+if strategy.position_size < 0 and structBull
+    strategy.close("Short", comment="Structure flip")
+
+// -----------------------------------------------------------------------------
+// VISUALS
+// -----------------------------------------------------------------------------
+plot(htfFast, "HTF Fast EMA", color.new(color.aqua,   40))
+plot(htfSlow, "HTF Slow EMA", color.new(color.orange, 40))
+
+plotshape(longOK  and showLabels, title="BUY",  style=shape.labelup,
+     location=location.belowbar, color=color.new(color.green, 0),
+     text="BUY",  textcolor=color.white, size=size.small)
+plotshape(shortOK and showLabels, title="SELL", style=shape.labeldown,
+     location=location.abovebar, color=color.new(color.red, 0),
+     text="SELL", textcolor=color.white, size=size.small)
+
+// Zone boxes (last swing high = supply, last swing low = demand)
+var box demandBox = na
+var box supplyBox = na
+if showZones and not na(pl)
+    demandBox := box.new(bar_index, pl + atr, bar_index + 20, pl - atr,
+         border_color=color.new(color.green, 40), bgcolor=color.new(color.green, 88))
+if showZones and not na(ph)
+    supplyBox := box.new(bar_index, ph + atr, bar_index + 20, ph - atr,
+         border_color=color.new(color.red, 40), bgcolor=color.new(color.red, 88))
+
+// -----------------------------------------------------------------------------
+// DASHBOARD  (live filter readout — the "SIGNAL OUTPUT" block)
+// -----------------------------------------------------------------------------
+var table dash = table.new(position.top_right, 2, 12, border_width=1)
+f_row(_i, _k, _v, _ok) =>
+    table.cell(dash, 0, _i, _k, text_color=color.silver, text_size=size.tiny, text_halign=text.align_left)
+    table.cell(dash, 1, _i, _v, text_color=_ok ? color.lime : color.gray, text_size=size.tiny, text_halign=text.align_right)
+
+if barstate.islast
+    dir  = longOK ? "BUY" : shortOK ? "SELL" : "NO TRADE"
+    conf = math.max(longConfirms, shortConfirms)
+    scr  = math.max(longScore, shortScore)
+    table.cell(dash, 0, 0, "GainzAlgo V2", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 0, dir, text_color=longOK ? color.lime : shortOK ? color.red : color.gray, text_size=size.small)
+    f_row(1,  "Trend",        trendState, trendBull or trendBear)
+    f_row(2,  "Confirmations", str.tostring(conf) + " / " + str.tostring(minConfirms), conf >= minConfirms)
+    f_row(3,  "Quality Score", str.tostring(scr) + " / 100", scr >= minScore)
+    f_row(4,  "Structure",    structBull ? "Bullish" : structBear ? "Bearish" : "Mixed", structBull or structBear)
+    f_row(5,  "Momentum",     impulseUp ? "Impulse Up" : impulseDown ? "Impulse Down" : "Weak", impulseUp or impulseDown)
+    f_row(6,  "Volume",       volSpike ? "Spike" : "Below avg", volSpike)
+    f_row(7,  "Volatility",   volExpansion ? "Expansion" : "Compression", volExpansion)
+    f_row(8,  "Liquidity",    sweepBull ? "Swept lows" : sweepBear ? "Swept highs" : "None", sweepBull or sweepBear)
+    f_row(9,  "BOS",          bosBull ? "Up" : bosBear ? "Down" : "-", bosBull or bosBear)
+    f_row(10, "CHOCH",        chochBull ? "Bullish" : chochBear ? "Bearish" : "-", chochBull or chochBear)
+    f_row(11, "Zone",         nearDemand ? "Fresh Demand" : nearSupply ? "Fresh Supply" : "-", nearDemand or nearSupply)
+
+// -----------------------------------------------------------------------------
+// ALERTS
+// -----------------------------------------------------------------------------
+alertcondition(longOK,  title="GainzAlgo V2 BUY",
+     message="GainzAlgo V2 BUY {{ticker}} @ {{close}} | multi-confirmation filter aligned")
+alertcondition(shortOK, title="GainzAlgo V2 SELL",
+     message="GainzAlgo V2 SELL {{ticker}} @ {{close}} | multi-confirmation filter aligned")
