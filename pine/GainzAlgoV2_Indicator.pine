@@ -1,65 +1,101 @@
 //@version=5
 // =============================================================================
-// GainzAlgo V2 Alpha — Indicator (clean signal version)
+// GainzAlgo V2 Alpha — Signals + Alpha Dashboard   (indicator / study)
 // =============================================================================
-// Study / indicator, NOT a strategy. It plots BUY / SELL only when multiple
-// independent filters align into a high-probability setup, and caps how many
-// signals it will give per day so you get a few A+ trades — not a stream.
-// If confirmation is missing the dashboard reads NO TRADE.  Quality > Quantity.
+// Non-repainting, non-lagging multi-confirmation signal tool inspired by the
+// GainzAlgo V2 Alpha feature set:
 //
-// 9 independent filters:  Trend · Structure · Momentum · Volume · Volatility
-//                         · Liquidity sweep · Supply/Demand · BOS · CHOCH
-// A signal fires only when confirmations >= minConfirms AND score >= minScore
-// AND the daily signal cap / cooldown still allow it.
+//   • Confirmed BUY / SELL arrows (locked on bar close -> no repaint)
+//   • Early momentum labels:  READY · BOS · CHoCH · FLOW · LIQ
+//   • Six-layer signal filtering (trend · structure · momentum · order-flow
+//     · volatility · liquidity) to screen out noise
+//   • Multi-timeframe trend convergence
+//   • Order flow via Cumulative Volume Delta (CVD)
+//   • Liquidity-zone / sweep detection
+//   • Volatility-adaptive, ATR-based TP/SL with three targets:
+//         TP1 "Toe in the water" · TP2 "Feeling spicy" · TP3 "All-in"
+//   • Alpha Dashboard summarising every layer + MTF trend at a glance
+//   • Custom presets for tight/ranging vs volatile/trending markets
+//
+// Philosophy: filter out low-quality trades; only fire when layers align.
+// Quality > Quantity.  Capital preservation first.
 // =============================================================================
 
-indicator(title      = "GainzAlgo V2 Alpha — Signals",
-          shorttitle = "GainzAlgo V2",
-          overlay    = true,
-          max_lines_count  = 500,
-          max_labels_count = 500,
-          max_boxes_count  = 500)
+indicator("GainzAlgo V2 Alpha — Signals", "GainzAlgo V2", overlay=true,
+          max_lines_count=500, max_labels_count=500, max_boxes_count=500)
 
 // -----------------------------------------------------------------------------
-// INPUTS
+// PRESETS  (calibration for tight vs volatile markets)
 // -----------------------------------------------------------------------------
-grpCore   = "Core Filter"
-minConfirms = input.int(7,  "Minimum confirmations required", minval=1, maxval=9, group=grpCore,
-     tooltip="Fewer than this many aligned factors => NO TRADE. 7+ keeps only high-probability setups.")
-minScore    = input.int(78, "Minimum quality score (0-100)", minval=0, maxval=100, group=grpCore,
-     tooltip="Score = confirmations/9*100. 78 needs >=7 confirmations; 89 needs >=8.")
+grpP = "Preset"
+preset = input.string("Custom", "Market preset", group=grpP,
+     options=["Custom", "Tight / Ranging", "Volatile / Trending", "Scalp", "Swing"],
+     tooltip="Overrides SL/TP width, cooldown and strictness. Choose Custom to use your own inputs below.")
 
-grpDaily  = "Daily Signal Control"
-maxSignalsPerDay = input.int(3, "Max signals per day", minval=1, maxval=10, group=grpDaily,
-     tooltip="Hard cap on signals per session (tune 2-4). Keeps it to a few A+ setups.")
-cooldownBars     = input.int(10, "Cooldown bars between signals", minval=0, group=grpDaily,
-     tooltip="Minimum bars to wait after a signal before another can print. Avoids clustering.")
+// -----------------------------------------------------------------------------
+// CORE FILTER
+// -----------------------------------------------------------------------------
+grpCore = "Core Filter (six layers)"
+minLayersIn = input.int(5, "Min layers to confirm (of 6)", minval=1, maxval=6, group=grpCore,
+     tooltip="A signal needs at least this many of the 6 layers aligned. 6 = strictest.")
+nonRepaint  = input.bool(true, "Confirm on bar close (no repaint)", group=grpCore,
+     tooltip="Signals lock only when the bar closes, so they never move or vanish.")
 
-grpTrend  = "Trend"
-htfTF       = input.timeframe("240", "Higher-timeframe for trend", group=grpTrend)
-emaFastLen  = input.int(20, "Fast EMA length", minval=1, group=grpTrend)
-emaSlowLen  = input.int(50, "Slow EMA length", minval=1, group=grpTrend)
+grpDaily = "Daily Signal Control"
+maxSignalsInput = input.int(3, "Max signals per day", minval=1, maxval=20, group=grpDaily)
+cooldownInput   = input.int(10, "Cooldown bars between signals", minval=0, group=grpDaily)
 
-grpStruct = "Structure / Momentum / Volume / Volatility"
-pivotLen    = input.int(5,   "Swing pivot lookback",        minval=1,   group=grpStruct)
-impulseMult = input.float(1.2, "Impulsive body >= ATR x",   minval=0.1, step=0.1, group=grpStruct)
-volLen      = input.int(20,  "Volume average length",       minval=1,   group=grpStruct)
-volMult     = input.float(1.5, "Volume spike >= avg x",     minval=0.1, step=0.1, group=grpStruct)
-atrLen      = input.int(14,  "ATR length",                  minval=1,   group=grpStruct)
-atrAvgLen   = input.int(50,  "ATR baseline length",         minval=1,   group=grpStruct)
-atrExpMult  = input.float(1.05, "Volatility expansion x",   minval=0.5, step=0.05, group=grpStruct)
-sweepLookback = input.int(10, "Sweep swing lookback",       minval=2,   group=grpStruct)
+// -----------------------------------------------------------------------------
+// MULTI-TIMEFRAME TREND CONVERGENCE
+// -----------------------------------------------------------------------------
+grpMTF = "Multi-Timeframe Trend"
+tf1 = input.timeframe("60",  "MTF 1", group=grpMTF)
+tf2 = input.timeframe("240", "MTF 2", group=grpMTF)
+tf3 = input.timeframe("D",   "MTF 3", group=grpMTF)
+emaFastLen = input.int(20, "Fast EMA", minval=1, group=grpMTF)
+emaSlowLen = input.int(50, "Slow EMA", minval=1, group=grpMTF)
 
-grpRisk   = "Risk / Targets"
-slBufferATR = input.float(0.5, "SL buffer beyond swing (ATR x)", minval=0.0, step=0.1, group=grpRisk)
-rrTP1       = input.float(2.0, "TP1 risk:reward", minval=0.5, step=0.5, group=grpRisk)
-rrTP2       = input.float(3.0, "TP2 risk:reward", minval=0.5, step=0.5, group=grpRisk)
-rrTP3       = input.float(4.0, "TP3 risk:reward", minval=0.5, step=0.5, group=grpRisk)
+// -----------------------------------------------------------------------------
+// STRUCTURE / MOMENTUM / VOLUME / VOLATILITY / LIQUIDITY
+// -----------------------------------------------------------------------------
+grpEng = "Engine"
+pivotLen      = input.int(5,   "Swing pivot lookback",     minval=1,   group=grpEng)
+impulseMult   = input.float(1.2, "Impulse body >= ATR x",  minval=0.1, step=0.1, group=grpEng)
+volLen        = input.int(20,  "Volume average length",    minval=1,   group=grpEng)
+volMult       = input.float(1.5, "Volume spike >= avg x",  minval=0.1, step=0.1, group=grpEng)
+atrLen        = input.int(14,  "ATR length",               minval=1,   group=grpEng)
+atrAvgLen     = input.int(50,  "ATR baseline length",      minval=1,   group=grpEng)
+atrExpMult    = input.float(1.05, "Volatility expansion x", minval=0.5, step=0.05, group=grpEng)
+sweepLookback = input.int(10,  "Liquidity swing lookback", minval=2,   group=grpEng)
+cvdLen        = input.int(20,  "CVD (order-flow) EMA",     minval=1,   group=grpEng)
 
-grpShow   = "Display"
-showLevels  = input.bool(true, "Draw Entry / SL / TP levels", group=grpShow)
-showDash    = input.bool(true, "Show dashboard",              group=grpShow)
-levelLen    = input.int(30, "Level line length (bars)", minval=5, group=grpShow)
+// -----------------------------------------------------------------------------
+// RISK / TARGETS  (ATR-based, volatility adaptive)
+// -----------------------------------------------------------------------------
+grpRisk = "Risk / Targets"
+slAtrIn  = input.float(1.5, "Stop-loss = ATR x",   minval=0.1, step=0.1, group=grpRisk,
+     tooltip="ATR-based stop distance. Widens automatically as volatility rises.")
+rr1In    = input.float(1.0, "TP1 'Toe in the water' R:R", minval=0.5, step=0.5, group=grpRisk)
+rr2In    = input.float(2.0, "TP2 'Feeling spicy'   R:R",  minval=0.5, step=0.5, group=grpRisk)
+rr3In    = input.float(3.0, "TP3 'All-in'          R:R",  minval=0.5, step=0.5, group=grpRisk)
+
+grpShow = "Display"
+showLevels = input.bool(true, "Draw Entry / SL / TP levels", group=grpShow)
+showEarly  = input.bool(true, "Show READY / BOS / CHoCH / FLOW / LIQ labels", group=grpShow)
+showDash   = input.bool(true, "Show Alpha Dashboard", group=grpShow)
+levelLen   = input.int(30, "Level line length (bars)", minval=5, group=grpShow)
+
+// -----------------------------------------------------------------------------
+// APPLY PRESET  (Custom = use raw inputs; otherwise override key knobs)
+// -----------------------------------------------------------------------------
+isCustom = preset == "Custom"
+slAtrMult   = isCustom ? slAtrIn  : preset == "Tight / Ranging" ? 1.0 : preset == "Volatile / Trending" ? 2.2 : preset == "Scalp" ? 1.0 : 2.5
+rr1         = isCustom ? rr1In    : preset == "Scalp" ? 1.0 : 1.0
+rr2         = isCustom ? rr2In    : preset == "Scalp" ? 1.5 : 2.0
+rr3         = isCustom ? rr3In    : preset == "Tight / Ranging" ? 2.5 : preset == "Volatile / Trending" ? 4.0 : preset == "Scalp" ? 2.0 : 4.0
+minLayers   = isCustom ? minLayersIn : preset == "Volatile / Trending" ? 4 : preset == "Scalp" ? 4 : 5
+maxSignals  = isCustom ? maxSignalsInput : preset == "Scalp" ? 6 : preset == "Swing" ? 2 : 3
+cooldownBars = isCustom ? cooldownInput : preset == "Scalp" ? 5 : preset == "Swing" ? 20 : 10
 
 // -----------------------------------------------------------------------------
 // CORE SERIES
@@ -69,19 +105,23 @@ atrBase = ta.sma(atr, atrAvgLen)
 volAvg  = ta.sma(volume, volLen)
 body    = math.abs(close - open)
 
-[htfFast, htfSlow] = request.security(syminfo.tickerid, htfTF,
-     [ta.ema(close, emaFastLen), ta.ema(close, emaSlowLen)],
-     lookahead = barmerge.lookahead_off)
+// ---- Multi-timeframe trend convergence -----------------------------------
+f_trend(_tf) =>
+    [f, s] = request.security(syminfo.tickerid, _tf,
+         [ta.ema(close, emaFastLen), ta.ema(close, emaSlowLen)], lookahead=barmerge.lookahead_off)
+    f > s ? 1 : f < s ? -1 : 0
 
-trendBull = htfFast > htfSlow and close > htfSlow
-trendBear = htfFast < htfSlow and close < htfSlow
+t1 = f_trend(tf1)
+t2 = f_trend(tf2)
+t3 = f_trend(tf3)
+mtfBullCount = (t1 == 1 ? 1 : 0) + (t2 == 1 ? 1 : 0) + (t3 == 1 ? 1 : 0)
+mtfBearCount = (t1 == -1 ? 1 : 0) + (t2 == -1 ? 1 : 0) + (t3 == -1 ? 1 : 0)
+mtfBull = mtfBullCount >= 2
+mtfBear = mtfBearCount >= 2
 
-// -----------------------------------------------------------------------------
-// STRUCTURE (HH/HL/LH/LL) + BOS/CHOCH
-// -----------------------------------------------------------------------------
+// ---- Structure (HH/HL/LH/LL) + BOS / CHoCH --------------------------------
 ph = ta.pivothigh(high, pivotLen, pivotLen)
 pl = ta.pivotlow(low,  pivotLen, pivotLen)
-
 var float lastPH = na
 var float prevPH = na
 var float lastPL = na
@@ -96,147 +136,184 @@ if not na(pl)
 structBull = not na(lastPH) and not na(prevPH) and not na(lastPL) and not na(prevPL) and lastPH > prevPH and lastPL > prevPL
 structBear = not na(lastPH) and not na(prevPH) and not na(lastPL) and not na(prevPL) and lastPH < prevPH and lastPL < prevPL
 
-trendState = trendBull and structBull ? "Strong Bullish" :
-             trendBull                ? "Bullish"        :
-             trendBear and structBear ? "Strong Bearish" :
-             trendBear                ? "Bearish"        : "Sideways"
-
-bosBull = not na(lastPH) and close > lastPH
-bosBear = not na(lastPL) and close < lastPL
-var int lastStructDir = 0
-chochBull = bosBull and lastStructDir == -1
-chochBear = bosBear and lastStructDir == 1
+bosBull = not na(lastPH) and ta.crossover(close, lastPH)
+bosBear = not na(lastPL) and ta.crossunder(close, lastPL)
+var int structDir = 0
+chochBull = bosBull and structDir == -1
+chochBear = bosBear and structDir == 1
 if bosBull
-    lastStructDir := 1
+    structDir := 1
 if bosBear
-    lastStructDir := -1
+    structDir := -1
 
-// -----------------------------------------------------------------------------
-// MOMENTUM · VOLUME · VOLATILITY · LIQUIDITY · ZONES
-// -----------------------------------------------------------------------------
-impulseUp    = close > open and body >= atr * impulseMult
-impulseDown  = close < open and body >= atr * impulseMult
-volSpike     = volume >= volAvg * volMult
-buyPressure  = close > open and volSpike
-sellPressure = close < open and volSpike
+// ---- Momentum -------------------------------------------------------------
+impulseUp   = close > open and body >= atr * impulseMult
+impulseDown = close < open and body >= atr * impulseMult
+
+// ---- Order flow: Cumulative Volume Delta (CVD) ----------------------------
+delta = close > open ? volume : close < open ? -volume : 0.0
+cvd   = ta.cum(delta)
+cvdEma = ta.ema(cvd, cvdLen)
+cvdBull = cvd > cvdEma
+cvdBear = cvd < cvdEma
+volSpike = volume >= volAvg * volMult
+
+// ---- Volatility -----------------------------------------------------------
 volExpansion = atr >= atrBase * atrExpMult
 
+// ---- Liquidity: sweep of prior swing then reclaim -------------------------
 priorHigh = ta.highest(high, sweepLookback)[1]
 priorLow  = ta.lowest(low,  sweepLookback)[1]
 sweepBull = low  < priorLow  and close > priorLow
 sweepBear = high > priorHigh and close < priorHigh
-
 nearDemand = not na(lastPL) and low  <= lastPL + atr and close > lastPL
 nearSupply = not na(lastPH) and high >= lastPH - atr and close < lastPH
 
-// -----------------------------------------------------------------------------
-// CONFIRMATION SCORING
-// -----------------------------------------------------------------------------
-longConfirms = (trendBull?1:0)+(structBull?1:0)+(impulseUp?1:0)+(buyPressure?1:0)+
-     (volExpansion?1:0)+(sweepBull?1:0)+(nearDemand?1:0)+(bosBull?1:0)+(chochBull?1:0)
-shortConfirms = (trendBear?1:0)+(structBear?1:0)+(impulseDown?1:0)+(sellPressure?1:0)+
-     (volExpansion?1:0)+(sweepBear?1:0)+(nearSupply?1:0)+(bosBear?1:0)+(chochBear?1:0)
+// =============================================================================
+// SIX-LAYER FILTERING
+// =============================================================================
+// L1 Trend (MTF convergence) · L2 Structure · L3 Momentum
+// L4 Order flow (volume + CVD) · L5 Volatility · L6 Liquidity
+L1_long = mtfBull
+L2_long = structBull or bosBull
+L3_long = impulseUp
+L4_long = volSpike and cvdBull
+L5_long = volExpansion
+L6_long = sweepBull or nearDemand
+longLayers = (L1_long?1:0)+(L2_long?1:0)+(L3_long?1:0)+(L4_long?1:0)+(L5_long?1:0)+(L6_long?1:0)
 
-longScore  = math.round(longConfirms  / 9 * 100)
-shortScore = math.round(shortConfirms / 9 * 100)
+L1_short = mtfBear
+L2_short = structBear or bosBear
+L3_short = impulseDown
+L4_short = volSpike and cvdBear
+L5_short = volExpansion
+L6_short = sweepBear or nearSupply
+shortLayers = (L1_short?1:0)+(L2_short?1:0)+(L3_short?1:0)+(L4_short?1:0)+(L5_short?1:0)+(L6_short?1:0)
 
-longOK  = longConfirms  >= minConfirms and longScore  >= minScore and longConfirms > shortConfirms
-shortOK = shortConfirms >= minConfirms and shortScore >= minScore and shortConfirms > longConfirms
+longScore  = math.round(longLayers  / 6 * 100)
+shortScore = math.round(shortLayers / 6 * 100)
+
+longRaw  = longLayers  >= minLayers and longLayers  > shortLayers
+shortRaw = shortLayers >= minLayers and shortLayers > longLayers
+
+// Non-repaint gate: only accept on a confirmed (closed) bar.
+confirmed = nonRepaint ? barstate.isconfirmed : true
 
 // -----------------------------------------------------------------------------
-// DAILY SIGNAL CONTROL (few, high-quality signals)
+// DAILY SIGNAL CONTROL
 // -----------------------------------------------------------------------------
 isNewDay = ta.change(time("D")) != 0
 var int signalsToday  = 0
 var int lastSignalBar = na
 if isNewDay
     signalsToday := 0
-
 cooldownOK = na(lastSignalBar) or (bar_index - lastSignalBar) >= cooldownBars
-canSignal  = signalsToday < maxSignalsPerDay and cooldownOK
+canSignal  = signalsToday < maxSignals and cooldownOK
 
 // -----------------------------------------------------------------------------
-// ENTRY / STOP / TARGETS
+// ATR-BASED RISK (volatility adaptive)
 // -----------------------------------------------------------------------------
-longSL   = (na(lastPL) ? low  - atr : lastPL) - atr * slBufferATR
-longRisk = close - longSL
-shortSL  = (na(lastPH) ? high + atr : lastPH) + atr * slBufferATR
+longSL   = close - atr * slAtrMult
+longRisk = close - longSL           // == atr * slAtrMult
+shortSL  = close + atr * slAtrMult
 shortRisk = shortSL - close
 
-buySignal  = longOK  and canSignal and longRisk  > 0
-sellSignal = shortOK and canSignal and shortRisk > 0
-
+buySignal  = longRaw  and confirmed and canSignal and longRisk  > 0
+sellSignal = shortRaw and confirmed and canSignal and shortRisk > 0
 if buySignal or sellSignal
     signalsToday  += 1
     lastSignalBar := bar_index
 
-// -----------------------------------------------------------------------------
-// SIGNAL MARKERS
-// -----------------------------------------------------------------------------
-plotshape(buySignal,  title="BUY",  style=shape.labelup,   location=location.belowbar,
-     color=color.new(color.green, 0), text="BUY",  textcolor=color.white, size=size.small)
-plotshape(sellSignal, title="SELL", style=shape.labeldown, location=location.abovebar,
-     color=color.new(color.red, 0),   text="SELL", textcolor=color.white, size=size.small)
+// =============================================================================
+// PLOTS — confirmed BUY / SELL arrows
+// =============================================================================
+plotshape(buySignal,  "BUY",  shape.labelup,   location.belowbar,
+     color.new(color.green, 0), text="BUY",  textcolor=color.white, size=size.small)
+plotshape(sellSignal, "SELL", shape.labeldown, location.abovebar,
+     color.new(color.red, 0),   text="SELL", textcolor=color.white, size=size.small)
 
-plot(htfFast, "HTF Fast EMA", color.new(color.aqua,   55))
-plot(htfSlow, "HTF Slow EMA", color.new(color.orange, 55))
+// ---- Early momentum labels: READY / BOS / CHoCH / FLOW / LIQ ---------------
+readyLong  = showEarly and not buySignal  and longLayers  == minLayers - 1 and longLayers  > shortLayers
+readyShort = showEarly and not sellSignal and shortLayers == minLayers - 1 and shortLayers > longLayers
+plotshape(readyLong,  "READY (long)",  shape.circle, location.belowbar,
+     color.new(color.green, 30), text="READY", textcolor=color.white, size=size.tiny)
+plotshape(readyShort, "READY (short)", shape.circle, location.abovebar,
+     color.new(color.red, 30),   text="READY", textcolor=color.white, size=size.tiny)
 
-// -----------------------------------------------------------------------------
-// ENTRY / SL / TP LEVEL LINES  (drawn on the signal bar)
-// -----------------------------------------------------------------------------
+plotshape(showEarly and (bosBull or bosBear), "BOS", shape.triangleup, location.bottom,
+     color.new(color.blue, 20), text="BOS", textcolor=color.white, size=size.tiny)
+plotshape(showEarly and (chochBull or chochBear), "CHoCH", shape.triangledown, location.top,
+     color.new(color.fuchsia, 10), text="CHoCH", textcolor=color.white, size=size.tiny)
+plotchar(showEarly and (cvdBull and volSpike and impulseUp) , "FLOW up", "▲", location.bottom, color.new(color.teal, 0), size=size.tiny, text="FLOW")
+plotchar(showEarly and (cvdBear and volSpike and impulseDown), "FLOW dn", "▼", location.top, color.new(color.maroon, 0), size=size.tiny, text="FLOW")
+plotchar(showEarly and (sweepBull or sweepBear), "LIQ", "✦", location.abovebar, color.new(color.orange, 0), size=size.tiny, text="LIQ")
+
+// ---- HTF EMAs (context) ---------------------------------------------------
+[htfF, htfS] = request.security(syminfo.tickerid, tf2,
+     [ta.ema(close, emaFastLen), ta.ema(close, emaSlowLen)], lookahead=barmerge.lookahead_off)
+plot(htfF, "MTF2 Fast EMA", color.new(color.aqua, 60))
+plot(htfS, "MTF2 Slow EMA", color.new(color.orange, 60))
+
+// =============================================================================
+// ENTRY / SL / TP LEVEL LINES  (three named ATR targets)
+// =============================================================================
 f_level(_price, _col, _txt) =>
     line.new(bar_index, _price, bar_index + levelLen, _price, color=_col, width=1, style=line.style_dashed)
-    label.new(bar_index + levelLen, _price, _txt + " " + str.tostring(_price, format.mintick),
+    label.new(bar_index + levelLen, _price, _txt + "  " + str.tostring(_price, format.mintick),
          style=label.style_none, textcolor=_col, size=size.small, textalign=text.align_left)
 
 if showLevels and buySignal
-    entry = close
-    f_level(entry,                       color.new(color.blue,  0), "Entry")
-    f_level(longSL,                      color.new(color.red,   0), "SL")
-    f_level(entry + longRisk * rrTP1,    color.new(color.green, 0), "TP1")
-    f_level(entry + longRisk * rrTP2,    color.new(color.green, 20), "TP2")
-    f_level(entry + longRisk * rrTP3,    color.new(color.green, 40), "TP3")
+    f_level(close,                    color.new(color.blue,  0), "Entry")
+    f_level(longSL,                   color.new(color.red,   0), "SL")
+    f_level(close + longRisk * rr1,   color.new(color.green, 0),  "TP1 Toe in the water")
+    f_level(close + longRisk * rr2,   color.new(color.green, 20), "TP2 Feeling spicy")
+    f_level(close + longRisk * rr3,   color.new(color.green, 40), "TP3 All-in")
 
 if showLevels and sellSignal
-    entry = close
-    f_level(entry,                       color.new(color.blue,  0), "Entry")
-    f_level(shortSL,                     color.new(color.red,   0), "SL")
-    f_level(entry - shortRisk * rrTP1,   color.new(color.green, 0), "TP1")
-    f_level(entry - shortRisk * rrTP2,   color.new(color.green, 20), "TP2")
-    f_level(entry - shortRisk * rrTP3,   color.new(color.green, 40), "TP3")
+    f_level(close,                    color.new(color.blue,  0), "Entry")
+    f_level(shortSL,                  color.new(color.red,   0), "SL")
+    f_level(close - shortRisk * rr1,  color.new(color.green, 0),  "TP1 Toe in the water")
+    f_level(close - shortRisk * rr2,  color.new(color.green, 20), "TP2 Feeling spicy")
+    f_level(close - shortRisk * rr3,  color.new(color.green, 40), "TP3 All-in")
 
-// -----------------------------------------------------------------------------
-// DASHBOARD
-// -----------------------------------------------------------------------------
-var table dash = table.new(position.top_right, 2, 13, border_width=1)
+// =============================================================================
+// ALPHA DASHBOARD
+// =============================================================================
+f_tfTxt(_d) => _d == 1 ? "Bull" : _d == -1 ? "Bear" : "Flat"
+var table dash = table.new(position.top_right, 2, 15, border_width=1)
 f_row(_i, _k, _v, _ok) =>
     table.cell(dash, 0, _i, _k, text_color=color.silver, text_size=size.tiny, text_halign=text.align_left)
     table.cell(dash, 1, _i, _v, text_color=_ok ? color.lime : color.gray, text_size=size.tiny, text_halign=text.align_right)
 
 if showDash and barstate.islast
-    capped = signalsToday >= maxSignalsPerDay
-    dir  = buySignal ? "BUY" : sellSignal ? "SELL" : capped ? "DONE FOR DAY" : "NO TRADE"
-    conf = math.max(longConfirms, shortConfirms)
+    capped = signalsToday >= maxSignals
+    dir  = buySignal ? "BUY" : sellSignal ? "SELL" : readyLong or readyShort ? "READY" : capped ? "DONE FOR DAY" : "NO TRADE"
+    dcol = buySignal ? color.lime : sellSignal ? color.red : readyLong or readyShort ? color.yellow : color.gray
+    lay  = math.max(longLayers, shortLayers)
     scr  = math.max(longScore, shortScore)
-    table.cell(dash, 0, 0, "GainzAlgo V2", text_color=color.white, text_size=size.small)
-    table.cell(dash, 1, 0, dir, text_color=buySignal ? color.lime : sellSignal ? color.red : color.gray, text_size=size.small)
-    f_row(1,  "Trend",         trendState, trendBull or trendBear)
-    f_row(2,  "Confirmations", str.tostring(conf) + " / " + str.tostring(minConfirms), conf >= minConfirms)
-    f_row(3,  "Quality Score", str.tostring(scr) + " / 100", scr >= minScore)
-    f_row(4,  "Structure",     structBull ? "Bullish" : structBear ? "Bearish" : "Mixed", structBull or structBear)
-    f_row(5,  "Momentum",      impulseUp ? "Impulse Up" : impulseDown ? "Impulse Down" : "Weak", impulseUp or impulseDown)
-    f_row(6,  "Volume",        volSpike ? "Spike" : "Below avg", volSpike)
-    f_row(7,  "Volatility",    volExpansion ? "Expansion" : "Compression", volExpansion)
-    f_row(8,  "Liquidity",     sweepBull ? "Swept lows" : sweepBear ? "Swept highs" : "None", sweepBull or sweepBear)
-    f_row(9,  "BOS",           bosBull ? "Up" : bosBear ? "Down" : "-", bosBull or bosBear)
-    f_row(10, "CHOCH",         chochBull ? "Bullish" : chochBear ? "Bearish" : "-", chochBull or chochBear)
-    f_row(11, "Zone",          nearDemand ? "Fresh Demand" : nearSupply ? "Fresh Supply" : "-", nearDemand or nearSupply)
-    f_row(12, "Signals today", str.tostring(signalsToday) + " / " + str.tostring(maxSignalsPerDay), not capped)
+    table.cell(dash, 0, 0, "GainzAlgo V2 Alpha", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 0, dir, text_color=dcol, text_size=size.small)
+    f_row(1,  "Preset",         preset, true)
+    f_row(2,  "Layers passed",  str.tostring(lay) + " / 6  (need " + str.tostring(minLayers) + ")", lay >= minLayers)
+    f_row(3,  "Quality score",  str.tostring(scr) + " / 100", scr >= 78)
+    f_row(4,  "MTF " + tf1,     f_tfTxt(t1), t1 != 0)
+    f_row(5,  "MTF " + tf2,     f_tfTxt(t2), t2 != 0)
+    f_row(6,  "MTF " + tf3,     f_tfTxt(t3), t3 != 0)
+    f_row(7,  "Convergence",    mtfBull ? "Bullish" : mtfBear ? "Bearish" : "Split", mtfBull or mtfBear)
+    f_row(8,  "L2 Structure",   structBull ? "Bullish" : structBear ? "Bearish" : "Mixed", structBull or structBear)
+    f_row(9,  "L3 Momentum",    impulseUp ? "Impulse Up" : impulseDown ? "Impulse Down" : "Weak", impulseUp or impulseDown)
+    f_row(10, "L4 Order flow",  cvdBull ? "CVD Up" : cvdBear ? "CVD Down" : "Flat", volSpike and (cvdBull or cvdBear))
+    f_row(11, "L5 Volatility",  volExpansion ? "Expansion" : "Compression", volExpansion)
+    f_row(12, "L6 Liquidity",   sweepBull ? "Swept lows" : sweepBear ? "Swept highs" : nearDemand ? "Demand" : nearSupply ? "Supply" : "-", sweepBull or sweepBear or nearDemand or nearSupply)
+    f_row(13, "Signals today",  str.tostring(signalsToday) + " / " + str.tostring(maxSignals), not capped)
+    f_row(14, "SL / TP mult",   "SL " + str.tostring(slAtrMult) + "xATR · RR " + str.tostring(rr1) + "/" + str.tostring(rr2) + "/" + str.tostring(rr3), true)
 
-// -----------------------------------------------------------------------------
+// =============================================================================
 // ALERTS
-// -----------------------------------------------------------------------------
-alertcondition(buySignal,  title="GainzAlgo V2 BUY",
-     message="GainzAlgo V2 BUY {{ticker}} @ {{close}} | high-probability setup")
-alertcondition(sellSignal, title="GainzAlgo V2 SELL",
-     message="GainzAlgo V2 SELL {{ticker}} @ {{close}} | high-probability setup")
+// =============================================================================
+alertcondition(buySignal,  "GainzAlgo V2 BUY",
+     message="GainzAlgo V2 BUY {{ticker}} @ {{close}} | layers aligned, within daily limit")
+alertcondition(sellSignal, "GainzAlgo V2 SELL",
+     message="GainzAlgo V2 SELL {{ticker}} @ {{close}} | layers aligned, within daily limit")
+alertcondition(readyLong or readyShort, "GainzAlgo V2 READY",
+     message="GainzAlgo V2 READY {{ticker}} — momentum building, one layer from a signal")
