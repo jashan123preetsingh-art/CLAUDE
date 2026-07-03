@@ -1,9 +1,18 @@
 # GainzAlgo V2 Alpha — Pine Script
 
-A TradingView **Pine Script v5 strategy** (`GainzAlgoV2.pine`) that encodes the
-GainzAlgo V2 *filtering* philosophy: it does not try to predict the market — it
-filters out low-quality trades and only fires when multiple **independent**
-factors align. If confirmation is missing, the dashboard reads **NO TRADE**.
+Two TradingView **Pine Script v5** files that encode the GainzAlgo V2
+*filtering* philosophy: they do not try to predict the market — they filter out
+low-quality trades and only fire when multiple **independent** factors align.
+If confirmation is missing, the dashboard reads **NO TRADE**.
+
+| File | Type | Use it for |
+|------|------|-----------|
+| **`GainzAlgoV2_Indicator.pine`** | Indicator (study) | Clean BUY/SELL signals on the chart with Entry/SL/TP levels + dashboard + alerts. **Start here.** |
+| `GainzAlgoV2.pine` | Strategy | Same logic wired into TradingView's backtester (entries/exits, equity curve). |
+
+Both share the same 9-filter engine and quality score. The **indicator** just
+paints signals and levels; the **strategy** additionally simulates trades so you
+can backtest. Pick the indicator if you want a clean overlay to trade manually.
 
 ## How it works
 
