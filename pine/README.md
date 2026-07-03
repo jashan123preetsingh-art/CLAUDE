@@ -23,12 +23,30 @@ Every bar is scored against 9 independent filters:
 
 Shorts mirror each condition. A signal is produced **only** when:
 
-- `confirmations ≥ minConfirms` (default **6**), **and**
-- `quality score ≥ minScore` (default **70** / 100), **and**
-- that side outscores the opposite side (no conflicting entries).
+- `confirmations ≥ minConfirms` (default **7**), **and**
+- `quality score ≥ minScore` (default **78** / 100), **and**
+- that side outscores the opposite side (no conflicting entries), **and**
+- the daily trade controls below still allow a new entry.
 
 Score = confirmations / 9 × 100, matching the spec's 0–100 Trade Quality Score
-(< 70 → NO TRADE, 70–80 Good, 80–90 Strong, 90+ Exceptional).
+(< 70 → NO TRADE, 70–80 Good, 80–90 Strong, 90+ Exceptional). The default of
+78 requires **≥ 7 of 9** filters to align — deliberately strict so only
+high-probability setups pass.
+
+## Fewer, higher-quality trades per day
+
+To keep it to a handful of A+ setups instead of a stream of signals, the
+strategy enforces daily trade controls (group **Daily Trade Control**):
+
+| Input | Default | Effect |
+|-------|---------|--------|
+| Max trades per day | **3** | Hard cap on entries per session (tune 2–4). Dashboard shows `DONE FOR DAY` once hit. |
+| Max losses per day | **2** | Halts trading for the rest of the day after N losers — enforces the spec's "no revenge trading". |
+| Cooldown bars | **10** | Minimum bars between entries so signals don't cluster. |
+
+The dashboard's **Trades today** row shows `used / max (L: losses)` live. To make
+it stricter still, raise `Minimum confirmations` to 8 (score 89) or lower
+`Max trades per day` to 2.
 
 ## Risk & targets
 

@@ -37,10 +37,18 @@ strategy(title              = "GainzAlgo V2 Alpha — Multi-Confirmation Filter"
 // INPUTS
 // -----------------------------------------------------------------------------
 grpCore   = "Core Filter Settings"
-minConfirms = input.int(6,  "Minimum confirmations required", minval=1, maxval=9, group=grpCore,
-     tooltip="Fewer than this many aligned factors => NO TRADE.")
-minScore    = input.int(70, "Minimum trade quality score (0-100)", minval=0, maxval=100, group=grpCore,
-     tooltip="Below 70 the spec treats it as NO TRADE.")
+minConfirms = input.int(7,  "Minimum confirmations required", minval=1, maxval=9, group=grpCore,
+     tooltip="Fewer than this many aligned factors => NO TRADE. 7+ keeps only high-probability setups.")
+minScore    = input.int(78, "Minimum trade quality score (0-100)", minval=0, maxval=100, group=grpCore,
+     tooltip="Score = confirmations/9*100. 78 needs >=7 confirmations; 89 needs >=8.")
+
+grpDaily  = "Daily Trade Control (fewer, higher-quality trades)"
+maxTradesPerDay = input.int(3, "Max trades per day", minval=1, maxval=10, group=grpDaily,
+     tooltip="Hard cap on entries per session. Keeps it to a few A+ setups (e.g. 2-4), not a stream.")
+maxLossesPerDay = input.int(2, "Max losses per day (then halt)", minval=1, maxval=10, group=grpDaily,
+     tooltip="Stop trading for the day after this many losing trades. Spec rule: no revenge trading.")
+cooldownBars    = input.int(10, "Cooldown bars between entries", minval=0, group=grpDaily,
+     tooltip="Minimum bars to wait after an entry before another can trigger. Avoids clustering.")
 
 grpTrend  = "Trend Filter"
 htfTF       = input.timeframe("240", "Higher-timeframe for trend", group=grpTrend,
@@ -240,19 +248,46 @@ longOK  = longValid  and longRisk  > 0
 shortOK = shortValid and shortRisk > 0
 
 // -----------------------------------------------------------------------------
+// DAILY TRADE CONTROL — cap entries, halt after N losses, cooldown between trades
+// -----------------------------------------------------------------------------
+isNewDay = ta.change(time("D")) != 0
+var int tradesToday = 0
+var int lossesToday = 0
+var int lastClosed  = 0
+var int lastEntryBar = na
+
+if isNewDay
+    tradesToday := 0
+    lossesToday := 0
+
+// Tally losses as trades close (used for the daily loss-halt).
+if strategy.closedtrades > lastClosed
+    for i = lastClosed to strategy.closedtrades - 1
+        if strategy.closedtrades.profit(i) < 0
+            lossesToday += 1
+    lastClosed := strategy.closedtrades
+
+cooldownOK = na(lastEntryBar) or (bar_index - lastEntryBar) >= cooldownBars
+canTrade   = tradesToday < maxTradesPerDay and lossesToday < maxLossesPerDay and cooldownOK
+
+// -----------------------------------------------------------------------------
 // STRATEGY EXECUTION
 // -----------------------------------------------------------------------------
-if longOK and strategy.position_size <= 0
+if longOK and canTrade and strategy.position_size <= 0
     strategy.entry("Long", strategy.long)
     strategy.exit("L-TP1", "Long", stop=longSL, limit=longTP1, qty_percent=40)
     strategy.exit("L-TP2", "Long", stop=longSL, limit=longTP2, qty_percent=35)
     strategy.exit("L-TP3", "Long", stop=longSL, limit=longTP3)
+    tradesToday  += 1
+    lastEntryBar := bar_index
 
-if shortOK and strategy.position_size >= 0
+if shortOK and canTrade and strategy.position_size >= 0
     strategy.entry("Short", strategy.short)
     strategy.exit("S-TP1", "Short", stop=shortSL, limit=shortTP1, qty_percent=40)
     strategy.exit("S-TP2", "Short", stop=shortSL, limit=shortTP2, qty_percent=35)
     strategy.exit("S-TP3", "Short", stop=shortSL, limit=shortTP3)
+    tradesToday  += 1
+    lastEntryBar := bar_index
 
 // Exit immediately if market structure flips against an open position.
 if strategy.position_size > 0 and structBear
@@ -266,10 +301,13 @@ if strategy.position_size < 0 and structBull
 plot(htfFast, "HTF Fast EMA", color.new(color.aqua,   40))
 plot(htfSlow, "HTF Slow EMA", color.new(color.orange, 40))
 
-plotshape(longOK  and showLabels, title="BUY",  style=shape.labelup,
+longSignal  = longOK  and canTrade
+shortSignal = shortOK and canTrade
+
+plotshape(longSignal  and showLabels, title="BUY",  style=shape.labelup,
      location=location.belowbar, color=color.new(color.green, 0),
      text="BUY",  textcolor=color.white, size=size.small)
-plotshape(shortOK and showLabels, title="SELL", style=shape.labeldown,
+plotshape(shortSignal and showLabels, title="SELL", style=shape.labeldown,
      location=location.abovebar, color=color.new(color.red, 0),
      text="SELL", textcolor=color.white, size=size.small)
 
@@ -286,17 +324,18 @@ if showZones and not na(ph)
 // -----------------------------------------------------------------------------
 // DASHBOARD  (live filter readout — the "SIGNAL OUTPUT" block)
 // -----------------------------------------------------------------------------
-var table dash = table.new(position.top_right, 2, 12, border_width=1)
+var table dash = table.new(position.top_right, 2, 13, border_width=1)
 f_row(_i, _k, _v, _ok) =>
     table.cell(dash, 0, _i, _k, text_color=color.silver, text_size=size.tiny, text_halign=text.align_left)
     table.cell(dash, 1, _i, _v, text_color=_ok ? color.lime : color.gray, text_size=size.tiny, text_halign=text.align_right)
 
 if barstate.islast
-    dir  = longOK ? "BUY" : shortOK ? "SELL" : "NO TRADE"
+    dayCapped = tradesToday >= maxTradesPerDay or lossesToday >= maxLossesPerDay
+    dir  = longSignal ? "BUY" : shortSignal ? "SELL" : dayCapped ? "DONE FOR DAY" : "NO TRADE"
     conf = math.max(longConfirms, shortConfirms)
     scr  = math.max(longScore, shortScore)
     table.cell(dash, 0, 0, "GainzAlgo V2", text_color=color.white, text_size=size.small)
-    table.cell(dash, 1, 0, dir, text_color=longOK ? color.lime : shortOK ? color.red : color.gray, text_size=size.small)
+    table.cell(dash, 1, 0, dir, text_color=longSignal ? color.lime : shortSignal ? color.red : color.gray, text_size=size.small)
     f_row(1,  "Trend",        trendState, trendBull or trendBear)
     f_row(2,  "Confirmations", str.tostring(conf) + " / " + str.tostring(minConfirms), conf >= minConfirms)
     f_row(3,  "Quality Score", str.tostring(scr) + " / 100", scr >= minScore)
@@ -308,11 +347,13 @@ if barstate.islast
     f_row(9,  "BOS",          bosBull ? "Up" : bosBear ? "Down" : "-", bosBull or bosBear)
     f_row(10, "CHOCH",        chochBull ? "Bullish" : chochBear ? "Bearish" : "-", chochBull or chochBear)
     f_row(11, "Zone",         nearDemand ? "Fresh Demand" : nearSupply ? "Fresh Supply" : "-", nearDemand or nearSupply)
+    f_row(12, "Trades today",  str.tostring(tradesToday) + " / " + str.tostring(maxTradesPerDay) +
+         "  (L:" + str.tostring(lossesToday) + ")", not dayCapped)
 
 // -----------------------------------------------------------------------------
 // ALERTS
 // -----------------------------------------------------------------------------
-alertcondition(longOK,  title="GainzAlgo V2 BUY",
-     message="GainzAlgo V2 BUY {{ticker}} @ {{close}} | multi-confirmation filter aligned")
-alertcondition(shortOK, title="GainzAlgo V2 SELL",
-     message="GainzAlgo V2 SELL {{ticker}} @ {{close}} | multi-confirmation filter aligned")
+alertcondition(longSignal,  title="GainzAlgo V2 BUY",
+     message="GainzAlgo V2 BUY {{ticker}} @ {{close}} | high-probability setup, within daily trade limit")
+alertcondition(shortSignal, title="GainzAlgo V2 SELL",
+     message="GainzAlgo V2 SELL {{ticker}} @ {{close}} | high-probability setup, within daily trade limit")
