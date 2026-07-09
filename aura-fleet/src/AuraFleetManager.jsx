@@ -47,10 +47,23 @@ const resaleFrac = (y) => {
   return RESALE[lo] + (RESALE[hi] - RESALE[lo]) * (y - lo);
 };
 
+/* ================= business model constants ================= */
+const VEHICLE = "Maruti Suzuki Dzire Tour S CNG";
+const DRIVER_PCT = 60;                 // driver keeps 60% of gross fares
+const COMPANY_PCT = 100 - DRIVER_PCT;  // company takes 40%
+const AVG_GROSS_MO = 68000;            // planning estimate · gross fares / car / month
+const DEF_RATE = 8;                    // default commercial-loan interest % p.a.
+const DEF_TENURE = 7;                  // default loan tenure, years
+
 /* per-car owner-side running cost assumptions (editable in Calculators) */
-const OPEX = { insurance: 28000, service: 15000, tyres: 16000, tyreLife: 3, battery: 6500, batteryLife: 3 };
+const OPEX = { insurance: 28000, service: 15000, tyres: 16000, tyreLife: 3, battery: 6500, batteryLife: 3, subscription: 3500 };
 const perCarOpexMo = (o = OPEX) =>
-  o.insurance / 12 + o.service / 12 + o.tyres / (o.tyreLife * 12) + o.battery / (o.batteryLife * 12);
+  o.insurance / 12 + o.service / 12 + o.tyres / (o.tyreLife * 12) + o.battery / (o.batteryLife * 12) + o.subscription;
+
+/* settlement helpers · driver ledger runs on trailing-30-day settlements */
+const last30 = (h) => h.filter((e) => (NOW - new Date(e.d)) / 86400000 <= 30);
+const sumG = (h) => h.reduce((s, e) => s + (e.gross || 0), 0);
+const sumF = (h) => h.reduce((s, e) => s + (e.fuel || 0), 0);
 
 const carLoan = (c) => {
   const P = c.onRoad - c.downPayment;
@@ -62,22 +75,25 @@ const carLoan = (c) => {
 const carValue = (c) => c.onRoad * resaleFrac(yearsSince(c.purchaseDate));
 
 /* ================= seed data ================= */
+/* fleet is 100% Maruti Suzuki Dzire Tour S CNG · financed at 8% p.a. over 7 years */
 const SEED_CARS = [
-  { id: "c1", reg: "PB 10 XY 4821", city: "Ludhiana", chassis: "MALBB51RLPM104821", engine: "G4LNCM104821", purchaseDate: "2024-03-10", onRoad: 705000, downPayment: 100000, rate: 9.4, tenure: 5, dailyRent: 1050, driverId: "d1", status: "Active", insuranceExpiry: "2026-07-20", pucExpiry: "2026-09-15", serviceDue: "2026-08-22", tyreDate: "2024-03-10", batteryDate: "2024-03-10", gps: true, rcCopy: true, insCopy: true },
-  { id: "c2", reg: "PB 10 AB 7734", city: "Ludhiana", chassis: "MALBB51RLRM207734", engine: "G4LNCM207734", purchaseDate: "2024-08-02", onRoad: 712000, downPayment: 120000, rate: 9.9, tenure: 5, dailyRent: 1100, driverId: "d2", status: "Active", insuranceExpiry: "2026-08-01", pucExpiry: "2026-10-05", serviceDue: "2026-09-10", tyreDate: "2026-06-14", batteryDate: "2024-08-02", gps: true, rcCopy: true, insCopy: true },
-  { id: "c3", reg: "CH 01 CD 2210", city: "Chandigarh", chassis: "MALBB51RLSM302210", engine: "G4LNCM302210", purchaseDate: "2025-01-15", onRoad: 718000, downPayment: 100000, rate: 9.5, tenure: 5, dailyRent: 1100, driverId: "d3", status: "Active", insuranceExpiry: "2027-01-14", pucExpiry: "2026-07-28", serviceDue: "2026-07-08", tyreDate: "2025-01-15", batteryDate: "2025-01-15", gps: true, rcCopy: true, insCopy: true },
-  { id: "c4", reg: "PB 65 EF 9902", city: "Mohali", chassis: "MALBB51RLSM409902", engine: "G4LNCM409902", purchaseDate: "2025-06-20", onRoad: 720000, downPayment: 150000, rate: 9.2, tenure: 4, dailyRent: 1150, driverId: "d4", status: "Active", insuranceExpiry: "2027-06-19", pucExpiry: "2026-12-18", serviceDue: "2026-10-02", tyreDate: "2025-06-20", batteryDate: "2025-06-20", gps: true, rcCopy: true, insCopy: true },
-  { id: "c5", reg: "PB 10 GH 5566", city: "Ludhiana", chassis: "MALBB51RLTM505566", engine: "G4LNCM505566", purchaseDate: "2025-11-05", onRoad: 722000, downPayment: 100000, rate: 9.75, tenure: 5, dailyRent: 1000, driverId: "d5", status: "Service", insuranceExpiry: "2027-11-04", pucExpiry: "2026-11-01", serviceDue: "2026-07-03", tyreDate: "2025-11-05", batteryDate: "2026-06-28", gps: true, rcCopy: true, insCopy: false },
-  { id: "c6", reg: "CH 01 JK 3141", city: "Chandigarh", chassis: "MALBB51RLTM603141", engine: "G4LNCM603141", purchaseDate: "2026-02-18", onRoad: 725000, downPayment: 100000, rate: 9.6, tenure: 5, dailyRent: 1100, driverId: null, status: "Idle", insuranceExpiry: "2028-02-17", pucExpiry: "2027-02-17", serviceDue: "2026-08-18", tyreDate: "2026-02-18", batteryDate: "2026-02-18", gps: true, rcCopy: true, insCopy: true },
+  { id: "c1", reg: "PB 10 XY 4821", model: VEHICLE, city: "Ludhiana", chassis: "MA3EYD32SPM104821", engine: "K12MN104821", purchaseDate: "2024-03-10", onRoad: 798000, downPayment: 100000, rate: 8, tenure: 7, driverId: "d1", status: "Active", insuranceExpiry: "2026-07-20", pucExpiry: "2026-09-15", fitnessExpiry: "2027-03-09", permitExpiry: "2029-03-09", serviceDue: "2026-08-22", tyreDate: "2024-03-10", batteryDate: "2024-03-10", accidents: [], gps: true, rcCopy: true, insCopy: true },
+  { id: "c2", reg: "PB 10 AB 7734", model: VEHICLE, city: "Ludhiana", chassis: "MA3EYD32SRM207734", engine: "K12MN207734", purchaseDate: "2024-08-02", onRoad: 805000, downPayment: 120000, rate: 8, tenure: 7, driverId: "d2", status: "Active", insuranceExpiry: "2026-08-01", pucExpiry: "2026-10-05", fitnessExpiry: "2026-08-01", permitExpiry: "2029-08-01", serviceDue: "2026-09-10", tyreDate: "2026-06-14", batteryDate: "2024-08-02", accidents: [{ d: "2025-11-02", cost: 18500, note: "Rear bumper + tailgate · insurance claim settled, no injury" }], gps: true, rcCopy: true, insCopy: true },
+  { id: "c3", reg: "CH 01 CD 2210", model: VEHICLE, city: "Chandigarh", chassis: "MA3EYD32SSM302210", engine: "K12MN302210", purchaseDate: "2025-01-15", onRoad: 812000, downPayment: 100000, rate: 8, tenure: 7, driverId: "d3", status: "Active", insuranceExpiry: "2027-01-14", pucExpiry: "2026-07-28", fitnessExpiry: "2027-01-14", permitExpiry: "2030-01-14", serviceDue: "2026-07-08", tyreDate: "2025-01-15", batteryDate: "2025-01-15", accidents: [], gps: true, rcCopy: true, insCopy: true },
+  { id: "c4", reg: "PB 65 EF 9902", model: VEHICLE, city: "Mohali", chassis: "MA3EYD32SSM409902", engine: "K12MN409902", purchaseDate: "2025-06-20", onRoad: 815000, downPayment: 150000, rate: 8, tenure: 7, driverId: "d4", status: "Active", insuranceExpiry: "2027-06-19", pucExpiry: "2026-12-18", fitnessExpiry: "2027-06-19", permitExpiry: "2030-06-19", serviceDue: "2026-10-02", tyreDate: "2025-06-20", batteryDate: "2025-06-20", accidents: [], gps: true, rcCopy: true, insCopy: true },
+  { id: "c5", reg: "PB 10 GH 5566", model: VEHICLE, city: "Ludhiana", chassis: "MA3EYD32STM505566", engine: "K12MN505566", purchaseDate: "2025-11-05", onRoad: 818000, downPayment: 100000, rate: 8, tenure: 7, driverId: "d5", status: "Service", insuranceExpiry: "2027-11-04", pucExpiry: "2026-11-01", fitnessExpiry: "2027-11-04", permitExpiry: "2030-11-04", serviceDue: "2026-07-03", tyreDate: "2025-11-05", batteryDate: "2026-06-28", accidents: [], gps: true, rcCopy: true, insCopy: false },
+  { id: "c6", reg: "CH 01 JK 3141", model: VEHICLE, city: "Chandigarh", chassis: "MA3EYD32STM603141", engine: "K12MN603141", purchaseDate: "2026-02-18", onRoad: 822000, downPayment: 100000, rate: 8, tenure: 7, driverId: null, status: "Idle", insuranceExpiry: "2028-02-17", pucExpiry: "2027-02-17", fitnessExpiry: "2028-02-17", permitExpiry: "2031-02-17", serviceDue: "2026-08-18", tyreDate: "2026-02-18", batteryDate: "2026-02-18", accidents: [], gps: true, rcCopy: true, insCopy: true },
 ];
 
+/* drivers work the 60/40 revenue share: driver keeps 60% of gross fares and pays his own CNG;
+   history = weekly settlements { d, gross, fuel } — the ledger computes the split automatically */
 const SEED_DRIVERS = [
-  { id: "d1", name: "Gurpreet Singh", mobile: "98140 22xx7", aadhaar: "XXXX XXXX 4821", pan: "AXBPP1234K", dl: "PB10 20190004821", address: "Model Town, Ludhiana", emergency: "Harleen Kaur · 98550 22xx1", policeVerified: true, deposit: 25000, joined: "2024-03-12", dailyRent: 1050, paid: 848000, pending: 0, lateDays: 3, rating: 4.6, complaints: 0, active: true, history: [{ d: "2026-07-01", a: 7350 }, { d: "2026-06-24", a: 7350 }, { d: "2026-06-17", a: 7350 }] },
-  { id: "d2", name: "Harjinder Singh", mobile: "97790 88xx2", aadhaar: "XXXX XXXX 7734", pan: "BYCPJ5678L", dl: "PB10 20170007734", address: "Focal Point, Ludhiana", emergency: "Manpreet Singh · 90410 45xx8", policeVerified: true, deposit: 25000, joined: "2024-08-05", dailyRent: 1100, paid: 751300, pending: 2200, lateDays: 9, rating: 4.1, complaints: 1, active: true, history: [{ d: "2026-06-29", a: 6600 }, { d: "2026-06-21", a: 7700 }, { d: "2026-06-14", a: 7700 }] },
-  { id: "d3", name: "Manjinder Singh", mobile: "99880 31xx4", aadhaar: "XXXX XXXX 2210", pan: "CZDPS9012M", dl: "CH01 20200002210", address: "Sector 22, Chandigarh", emergency: "Rajwinder Kaur · 98153 77xx0", policeVerified: true, deposit: 30000, joined: "2025-01-18", dailyRent: 1100, paid: 577500, pending: 0, lateDays: 1, rating: 4.8, complaints: 0, active: true, history: [{ d: "2026-07-02", a: 7700 }, { d: "2026-06-25", a: 7700 }, { d: "2026-06-18", a: 7700 }] },
-  { id: "d4", name: "Balwinder Singh", mobile: "80540 55xx9", aadhaar: "XXXX XXXX 9902", pan: "DAEPM3456N", dl: "PB65 20180009902", address: "Phase 7, Mohali", emergency: "Simran Kaur · 98140 90xx3", policeVerified: true, deposit: 25000, joined: "2025-06-22", dailyRent: 1150, paid: 429800, pending: 1150, lateDays: 5, rating: 4.3, complaints: 0, active: true, history: [{ d: "2026-06-30", a: 6900 }, { d: "2026-06-23", a: 8050 }] },
-  { id: "d5", name: "Sukhwinder Singh", mobile: "91530 12xx6", aadhaar: "XXXX XXXX 5566", pan: "EBFPK7890P", dl: "PB10 20160005566", address: "Dugri, Ludhiana", emergency: "Gagandeep Singh · 95610 34xx2", policeVerified: true, deposit: 20000, joined: "2025-11-08", dailyRent: 1000, paid: 230000, pending: 3000, lateDays: 12, rating: 3.7, complaints: 2, active: true, history: [{ d: "2026-06-26", a: 5000 }, { d: "2026-06-15", a: 7000 }] },
-  { id: "d6", name: "Jaspreet Singh", mobile: "98550 67xx1", aadhaar: "XXXX XXXX 3141", pan: "FCGPG2345Q", dl: "PB10 20150003141", address: "Kharar, Mohali", emergency: "Navjot Kaur · 90280 11xx5", policeVerified: true, deposit: 0, joined: "2024-05-01", dailyRent: 1050, paid: 468000, pending: 0, lateDays: 14, rating: 3.9, complaints: 1, active: false, history: [{ d: "2026-01-31", a: 7350 }] },
+  { id: "d1", name: "Gurpreet Singh", mobile: "98140 22xx7", aadhaar: "XXXX XXXX 4821", pan: "AXBPP1234K", dl: "PB10 20190004821", dlExpiry: "2029-04-18", badge: "LDH/B/2019/4821", badgeExpiry: "2027-04-18", address: "Model Town, Ludhiana", emergency: "Harleen Kaur · 98550 22xx1", policeVerified: true, deposit: 25000, joined: "2024-03-12", share: DRIVER_PCT, companyEarned: 612000, pending: 0, lateDays: 3, rating: 4.6, complaints: 0, attendance: 26, active: true, clientId: "k1", history: [{ d: "2026-07-06", gross: 16800, fuel: 5300 }, { d: "2026-06-29", gross: 17400, fuel: 5450 }, { d: "2026-06-22", gross: 16200, fuel: 5100 }, { d: "2026-06-15", gross: 15900, fuel: 5200 }] },
+  { id: "d2", name: "Harjinder Singh", mobile: "97790 88xx2", aadhaar: "XXXX XXXX 7734", pan: "BYCPJ5678L", dl: "PB10 20170007734", dlExpiry: "2027-09-02", badge: "LDH/B/2017/7734", badgeExpiry: "2026-08-10", address: "Focal Point, Ludhiana", emergency: "Manpreet Singh · 90410 45xx8", policeVerified: true, deposit: 25000, joined: "2024-08-05", share: DRIVER_PCT, companyEarned: 508400, pending: 6400, lateDays: 9, rating: 4.1, complaints: 1, attendance: 24, active: true, clientId: "k1", history: [{ d: "2026-06-29", gross: 14800, fuel: 5050 }, { d: "2026-06-21", gross: 16600, fuel: 5350 }, { d: "2026-06-14", gross: 16100, fuel: 5300 }] },
+  { id: "d3", name: "Manjinder Singh", mobile: "99880 31xx4", aadhaar: "XXXX XXXX 2210", pan: "CZDPS9012M", dl: "CH01 20200002210", dlExpiry: "2030-01-22", badge: "CHD/B/2020/2210", badgeExpiry: "2028-01-22", address: "Sector 22, Chandigarh", emergency: "Rajwinder Kaur · 98153 77xx0", policeVerified: true, deposit: 30000, joined: "2025-01-18", share: DRIVER_PCT, companyEarned: 421600, pending: 0, lateDays: 1, rating: 4.8, complaints: 0, attendance: 27, active: true, clientId: "k2", history: [{ d: "2026-07-06", gross: 19200, fuel: 5900 }, { d: "2026-06-29", gross: 18700, fuel: 5750 }, { d: "2026-06-22", gross: 18900, fuel: 5800 }, { d: "2026-06-15", gross: 18300, fuel: 5700 }] },
+  { id: "d4", name: "Balwinder Singh", mobile: "80540 55xx9", aadhaar: "XXXX XXXX 9902", pan: "DAEPM3456N", dl: "PB65 20180009902", dlExpiry: "2028-06-30", badge: "MOH/B/2018/9902", badgeExpiry: "2027-06-30", address: "Phase 7, Mohali", emergency: "Simran Kaur · 98140 90xx3", policeVerified: true, deposit: 25000, joined: "2025-06-22", share: DRIVER_PCT, companyEarned: 301800, pending: 6900, lateDays: 5, rating: 4.3, complaints: 0, attendance: 25, active: true, clientId: null, history: [{ d: "2026-06-30", gross: 17300, fuel: 5600 }, { d: "2026-06-23", gross: 16900, fuel: 5500 }] },
+  { id: "d5", name: "Sukhwinder Singh", mobile: "91530 12xx6", aadhaar: "XXXX XXXX 5566", pan: "EBFPK7890P", dl: "PB10 20160005566", dlExpiry: "2026-07-30", badge: "LDH/B/2016/5566", badgeExpiry: "2026-07-30", address: "Dugri, Ludhiana", emergency: "Gagandeep Singh · 95610 34xx2", policeVerified: true, deposit: 20000, joined: "2025-11-08", share: DRIVER_PCT, companyEarned: 158200, pending: 5200, lateDays: 12, rating: 3.7, complaints: 2, attendance: 19, active: true, clientId: null, history: [{ d: "2026-06-26", gross: 11800, fuel: 4300 }, { d: "2026-06-15", gross: 13600, fuel: 4700 }] },
+  { id: "d6", name: "Jaspreet Singh", mobile: "98550 67xx1", aadhaar: "XXXX XXXX 3141", pan: "FCGPG2345Q", dl: "PB10 20150003141", dlExpiry: "2027-05-14", badge: "LDH/B/2015/3141", badgeExpiry: "2026-05-14", address: "Kharar, Mohali", emergency: "Navjot Kaur · 90280 11xx5", policeVerified: true, deposit: 0, joined: "2024-05-01", share: DRIVER_PCT, companyEarned: 336000, pending: 0, lateDays: 14, rating: 3.9, complaints: 1, attendance: 0, active: false, clientId: null, history: [{ d: "2026-01-31", gross: 15400, fuel: 5100 }] },
 ];
 
 const EXP_CATEGORIES = ["Insurance", "Road Tax", "RC / Registration", "Fitness", "Permit", "FASTag", "GPS / Tracking", "Tyres", "Battery", "Engine Repair", "AC Repair", "Seat Covers", "Scheduled Service", "Oil & Consumables", "Unexpected Repair", "Accident Repair", "Replacement Vehicle", "Office Rent", "Employee Salary", "Internet", "Phone Bills", "Legal Fees", "CA Fees", "Marketing", "Emergency Fund", "Miscellaneous"];
@@ -93,9 +109,11 @@ const SEED_EXPENSES = [
   { id: "e8", date: "2026-05-18", carId: "c1", category: "Insurance", amount: 27500, note: "Comprehensive renewal" },
 ];
 
+/* corporate contracts are an additional, best-effort benefit — never guaranteed to drivers.
+   billed at 12% GST with ITC (unlocks the car purchase credit) */
 const SEED_CLIENTS = [
-  { id: "k1", name: "Focal Point Knitwear Pvt Ltd", type: "Ludhiana factory · night-shift worker drop", billing: 56000, gst: 5, start: "2025-10-01", end: "2026-09-30", cars: 2, timings: "9 PM – 5 AM · Mon–Sat", cost: 39000, invoicePending: true, sla: "Pickup within 10 min of slot · ₹200/miss penalty", penalties: 400 },
-  { id: "k2", name: "Silverline Hotel, Chandigarh", type: "Airport transfers · Mohali", billing: 44000, gst: 5, start: "2026-01-15", end: "2027-01-14", cars: 1, timings: "On-call · 24×7 roster", cost: 29000, invoicePending: false, sla: "Sedan, uniformed driver · 30-min standby", penalties: 0 },
+  { id: "k1", name: "Focal Point Knitwear Pvt Ltd", type: "Ludhiana factory · night-shift worker drop", billing: 56000, gst: 12, includedKm: 2400, extraKmRate: 14, start: "2025-10-01", end: "2026-09-30", carIds: ["c1", "c2"], driverIds: ["d1", "d2"], timings: "9 PM – 5 AM · Mon–Sat", cost: 39000, invoicePending: true, sla: "Pickup within 10 min of slot · ₹200/miss penalty", penalties: 400 },
+  { id: "k2", name: "Silverline Hotel, Chandigarh", type: "Airport transfers · Mohali", billing: 44000, gst: 12, includedKm: 1800, extraKmRate: 16, start: "2026-01-15", end: "2027-01-14", carIds: ["c3"], driverIds: ["d3"], timings: "On-call · 24×7 roster", cost: 29000, invoicePending: false, sla: "Sedan, uniformed driver · 30-min standby", penalties: 0 },
 ];
 
 const SEED_LEADS = [
@@ -214,26 +232,36 @@ const PIE_COLORS = ["#18181b", "#b45309", "#065f46", "#9f1239", "#155e75", "#a16
 const tooltipFmt = (v) => inr(v);
 
 /* ================= OVERVIEW ================= */
-function Overview({ cars, drivers, stats }) {
+function Overview({ cars, drivers, stats, expenses }) {
+  const [period, setPeriod] = useState("Monthly");
+  const PERIODS = { Daily: 1 / 30, Weekly: 7 / 30, Monthly: 1, Yearly: 12 };
+  const pf = PERIODS[period];
+
   const trend = useMemo(() => {
     const out = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date(NOW.getFullYear(), NOW.getMonth() - i, 15);
       const label = d.toLocaleDateString("en-IN", { month: "short" });
-      let rev = 0, emi = 0, n = 0;
+      let gross = 0, emi = 0, n = 0;
       cars.forEach((c) => {
         if (new Date(c.purchaseDate) <= d) {
           n++;
-          rev += c.dailyRent * 29;
+          gross += AVG_GROSS_MO;
           const L = carLoan(c);
           emi += emiCalc(L.principal, c.rate, c.tenure);
         }
       });
-      rev *= 0.955;
-      out.push({ m: label, Revenue: Math.round(rev), EMI: Math.round(emi), Profit: Math.round(rev - emi - n * perCarOpexMo()) });
+      gross *= 0.955;
+      const company = gross * COMPANY_PCT / 100;
+      out.push({ m: label, "Fleet gross": Math.round(gross), "Company 40%": Math.round(company), EMI: Math.round(emi), Net: Math.round(company - emi - n * perCarOpexMo()) });
     }
     return out;
   }, [cars]);
+
+  const maintMo = useMemo(() => {
+    const cats = ["Tyres", "Battery", "Engine Repair", "AC Repair", "Scheduled Service", "Oil & Consumables", "Unexpected Repair", "Accident Repair"];
+    return expenses.filter((e) => cats.includes(e.category) && (NOW - new Date(e.date)) / 86400000 <= 30).reduce((s, e) => s + e.amount, 0);
+  }, [expenses]);
 
   const alerts = [];
   cars.forEach((c) => {
@@ -241,32 +269,63 @@ function Overview({ cars, drivers, stats }) {
     if (ins <= 45) alerts.push({ tone: ins <= 10 ? "red" : "amber", text: `Insurance expires in ${ins} d`, car: c.reg });
     const puc = daysUntil(c.pucExpiry);
     if (puc <= 45) alerts.push({ tone: puc <= 10 ? "red" : "amber", text: `PUC expires in ${puc} d`, car: c.reg });
+    const fit = daysUntil(c.fitnessExpiry);
+    if (fit <= 45) alerts.push({ tone: fit <= 10 ? "red" : "amber", text: `Fitness expires in ${fit} d`, car: c.reg });
     const sv = daysUntil(c.serviceDue);
     if (sv <= 21) alerts.push({ tone: sv <= 3 ? "red" : "amber", text: sv < 0 ? `Service overdue by ${-sv} d` : `Service due in ${sv} d`, car: c.reg });
   });
-  drivers.filter((d) => d.active && d.pending > 0).forEach((d) =>
-    alerts.push({ tone: d.pending > 2000 ? "red" : "amber", text: `${inr(d.pending)} rent pending · ${d.name}`, car: null })
-  );
+  drivers.filter((d) => d.active).forEach((d) => {
+    if (d.pending > 0) alerts.push({ tone: d.pending > 5000 ? "red" : "amber", text: `${inr(d.pending)} company share pending · ${d.name}`, car: null });
+    const dl = daysUntil(d.dlExpiry);
+    if (dl <= 45) alerts.push({ tone: dl <= 10 ? "red" : "amber", text: `DL expires in ${dl} d · ${d.name}`, car: null });
+    const bd = daysUntil(d.badgeExpiry);
+    if (bd <= 45) alerts.push({ tone: bd <= 10 ? "red" : "amber", text: `Badge expires in ${bd} d · ${d.name}`, car: null });
+  });
   if (NOW.getDate() <= 5) alerts.push({ tone: "blue", text: `EMI of ${inr(stats.emiMo)} due by 5th`, car: null });
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <Stat label="Total cars" value={stats.total} />
-        <Stat label="Active on rent" value={stats.active} tone="green" />
+        <Stat label="Total cars" value={stats.total} hint={VEHICLE} />
+        <Stat label="Active with driver" value={stats.active} tone="green" />
         <Stat label="In service / idle" value={`${stats.service} / ${stats.idle}`} tone="amber" />
-        <Stat label="Monthly revenue" value={inrS(stats.revenueMo)} tone="green" />
-        <Stat label="Monthly EMI" value={inrS(stats.emiMo)} />
-        <Stat label="Monthly profit" value={inrS(stats.profitMo)} tone={stats.profitMo >= 0 ? "green" : "red"} hint="after EMI + provisions" />
-        <Stat label="Pending payments" value={inr(stats.pending)} tone={stats.pending > 0 ? "red" : "green"} />
+        <Stat label="Fleet gross (30d)" value={inrS(stats.grossMo)} tone="green" hint="driver fares, all apps" />
+        <Stat label="Company revenue" value={inrS(stats.companyRevMo)} tone="green" hint={`${COMPANY_PCT}% share + corporate`} />
+        <Stat label="Driver payouts" value={inrS(stats.driverPayoutMo)} hint={`${DRIVER_PCT}% of gross`} />
+        <Stat label="Monthly EMI" value={inrS(stats.emiMo)} hint={`${stats.total} loans @ 8% · 7 yr`} />
+        <Stat label="Maintenance (30d)" value={inr(maintMo)} tone="amber" hint="repairs, tyres, service" />
+        <Stat label="Company net" value={inrS(stats.profitMo)} tone={stats.profitMo >= 0 ? "green" : "red"} hint="after EMI + provisions" />
+        <Stat label="Pending from drivers" value={inr(stats.pending)} tone={stats.pending > 0 ? "red" : "green"} />
         <Stat label="Loan outstanding" value={inrS(stats.loanOut)} />
         <Stat label="Fleet market value" value={inrS(stats.fleetValue)} />
         <Stat label="Total depreciation" value={inrS(stats.depreciation)} tone="red" hint="vs on-road price" />
+        <Stat label="Utilization" value={`${Math.round(stats.utilization * 100)}%`} tone={stats.utilization >= 0.8 ? "green" : "amber"} />
       </div>
+
+      <Card>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <H sub="Fleet performance normalised from the trailing-30-day ledger">Reports · {period.toLowerCase()}</H>
+          <div className="inline-flex rounded-lg border border-zinc-300 p-0.5">
+            {Object.keys(PERIODS).map((k) => (
+              <button key={k} onClick={() => setPeriod(k)}
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400 ${period === k ? "bg-zinc-900 text-amber-300" : "text-zinc-600"}`}>
+                {k}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <Stat label="Fleet gross" value={inrS(stats.grossMo * pf)} tone="green" />
+          <Stat label={`Company ${COMPANY_PCT}% + corp`} value={inrS(stats.companyRevMo * pf)} tone="green" />
+          <Stat label={`Driver ${DRIVER_PCT}%`} value={inrS(stats.driverPayoutMo * pf)} />
+          <Stat label="EMI" value={inrS(stats.emiMo * pf)} />
+          <Stat label="Company net" value={inrS(stats.profitMo * pf)} tone={stats.profitMo >= 0 ? "green" : "red"} />
+        </div>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <H sub="Last 12 months · fleet revenue vs EMI vs net">Revenue & profit trend</H>
+          <H sub="Last 12 months · gross fares vs company share vs EMI vs net">Revenue & profit trend</H>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend} margin={{ left: 4, right: 8, top: 4 }}>
@@ -275,16 +334,17 @@ function Overview({ cars, drivers, stats }) {
                 <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={52} />
                 <Tooltip formatter={tooltipFmt} />
                 <Legend />
-                <Line type="monotone" dataKey="Revenue" stroke="#065f46" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="EMI" stroke="#71717a" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Profit" stroke="#b45309" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="Fleet gross" stroke="#71717a" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="Company 40%" stroke="#065f46" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="EMI" stroke="#9f1239" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="Net" stroke="#b45309" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </Card>
         <Card>
           <H sub={`${alerts.length} item${alerts.length === 1 ? "" : "s"} need attention`}>Notifications</H>
-          <div className="space-y-2">
+          <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
             {alerts.length === 0 && <p className="text-sm text-zinc-500">All clear. Nothing due in the next 45 days.</p>}
             {alerts.map((a, i) => (
               <div key={i} className="flex items-start justify-between gap-2 rounded-lg bg-zinc-50 p-2">
@@ -299,12 +359,12 @@ function Overview({ cars, drivers, stats }) {
       <Card>
         <H sub="Business intelligence · computed live from the ledger">Fleet KPIs</H>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="Avg revenue / car" value={inr(stats.avgRevCar)} hint="per month, active cars" />
-          <Stat label="Avg profit / car" value={inr(stats.avgProfitCar)} tone="green" />
+          <Stat label="Avg gross / car" value={inr(stats.avgRevCar)} hint="trailing 30 days, active cars" />
+          <Stat label="Company net / car" value={inr(stats.avgProfitCar)} tone="green" />
           <Stat label="Utilization" value={`${Math.round(stats.utilization * 100)}%`} tone={stats.utilization >= 0.8 ? "green" : "amber"} />
-          <Stat label="Collection default" value={`${(stats.defaultRate * 100).toFixed(1)}%`} tone={stats.defaultRate > 0.03 ? "red" : "green"} hint="pending vs monthly billing" />
-          <Stat label="Maintenance %" value={`${(stats.maintPct * 100).toFixed(1)}%`} hint="provisions vs revenue" />
-          <Stat label="ROI on capital" value={`${(stats.roi * 100).toFixed(1)}%`} tone="green" hint="annual profit / down payments" />
+          <Stat label="Collection default" value={`${(stats.defaultRate * 100).toFixed(1)}%`} tone={stats.defaultRate > 0.03 ? "red" : "green"} hint="pending vs company share" />
+          <Stat label="Maintenance %" value={`${(stats.maintPct * 100).toFixed(1)}%`} hint="provisions vs company revenue" />
+          <Stat label="ROI on capital" value={`${(stats.roi * 100).toFixed(1)}%`} tone="green" hint="annual net / down payments" />
           <Stat label="Break-even / car" value={`${stats.breakEvenMo} mo`} hint="down payment recovery" />
           <Stat label="ITC claimed on fleet" value={inrS(stats.itcFleet)} tone="green" hint="~18% GST credit on cars" />
         </div>
@@ -314,17 +374,19 @@ function Overview({ cars, drivers, stats }) {
 }
 
 /* ================= FLEET ================= */
-function Fleet({ cars, setCars, drivers }) {
+function Fleet({ cars, setCars, drivers, expenses }) {
   const [open, setOpen] = useState(null);
   const [add, setAdd] = useState(false);
-  const blank = { reg: "", onRoad: 715000, downPayment: 100000, rate: 9.5, tenure: 5, dailyRent: 1150, purchaseDate: NOW.toISOString().slice(0, 10) };
+  const blank = { reg: "", onRoad: 820000, downPayment: 100000, rate: DEF_RATE, tenure: DEF_TENURE, purchaseDate: NOW.toISOString().slice(0, 10) };
   const [f, setF] = useState(blank);
   const driverName = (id) => drivers.find((d) => d.id === id)?.name || "—";
+  const SERVICE_CATS = ["Tyres", "Battery", "Engine Repair", "AC Repair", "Scheduled Service", "Oil & Consumables", "Unexpected Repair", "Accident Repair"];
+  const serviceHistory = (carId) => expenses.filter((e) => e.carId === carId && SERVICE_CATS.includes(e.category));
 
   const saveCar = () => {
     if (!f.reg.trim()) return;
     const y = new Date(f.purchaseDate); const plus = (n) => { const d = new Date(y); d.setFullYear(d.getFullYear() + n); return d.toISOString().slice(0, 10); };
-    setCars([{ ...f, id: "c" + Date.now(), chassis: "—", engine: "—", driverId: null, status: "Idle", insuranceExpiry: plus(1), pucExpiry: plus(1), serviceDue: plus(1), tyreDate: f.purchaseDate, batteryDate: f.purchaseDate, gps: true, rcCopy: false, insCopy: false }, ...cars]);
+    setCars([{ ...f, id: "c" + Date.now(), model: VEHICLE, chassis: "—", engine: "—", driverId: null, status: "Idle", insuranceExpiry: plus(1), pucExpiry: plus(1), fitnessExpiry: plus(2), permitExpiry: plus(5), serviceDue: plus(1), tyreDate: f.purchaseDate, batteryDate: f.purchaseDate, accidents: [], gps: true, rcCopy: false, insCopy: false }, ...cars]);
     setF(blank); setAdd(false);
   };
   const toggleStatus = (c) => setCars(cars.map((x) => x.id === c.id ? { ...x, status: x.status === "Service" ? (x.driverId ? "Active" : "Idle") : "Service" } : x));
@@ -339,6 +401,7 @@ function Fleet({ cars, setCars, drivers }) {
       {cars.map((c) => {
         const L = carLoan(c), mv = carValue(c), expanded = open === c.id;
         const tone = c.status === "Active" ? "green" : c.status === "Service" ? "amber" : "zinc";
+        const hist = serviceHistory(c.id);
         return (
           <Card key={c.id}>
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -350,36 +413,59 @@ function Fleet({ cars, setCars, drivers }) {
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <div className="text-xs text-zinc-500">Daily rent</div>
-                  <div style={MONO} className="text-sm font-semibold text-emerald-700">{inr(c.dailyRent)}</div>
+                  <div className="text-xs text-zinc-500">{c.model || VEHICLE}</div>
+                  <div style={MONO} className="text-sm font-semibold text-emerald-700">EMI {inr(L.emi)}</div>
                 </div>
                 <Btn kind="ghost" onClick={() => setOpen(expanded ? null : c.id)}>{expanded ? "Hide" : "Details"}</Btn>
               </div>
             </div>
             <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
               <div><span className="text-zinc-500">Driver: </span>{driverName(c.driverId)}</div>
-              <div><span className="text-zinc-500">EMI: </span><span style={MONO}>{inr(L.emi)}</span></div>
+              <div><span className="text-zinc-500">EMI: </span><span style={MONO}>{inr(L.emi)} · {L.monthsLeft} mo left</span></div>
               <div><span className="text-zinc-500">Loan left: </span><span style={MONO}>{inrS(L.remaining)}</span></div>
               <div><span className="text-zinc-500">Value now: </span><span style={MONO}>{inrS(mv)}</span></div>
             </div>
             {expanded && (
               <div className="mt-3 space-y-3 border-t border-zinc-100 pt-3 text-sm">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
+                  <div className="col-span-2 sm:col-span-3"><span className="text-zinc-500">Model:</span> <span className="font-medium">{c.model || VEHICLE}</span></div>
                   <div><span className="text-zinc-500">Chassis:</span> <span style={MONO} className="text-xs">{c.chassis}</span></div>
                   <div><span className="text-zinc-500">Engine:</span> <span style={MONO} className="text-xs">{c.engine}</span></div>
                   <div><span className="text-zinc-500">Purchased:</span> {fmtD(c.purchaseDate)}</div>
                   <div><span className="text-zinc-500">On-road:</span> <span style={MONO}>{inr(c.onRoad)}</span></div>
                   <div><span className="text-zinc-500">Down payment:</span> <span style={MONO}>{inr(c.downPayment)}</span></div>
                   <div><span className="text-zinc-500">Loan:</span> <span style={MONO}>{inr(L.principal)} @ {c.rate}% · {c.tenure} yr</span></div>
-                  <div><span className="text-zinc-500">Months left:</span> {L.monthsLeft}</div>
+                  <div><span className="text-zinc-500">EMI schedule:</span> <span style={MONO}>{inr(L.emi)} × {L.monthsLeft} mo</span></div>
                   <div><span className="text-zinc-500">Insurance:</span> {fmtD(c.insuranceExpiry)}</div>
                   <div><span className="text-zinc-500">PUC:</span> {fmtD(c.pucExpiry)}</div>
+                  <div><span className="text-zinc-500">Fitness cert.:</span> {fmtD(c.fitnessExpiry)}</div>
+                  <div><span className="text-zinc-500">Permit:</span> {fmtD(c.permitExpiry)}</div>
                   <div><span className="text-zinc-500">Service due:</span> {fmtD(c.serviceDue)}</div>
                   <div><span className="text-zinc-500">Tyres:</span> {fmtD(c.tyreDate)}</div>
                   <div><span className="text-zinc-500">Battery:</span> {fmtD(c.batteryDate)}</div>
                   <div><span className="text-zinc-500">RC copy:</span> {c.rcCopy ? "on file" : <span className="text-rose-700">missing</span>}</div>
                   <div><span className="text-zinc-500">Insurance copy:</span> {c.insCopy ? "on file" : <span className="text-rose-700">missing</span>}</div>
                   <div><span className="text-zinc-500">Depreciation:</span> <span style={MONO} className="text-rose-700">{inrS(c.onRoad - mv)}</span></div>
+                </div>
+                <div>
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Accident history</div>
+                  {(c.accidents || []).length === 0 && <p className="text-xs text-zinc-400">No accidents on record.</p>}
+                  {(c.accidents || []).map((a, i) => (
+                    <div key={i} className="mb-1 flex items-center justify-between rounded-lg bg-rose-50 p-2 text-xs">
+                      <span className="text-zinc-700">{fmtD(a.d)} · {a.note}</span>
+                      <span style={MONO} className="font-semibold text-rose-700">{inr(a.cost)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Service history (from expense ledger)</div>
+                  {hist.length === 0 && <p className="text-xs text-zinc-400">No service entries logged for this car yet.</p>}
+                  {hist.slice(0, 5).map((e) => (
+                    <div key={e.id} className="mb-1 flex items-center justify-between rounded-lg bg-zinc-50 p-2 text-xs">
+                      <span className="text-zinc-700">{fmtD(e.date)} · {e.category}{e.note ? ` · ${e.note}` : ""}</span>
+                      <span style={MONO} className="font-semibold">{inr(e.amount)}</span>
+                    </div>
+                  ))}
                 </div>
                 <div className="flex flex-wrap items-end gap-2">
                   <div className="w-44">
@@ -399,13 +485,13 @@ function Fleet({ cars, setCars, drivers }) {
       })}
       {add && (
         <Modal title="Add car" onClose={() => setAdd(false)}>
+          <div className="mb-3 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600">Model: <span className="font-semibold text-zinc-900">{VEHICLE}</span> · financing defaults to {DEF_RATE}% p.a. over {DEF_TENURE} years (editable)</div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2"><Field label="Registration number"><TextIn value={f.reg} onChange={(v) => setF({ ...f, reg: v.toUpperCase() })} placeholder="MH 12 AB 1234" /></Field></div>
+            <div className="col-span-2"><Field label="Registration number"><TextIn value={f.reg} onChange={(v) => setF({ ...f, reg: v.toUpperCase() })} placeholder="PB 10 AB 1234" /></Field></div>
             <Field label="On-road price"><NumIn value={f.onRoad} step={1000} onChange={(v) => setF({ ...f, onRoad: v })} /></Field>
             <Field label="Down payment"><NumIn value={f.downPayment} step={5000} onChange={(v) => setF({ ...f, downPayment: v })} /></Field>
             <Field label="Interest % p.a."><NumIn value={f.rate} step={0.1} onChange={(v) => setF({ ...f, rate: v })} /></Field>
             <Field label="Tenure (years)"><Sel value={String(f.tenure)} onChange={(v) => setF({ ...f, tenure: +v })} options={["3", "4", "5", "6", "7"]} /></Field>
-            <Field label="Daily rent"><NumIn value={f.dailyRent} step={50} onChange={(v) => setF({ ...f, dailyRent: v })} /></Field>
             <Field label="Purchase date"><DateIn value={f.purchaseDate} onChange={(v) => setF({ ...f, purchaseDate: v })} /></Field>
           </div>
           <div className="mt-3 flex items-center justify-between rounded-lg bg-zinc-50 p-2 text-sm">
@@ -422,64 +508,100 @@ function Fleet({ cars, setCars, drivers }) {
 /* ================= DRIVERS ================= */
 function agreementText(d, car) {
   const reg = car ? car.reg : "____________";
-  return `DAILY RENTAL AGREEMENT
+  return `REVENUE-SHARE DRIVER AGREEMENT
 
-This agreement is made on ${fmtD(NOW.toISOString())} between the Owner (First Party) and ${d.name}, holder of DL ${d.dl}, residing at ${d.address} (Second Party / Driver).
+This agreement is made on ${fmtD(NOW.toISOString())} between the Company (First Party) and ${d.name}, holder of DL ${d.dl}, residing at ${d.address} (Second Party / Driver).
 
-1. VEHICLE. The Owner hands over Hyundai Aura CNG bearing registration ${reg} in roadworthy condition, with valid insurance, registration and permit.
-2. RENT. The Driver shall pay a fixed daily rent of ${inr(d.dailyRent)} by UPI/cash before 9:00 PM each day, for every day the vehicle remains in his custody, irrespective of earnings.
-3. DEPOSIT. A refundable security deposit of ${inr(d.deposit)} is held by the Owner and is adjustable against unpaid rent, challans or damage.
-4. OWNER PROVIDES: insurance, registration, permit and scheduled servicing.
-5. DRIVER BEARS: CNG/fuel, daily cleaning, parking, challans/fines caused by him, and minor daily running expenses.
-6. GPS. The vehicle carries a GPS device which shall not be tampered with. Removal is grounds for immediate termination and deposit forfeiture.
-7. DEFAULT. Rent unpaid for 7 consecutive days, or misuse of the vehicle, entitles the Owner to repossess the vehicle without notice.
-8. TERMINATION. Either party may terminate with 15 days written notice. Deposit is refunded within 7 days of vehicle return, after inspection and dues.
-9. JURISDICTION. Courts at the Owner's registered city shall have exclusive jurisdiction.
+1. VEHICLE. The Company provides a ${VEHICLE} bearing registration ${reg} in roadworthy condition, with valid insurance, registration, permit and fitness certificate.
+2. REVENUE SHARE. All fares and ride earnings are gross revenue. The Driver keeps ${d.share || DRIVER_PCT}% of gross revenue; the Company receives ${100 - (d.share || DRIVER_PCT)}%. Earnings shall be settled weekly through the Company account, with a full statement of gross fares.
+3. FUEL. The Driver bears all CNG/fuel expenses out of his share, and shall record fuel spend at each settlement.
+4. COMPANY PROVIDES: the vehicle, insurance, regular servicing and maintenance, fleet management, platform subscription where applicable, and driver support and operational management.
+5. DRIVER BEARS: CNG/fuel, daily cleaning, parking, and challans/fines caused by him.
+6. CORPORATE DUTY. The Company will make reasonable best efforts to secure corporate contracts and assign them fairly among drivers. Corporate work is an additional benefit and is NOT guaranteed; availability depends on market demand and client acquisition.
+7. DEPOSIT. A refundable security deposit of ${inr(d.deposit)} is held by the Company and is adjustable against unpaid company share, challans or damage.
+8. GPS. The vehicle carries a GPS device which shall not be tampered with. Removal is grounds for immediate termination and deposit forfeiture.
+9. DEFAULT. Company share unpaid for 7 consecutive days, concealment of earnings, or misuse of the vehicle entitles the Company to repossess the vehicle without notice.
+10. TERMINATION. Either party may terminate with 15 days written notice. Deposit is refunded within 7 days of vehicle return, after inspection and dues.
+11. JURISDICTION. Courts at the Company's registered city shall have exclusive jurisdiction.
 
-Owner: ____________________        Driver: ____________________
+Company: ____________________      Driver: ____________________
 Witness 1: _________________       Witness 2: _________________`;
 }
-function receiptText(d, car, amount) {
-  return `RENT RECEIPT · ${fmtD(NOW.toISOString())}
+function receiptText(d, car, entry) {
+  const gross = entry?.gross || 0, fuel = entry?.fuel || 0;
+  const pct = d.share || DRIVER_PCT;
+  const driverShare = gross * pct / 100, companyShare = gross - driverShare;
+  return `SETTLEMENT RECEIPT · ${fmtD(NOW.toISOString())}
 
-Received with thanks from ${d.name} (DL ${d.dl})
-the sum of ${inr(amount)} towards daily vehicle rent
-for vehicle ${car ? car.reg : "—"} at ${inr(d.dailyRent)}/day.
+Driver: ${d.name} (DL ${d.dl}) · Vehicle: ${car ? car.reg : "—"} (${VEHICLE})
 
-Balance pending after this payment: ${inr(Math.max(0, d.pending - amount))}
+Gross revenue for the period:        ${inr(gross)}
+Driver share (${pct}%):                ${inr(driverShare)}
+Company share (${100 - pct}%):               ${inr(companyShare)}
+Fuel (CNG) reported by driver:       ${inr(fuel)}
+Driver net earnings (share − fuel):  ${inr(driverShare - fuel)}
 
-Received by: ____________________ (Owner / Authorised signatory)`;
+Company share received with thanks.
+Balance pending after this settlement: ${inr(Math.max(0, d.pending))}
+
+Received by: ____________________ (Authorised signatory)`;
 }
 
-function Drivers({ drivers, setDrivers, cars }) {
+function Drivers({ drivers, setDrivers, cars, clients }) {
   const [add, setAdd] = useState(false);
   const [doc, setDoc] = useState(null);
+  const [settle, setSettle] = useState(null);
+  const [sGross, setSGross] = useState(16000);
+  const [sFuel, setSFuel] = useState(5200);
+  const [sReceived, setSReceived] = useState(true);
   const [pay, setPay] = useState(null);
   const [payAmt, setPayAmt] = useState(0);
-  const blank = { name: "", mobile: "", dailyRent: 1150, deposit: 25000, dl: "", address: "" };
+  const blank = { name: "", mobile: "", deposit: 25000, dl: "", address: "" };
   const [f, setF] = useState(blank);
   const carOf = (d) => cars.find((c) => c.driverId === d.id);
+  const clientOf = (d) => clients.find((k) => k.id === d.clientId);
 
   const save = () => {
     if (!f.name.trim()) return;
-    setDrivers([{ ...f, id: "d" + Date.now(), aadhaar: "XXXX XXXX —", pan: "—", emergency: "—", policeVerified: false, joined: NOW.toISOString().slice(0, 10), paid: 0, pending: 0, lateDays: 0, rating: 5, complaints: 0, active: true, history: [] }, ...drivers]);
+    setDrivers([{ ...f, id: "d" + Date.now(), aadhaar: "XXXX XXXX —", pan: "—", dlExpiry: "", badge: "—", badgeExpiry: "", emergency: "—", policeVerified: false, joined: NOW.toISOString().slice(0, 10), share: DRIVER_PCT, companyEarned: 0, pending: 0, lateDays: 0, rating: 5, complaints: 0, attendance: 0, active: true, clientId: null, history: [] }, ...drivers]);
     setF(blank); setAdd(false);
   };
+  const recordSettlement = () => {
+    const companyShare = sGross * (100 - (settle.share || DRIVER_PCT)) / 100;
+    setDrivers(drivers.map((d) => d.id === settle.id ? {
+      ...d,
+      history: [{ d: NOW.toISOString().slice(0, 10), gross: sGross, fuel: sFuel }, ...d.history],
+      companyEarned: d.companyEarned + (sReceived ? companyShare : 0),
+      pending: d.pending + (sReceived ? 0 : companyShare),
+    } : d));
+    setSettle(null);
+  };
   const recordPay = () => {
-    setDrivers(drivers.map((d) => d.id === pay.id ? { ...d, pending: Math.max(0, d.pending - payAmt), paid: d.paid + payAmt, history: [{ d: NOW.toISOString().slice(0, 10), a: payAmt }, ...d.history] } : d));
+    setDrivers(drivers.map((d) => d.id === pay.id ? { ...d, pending: Math.max(0, d.pending - payAmt), companyEarned: d.companyEarned + payAmt } : d));
     setPay(null);
   };
   const copyDoc = async (t) => { try { await navigator.clipboard.writeText(t); } catch (e) { /* noop */ } };
+  const expChip = (label, iso) => {
+    if (!iso) return null;
+    const dd = daysUntil(iso);
+    return <Chip tone={dd <= 10 ? "red" : dd <= 45 ? "amber" : "zinc"}>{label} {dd < 0 ? "expired" : `till ${fmtD(iso)}`}</Chip>;
+  };
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <H sub="KYC, deposits, rent ledger and paperwork">Drivers</H>
+        <H sub={`KYC, ${DRIVER_PCT}/${COMPANY_PCT} revenue ledger, settlements and paperwork · driver pays own CNG`}>Drivers</H>
         <Btn kind="accent" onClick={() => setAdd(true)}>+ Add driver</Btn>
       </div>
       {drivers.map((d) => {
         const car = carOf(d);
-        const days = Math.round(monthsSince(d.joined) * 30.44);
+        const client = clientOf(d);
+        const pct = d.share || DRIVER_PCT;
+        const h30 = last30(d.history);
+        const gross30 = sumG(h30), fuel30 = sumF(h30);
+        const driverShare30 = gross30 * pct / 100;
+        const companyShare30 = gross30 - driverShare30;
+        const driverNet30 = driverShare30 - fuel30;
         return (
           <Card key={d.id} className={d.active ? "" : "opacity-60"}>
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -487,34 +609,49 @@ function Drivers({ drivers, setDrivers, cars }) {
                 <div className="flex items-center gap-2">
                   <span style={DISP} className="font-bold text-zinc-900">{d.name}</span>
                   <Chip tone={d.active ? "green" : "zinc"}>{d.active ? "Active" : "Inactive"}</Chip>
+                  <Chip tone="blue">{pct}/{100 - pct} share</Chip>
                   {d.policeVerified && <Chip tone="blue">Police verified</Chip>}
+                  {client && <Chip tone="green">Corporate · {client.name.split(",")[0]}</Chip>}
                 </div>
-                <div className="mt-0.5 text-xs text-zinc-500">{d.mobile} · DL {d.dl} · joined {fmtD(d.joined)}</div>
+                <div className="mt-0.5 text-xs text-zinc-500">{d.mobile} · DL {d.dl} · badge {d.badge} · joined {fmtD(d.joined)}</div>
+                <div className="mt-1 flex flex-wrap gap-1.5">{expChip("DL", d.dlExpiry)}{expChip("Badge", d.badgeExpiry)}</div>
               </div>
               {car ? <Plate reg={car.reg} /> : <Chip tone="amber">No car</Chip>}
             </div>
+            <div className="mt-3 rounded-lg bg-zinc-50 p-2.5">
+              <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">Revenue ledger · trailing 30 days (app-based earnings)</div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
+                <div><span className="text-zinc-500">Gross revenue: </span><span style={MONO} className="font-semibold">{inr(gross30)}</span></div>
+                <div><span className="text-zinc-500">Driver {pct}%: </span><span style={MONO}>{inr(driverShare30)}</span></div>
+                <div><span className="text-zinc-500">Company {100 - pct}%: </span><span style={MONO} className="font-semibold text-emerald-700">{inr(companyShare30)}</span></div>
+                <div><span className="text-zinc-500">Fuel (driver): </span><span style={MONO} className="text-rose-700">{inr(fuel30)}</span></div>
+                <div><span className="text-zinc-500">Driver net: </span><span style={MONO} className={driverNet30 >= 15000 ? "font-semibold text-emerald-700" : "font-semibold text-amber-600"}>{inr(driverNet30)}</span></div>
+                <div><span className="text-zinc-500">Company earnings: </span><span style={MONO} className="font-semibold text-emerald-700">{inr(companyShare30)}</span></div>
+              </div>
+            </div>
             <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
-              <div><span className="text-zinc-500">Daily rent: </span><span style={MONO}>{inr(d.dailyRent)}</span></div>
               <div><span className="text-zinc-500">Deposit: </span><span style={MONO}>{inr(d.deposit)}</span></div>
-              <div><span className="text-zinc-500">Days worked: </span><span style={MONO}>{days}</span></div>
-              <div><span className="text-zinc-500">Rent paid: </span><span style={MONO}>{inrS(d.paid)}</span></div>
+              <div><span className="text-zinc-500">Attendance: </span><span style={MONO}>{d.attendance} d / mo</span></div>
+              <div><span className="text-zinc-500">Company earned (life): </span><span style={MONO}>{inrS(d.companyEarned)}</span></div>
               <div><span className="text-zinc-500">Pending: </span><span style={MONO} className={d.pending > 0 ? "font-semibold text-rose-700" : "text-emerald-700"}>{inr(d.pending)}</span></div>
-              <div><span className="text-zinc-500">Late days: </span><span style={MONO}>{d.lateDays}</span></div>
+              <div><span className="text-zinc-500">Late settlements: </span><span style={MONO}>{d.lateDays}</span></div>
               <div><span className="text-zinc-500">Rating: </span><span style={MONO}>{d.rating.toFixed(1)} ★</span></div>
               <div><span className="text-zinc-500">Complaints: </span><span style={MONO}>{d.complaints}</span></div>
+              <div><span className="text-zinc-500">Corporate: </span>{client ? client.name.split(",")[0] : <span className="text-zinc-400">none · best-effort</span>}</div>
             </div>
             {d.history.length > 0 && (
               <div className="mt-2 text-xs text-zinc-500">
-                Last payments:{" "}
+                Last settlements:{" "}
                 {d.history.slice(0, 3).map((h, i) => (
-                  <span key={i} style={MONO} className="mr-2 rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-700">{fmtD(h.d)} · {inr(h.a)}</span>
+                  <span key={i} style={MONO} className="mr-2 rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-700">{fmtD(h.d)} · gross {inr(h.gross)} · fuel {inr(h.fuel)}</span>
                 ))}
               </div>
             )}
             <div className="mt-3 flex flex-wrap gap-2">
-              <Btn kind="dark" onClick={() => { setPay(d); setPayAmt(d.pending || d.dailyRent * 7); }}>Record payment</Btn>
-              <Btn kind="ghost" onClick={() => setDoc({ title: "Rental agreement", text: agreementText(d, car) })}>Agreement</Btn>
-              <Btn kind="ghost" onClick={() => setDoc({ title: "Rent receipt", text: receiptText(d, car, d.history[0]?.a || d.dailyRent * 7) })}>Receipt</Btn>
+              <Btn kind="dark" onClick={() => { setSettle(d); setSGross(16000); setSFuel(5200); setSReceived(true); }}>Record settlement</Btn>
+              {d.pending > 0 && <Btn kind="ghost" onClick={() => { setPay(d); setPayAmt(d.pending); }}>Collect pending</Btn>}
+              <Btn kind="ghost" onClick={() => setDoc({ title: "Revenue-share agreement", text: agreementText(d, car) })}>Agreement</Btn>
+              <Btn kind="ghost" onClick={() => setDoc({ title: "Settlement receipt", text: receiptText(d, car, d.history[0]) })}>Receipt</Btn>
               <Btn kind="ghost" onClick={() => setDrivers(drivers.map((x) => x.id === d.id ? { ...x, active: !x.active } : x))}>{d.active ? "Mark inactive" : "Reactivate"}</Btn>
             </div>
           </Card>
@@ -523,22 +660,47 @@ function Drivers({ drivers, setDrivers, cars }) {
 
       {add && (
         <Modal title="Add driver" onClose={() => setAdd(false)}>
+          <div className="mb-3 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600">Every driver joins on the <span className="font-semibold text-zinc-900">{DRIVER_PCT}% driver / {COMPANY_PCT}% company</span> revenue share and pays his own CNG. The company provides the car, insurance, servicing, fleet management, platform subscription and support.</div>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2"><Field label="Full name"><TextIn value={f.name} onChange={(v) => setF({ ...f, name: v })} /></Field></div>
             <Field label="Mobile"><TextIn value={f.mobile} onChange={(v) => setF({ ...f, mobile: v })} /></Field>
             <Field label="Driving licence"><TextIn value={f.dl} onChange={(v) => setF({ ...f, dl: v })} /></Field>
-            <Field label="Daily rent"><NumIn value={f.dailyRent} step={50} onChange={(v) => setF({ ...f, dailyRent: v })} /></Field>
             <Field label="Security deposit"><NumIn value={f.deposit} step={1000} onChange={(v) => setF({ ...f, deposit: v })} /></Field>
             <div className="col-span-2"><Field label="Address"><TextIn value={f.address} onChange={(v) => setF({ ...f, address: v })} /></Field></div>
           </div>
           <div className="mt-3 flex justify-end gap-2"><Btn kind="ghost" onClick={() => setAdd(false)}>Cancel</Btn><Btn kind="accent" onClick={save}>Save driver</Btn></div>
         </Modal>
       )}
+      {settle && (() => {
+        const pct = settle.share || DRIVER_PCT;
+        const dShare = sGross * pct / 100, cShare = sGross - dShare;
+        return (
+          <Modal title={`Record settlement · ${settle.name}`} onClose={() => setSettle(null)}>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Gross revenue (all apps)"><NumIn value={sGross} step={100} onChange={setSGross} /></Field>
+              <Field label="Fuel spent by driver"><NumIn value={sFuel} step={50} onChange={setSFuel} /></Field>
+            </div>
+            <div className="mt-3 space-y-1.5 rounded-lg bg-zinc-50 p-3 text-sm">
+              <div className="flex justify-between"><span className="text-zinc-500">Gross revenue</span><span style={MONO}>{inr(sGross)}</span></div>
+              <div className="flex justify-between"><span className="text-zinc-500">Driver share ({pct}%)</span><span style={MONO}>{inr(dShare)}</span></div>
+              <div className="flex justify-between"><span className="text-zinc-500">Company share ({100 - pct}%)</span><span style={MONO} className="font-semibold text-emerald-700">{inr(cShare)}</span></div>
+              <div className="flex justify-between"><span className="text-zinc-500">− Fuel (driver's cost)</span><span style={MONO} className="text-rose-700">{inr(sFuel)}</span></div>
+              <div className="flex justify-between border-t border-zinc-200 pt-1.5 font-semibold"><span>Driver takes home</span><span style={MONO} className="text-sky-700">{inr(dShare - sFuel)}</span></div>
+              <div className="flex justify-between font-semibold"><span>Company earns</span><span style={MONO} className="text-emerald-700">{inr(cShare)}</span></div>
+            </div>
+            <label className="mt-3 flex items-center gap-2 text-sm text-zinc-700">
+              <input type="checkbox" checked={sReceived} onChange={(e) => setSReceived(e.target.checked)} className="accent-amber-500" />
+              Company share received now (uncheck to add to pending)
+            </label>
+            <div className="mt-3 flex justify-end gap-2"><Btn kind="ghost" onClick={() => setSettle(null)}>Cancel</Btn><Btn kind="accent" onClick={recordSettlement}>Save settlement</Btn></div>
+          </Modal>
+        );
+      })()}
       {pay && (
-        <Modal title={`Record payment · ${pay.name}`} onClose={() => setPay(null)}>
+        <Modal title={`Collect pending · ${pay.name}`} onClose={() => setPay(null)}>
           <Field label="Amount received"><NumIn value={payAmt} step={50} onChange={setPayAmt} /></Field>
-          <p className="mt-2 text-xs text-zinc-500">Pending before this payment: <span style={MONO}>{inr(pay.pending)}</span></p>
-          <div className="mt-3 flex justify-end gap-2"><Btn kind="ghost" onClick={() => setPay(null)}>Cancel</Btn><Btn kind="accent" onClick={recordPay}>Save & issue receipt</Btn></div>
+          <p className="mt-2 text-xs text-zinc-500">Company share pending before this payment: <span style={MONO}>{inr(pay.pending)}</span></p>
+          <div className="mt-3 flex justify-end gap-2"><Btn kind="ghost" onClick={() => setPay(null)}>Cancel</Btn><Btn kind="accent" onClick={recordPay}>Save</Btn></div>
         </Modal>
       )}
       {doc && (
@@ -553,7 +715,7 @@ function Drivers({ drivers, setDrivers, cars }) {
 
 /* ================= CALCULATORS ================= */
 function EmiTab() {
-  const [p, setP] = useState(710000), [dp, setDp] = useState(100000), [r, setR] = useState(9.5), [t, setT] = useState(5);
+  const [p, setP] = useState(820000), [dp, setDp] = useState(100000), [r, setR] = useState(DEF_RATE), [t, setT] = useState(DEF_TENURE);
   const [preAmt, setPreAmt] = useState(100000), [preAt, setPreAt] = useState(24);
   const P = Math.max(0, p - dp), e = emiCalc(P, r, t), n = t * 12;
   const totalPay = e * n, totalInt = totalPay - P;
@@ -628,8 +790,9 @@ function EmiTab() {
 function simDerive(s) {
   const P = s.price - s.dp;
   const e = emiCalc(P, s.rate, s.tenure);
-  const revMo = s.rent * s.days;
-  const carOpexMo = s.insurance / 12 + s.service / 12 + s.tyres / (36) + s.battery / (36) + s.misc + s.parking + s.annualMaint / 12;
+  /* company revenue per car = max(company % of gross fares, floor) — driver pays own CNG */
+  const revMo = Math.max(s.gross * s.companyPct / 100, s.floor);
+  const carOpexMo = s.insurance / 12 + s.service / 12 + s.tyres / (36) + s.battery / (36) + s.misc + s.parking + s.annualMaint / 12 + s.subscription;
   const fleetFixedMo = s.accountant + s.office;
   const profitMo1 = revMo - e - carOpexMo; // per car, before fleet fixed costs
   return { P, e, revMo, carOpexMo, fleetFixedMo, profitMo1 };
@@ -710,12 +873,14 @@ function SimulatorTab({ sim, setSim }) {
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <F k="cars" label="Number of cars" step={1} />
-          <F k="price" label="On-road price" step={5000} />
+          <F k="price" label={`On-road price (${VEHICLE.split(" ").slice(-4).join(" ")})`} step={5000} />
           <F k="dp" label="Down payment / car" step={5000} />
           <Field label="Interest % p.a."><NumIn value={sim.rate} step={0.1} onChange={(v) => setSim({ ...sim, rate: v })} /></Field>
           <Field label="Tenure (yrs)"><Sel value={String(sim.tenure)} onChange={(v) => setSim({ ...sim, tenure: +v })} options={["3", "4", "5", "6", "7"]} /></Field>
-          <F k="rent" label="Daily rent" step={50} />
-          <F k="days" label="Rent days / month" step={1} />
+          <F k="gross" label="Gross fares / car / mo" step={1000} />
+          <F k="companyPct" label="Company share %" step={5} />
+          <F k="floor" label="Company floor / mo" step={500} />
+          <F k="subscription" label="Platform sub / mo / car" step={250} />
           <F k="insurance" label="Insurance / yr / car" step={1000} />
           <F k="service" label="Service / yr / car" step={1000} />
           <F k="tyres" label="Tyres (every 3 yr)" step={1000} />
@@ -737,7 +902,7 @@ function SimulatorTab({ sim, setSim }) {
               </label>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Field label="Output GST on rent %"><NumIn value={sim.outputGstPct} step={1} onChange={(v) => setSim({ ...sim, outputGstPct: v })} /></Field>
+              <Field label="Output GST %"><NumIn value={sim.outputGstPct} step={1} onChange={(v) => setSim({ ...sim, outputGstPct: v })} /></Field>
               <Field label="ITC / car (one-time)"><NumIn value={sim.itcPerCar} step={1000} onChange={(v) => setSim({ ...sim, itcPerCar: v })} /></Field>
               <Field label="Input ITC on expenses %"><NumIn value={sim.inputItcPct} step={1} onChange={(v) => setSim({ ...sim, inputItcPct: v })} /></Field>
               <Field label="Corporate tax %"><NumIn value={sim.corpTaxPct} step={0.01} onChange={(v) => setSim({ ...sim, corpTaxPct: v })} /></Field>
@@ -749,9 +914,9 @@ function SimulatorTab({ sim, setSim }) {
 
       {isCo && (
         <Card>
-          <H sub="Driver dry-lease — you absorb 18% output GST; ITC offsets it">GST & ITC position</H>
+          <H sub="Output GST on the company's revenue share — ITC offsets it; confirm structuring with your CA">GST & ITC position</H>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="Output GST / mo" value={inrS(g.outputGstYr / 12)} tone="red" hint={`${sim.outputGstPct}% on rent`} />
+            <Stat label="Output GST / mo" value={inrS(g.outputGstYr / 12)} tone="red" hint={`${sim.outputGstPct}% on company share`} />
             <Stat label="Input ITC / mo" value={inrS(g.inputItcYr / 12)} tone="green" hint="on insurance, service, etc." />
             <Stat label="Net GST / mo" value={inrS(g.netGstYr / 12)} tone={g.netGstYr > 0 ? "amber" : "green"} hint="steady state to govt" />
             <Stat label="One-time ITC" value={inrS(g.itcPool)} tone="green" hint={`covers first ~${g.poolMonths} mo of GST`} />
@@ -761,11 +926,11 @@ function SimulatorTab({ sim, setSim }) {
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <Stat label="Monthly revenue" value={inrS(monthlyRev)} tone="green" />
-        <Stat label="Monthly EMI" value={inrS(monthlyEmi)} />
-        <Stat label="Monthly opex" value={inrS(monthlyOpex)} />
+        <Stat label="Company revenue / mo" value={inrS(monthlyRev)} tone="green" hint={`${sim.companyPct}% of gross, floor ${inrS(sim.floor)}`} />
+        <Stat label="Monthly EMI" value={inrS(monthlyEmi)} hint={`${sim.rate}% · ${sim.tenure} yr`} />
+        <Stat label="Monthly opex" value={inrS(monthlyOpex)} hint="incl. platform subscription" />
         <Stat label={isCo ? "Post-tax profit / mo" : "Pre-tax profit / mo"} value={inrS(monthlyPostTax)} tone={monthlyPostTax >= 0 ? "green" : "red"} hint={isCo ? "after GST + 25% tax" : "before tax"} />
-        <Stat label="Profit / car / day" value={inr(N ? monthlyPostTax / N / sim.days : 0)} tone="amber" hint="target ₹1,100–1,200 rent" />
+        <Stat label="Profit / car / mo" value={inr(N ? monthlyPostTax / N : 0)} tone="amber" hint={`at ${inrS(sim.gross)} gross`} />
       </div>
 
       <Card>
@@ -805,7 +970,7 @@ function SimulatorTab({ sim, setSim }) {
 }
 
 function DepTab() {
-  const [price, setPrice] = useState(715000);
+  const [price, setPrice] = useState(820000);
   const [slmYears, setSlmYears] = useState(8);
   const [wdvRate, setWdvRate] = useState(20);
   const [residual, setResidual] = useState(10);
@@ -834,12 +999,12 @@ function DepTab() {
         <Table
           head={["End of year", "Straight line", "WDV", "Market resale", "Total dep. (mkt)", "Sold vs loan*"]}
           rows={rows.filter((r) => r.y > 0).map((r) => {
-            const loanLeft = balanceAt(price - 100000, 9.5, 5, r.y * 12);
+            const loanLeft = balanceAt(price - 100000, DEF_RATE, DEF_TENURE, r.y * 12);
             const net = r.Market - loanLeft;
             return [`Year ${r.y}`, inrS(r.SLM), inrS(r.WDV), inrS(r.Market), <span key="d" className="text-rose-700">{inrS(price - r.Market)}</span>, <span key="n" className={net >= 0 ? "text-emerald-700" : "text-rose-700"}>{inrS(net)}</span>];
           })}
         />
-        <p className="mt-2 text-xs text-zinc-400">*Sale proceeds minus loan outstanding, assuming ₹1L down @ 9.5% for 5 yrs. Rental income earned meanwhile is separate (see Simulator).</p>
+        <p className="mt-2 text-xs text-zinc-400">*Sale proceeds minus loan outstanding, assuming ₹1L down @ {DEF_RATE}% for {DEF_TENURE} yrs. Revenue-share income earned meanwhile is separate (see Projections).</p>
         <div className="mt-3 h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={rows} margin={{ left: 4, right: 8 }}>
@@ -880,7 +1045,7 @@ function ScaleTab({ sim }) {
   });
   return (
     <Card>
-      <H sub="Same assumptions as the simulator · tax est. @ 25% on book profit · admin doubles beyond 20 cars">Profit at scale</H>
+      <H sub="Fleet expansion planning · company revenue = 40% of gross with floor · tax est. @ 25% · admin doubles beyond 20 cars">Profit at scale</H>
       <Table
         head={["Cars", "Revenue/mo", "EMI/mo", "Maint./mo", "Insurance/mo", "Depreciation/mo", "Tax (est)/mo", "Net profit/mo", "ROI p.a.", "Payback"]}
         rows={rows.map((r) => [
@@ -908,385 +1073,346 @@ function ScaleTab({ sim }) {
 
 /* city CNG (₹/kg) — Ludhiana & Mohali from mid-2026 market data; others editable */
 const CITY_CNG = { Ludhiana: 84.25, "Mohali / tricity": 97.5, Chandigarh: 90, Amritsar: 87.58, "Other Punjab": 88 };
-/* tenure discount — longer commitment, lower daily rent (new car) */
-const TERM_RENT = { "Monthly": 1100, "3-month": 1000, "12-month": 900 };
 
-function RentGuideTab({ sim }) {
+/* ================= REVENUE SHARING (60/40) ================= */
+function RevShareTab({ sim }) {
+  const [days, setDays] = useState(26);
+  const [grossFare, setGrossFare] = useState(2600);
+  const [driverFuel, setDriverFuel] = useState(950);
+  const [driverPct, setDriverPct] = useState(DRIVER_PCT);
+  const [floor, setFloor] = useState(20000);
+  const [maintMo, setMaintMo] = useState(5000);
+  const [subFee, setSubFee] = useState(3500);
   const [city, setCity] = useState("Ludhiana");
-  const [term, setTerm] = useState("12-month");
-  const [rent, setRent] = useState(900);
-  const [collDays, setCollDays] = useState(28);
-  const [km, setKm] = useState(150);
-  const [tankCost, setTankCost] = useState(750);
-  const [tankKm, setTankKm] = useState(150);
-  const [gross, setGross] = useState(2200);
-  const [carAge, setCarAge] = useState("New (0–1 yr)");
-  const [hybrid, setHybrid] = useState(false);
-  const [officeValue, setOfficeValue] = useState(17000);
-  const [officeKm, setOfficeKm] = useState(24);
-  const [corpRent, setCorpRent] = useState(800);
-  const [officeFuelOwner, setOfficeFuelOwner] = useState(false);
-  const cng = CITY_CNG[city];
 
-  /* owner side, per day */
-  const P = sim.price - sim.dp;
-  const emiMo = emiCalc(P, sim.rate, sim.tenure);
-  const opexMo = sim.insurance / 12 + sim.service / 12 + sim.tyres / 36 + sim.battery / 36 + sim.misc + sim.parking + sim.annualMaint / 12;
-  const emiDay = emiMo / collDays;
-  const opexDay = opexMo / collDays;
-  const gstDay = sim.mode === "company" ? Math.max(0, rent * sim.outputGstPct / 100 - opexDay * sim.inputItcPct / 100) : 0;
-  const floor = emiDay + opexDay + gstDay;                 // break-even rent/day
-  const ownerMargin = rent - floor;                        // profit/day at chosen rent
-  const recLow = Math.round((floor + 200) / 25) * 25;
-  const recHigh = Math.round((floor + 450) / 25) * 25;
-
-  /* driver side, per day */
-  const cngPerKm = tankKm > 0 ? tankCost / tankKm : 0;
-  const cngDay = km * cngPerKm;
-  const driverTakeHome = gross - rent - cngDay;      // driver keeps fares; his own small extras are his
-  const driverMo = driverTakeHome * collDays;
-
-  const ageFactor = { "New (0–1 yr)": [850, 1000], "2–3 yr": [800, 950], "4–5 yr": [700, 850], "6–7 yr": [600, 750] };
-  const band = ageFactor[carAge];
-
-  /* hybrid: assign a corporate client to this driver; his reward is a rent cut */
-  const officeFuelMo = officeFuelOwner ? officeKm * collDays * cngPerKm : 0;
-  const gstHybridMo = sim.mode === "company"
-    ? Math.max(0, corpRent * collDays * sim.outputGstPct / 100 + officeValue * 0.05 - opexMo * sim.inputItcPct / 100)
-    : 0;
-  const ownerPlainMo = ownerMargin * collDays;
-  const ownerHybridMo = corpRent * collDays + officeValue - emiMo - opexMo - officeFuelMo - gstHybridMo;
-  const driverRentSaveMo = (rent - corpRent) * collDays;
-  const driverPlainMo = driverMo;
-  const driverHybridMo = driverMo + driverRentSaveMo - (officeFuelOwner ? 0 : officeKm * collDays * cngPerKm);
-
-  const bothWork = ownerMargin > 0 && driverTakeHome >= 250;
-  const verdict = ownerMargin <= 0
-    ? { t: "Below your break-even — you'd lose money at this rent.", tone: "red" }
-    : driverTakeHome < 150
-      ? { t: "Works for you, but the driver keeps too little — expect churn or late payments.", tone: "amber" }
-      : { t: "Sustainable for both sides at these assumptions.", tone: "green" };
+  const emiMo = emiCalc(sim.price - sim.dp, sim.rate, sim.tenure);
+  const base = emiMo + maintMo + subFee; // true fixed cost / car / month
+  const grossMo = grossFare * days;
+  const fuelMo = driverFuel * days;
+  const companyPct = 100 - driverPct;
+  const companyShare = Math.max(grossMo * companyPct / 100, floor);
+  const floorBinds = floor > grossMo * companyPct / 100;
+  const driverNet = grossMo - companyShare - fuelMo;
+  const companyNet = companyShare - base;
+  const floorCoversCost = floor >= base;
+  const slowGross = grossMo * 0.75;
+  const companyShareSlow = Math.max(slowGross * companyPct / 100, floor);
+  const companyNetSlow = companyShareSlow - base;
+  const driverNetSlow = slowGross - companyShareSlow - fuelMo * 0.82;
+  const cngPerKm = CITY_CNG[city] / 18; // Dzire Tour S CNG · city AC ~18 km/kg
 
   return (
     <div className="space-y-4">
       <Card>
-        <H sub="Find a daily rent that keeps you profitable AND the driver willing to stay">Rent guide · {city}</H>
+        <H sub={`The primary model · driver keeps ${driverPct}%, pays his own CNG · company provides the ${VEHICLE}, insurance, servicing, fleet management, platform subscription and support`}>Revenue sharing · {driverPct} / {companyPct}</H>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field label="City"><Sel value={city} onChange={setCity} options={Object.keys(CITY_CNG)} /></Field>
-          <Field label="Contract term"><Sel value={term} onChange={(v) => { setTerm(v); setRent(TERM_RENT[v]); }} options={Object.keys(TERM_RENT)} /></Field>
-          <Field label="Your daily rent"><NumIn value={rent} step={50} onChange={setRent} /></Field>
-          <Field label="Collectible days / mo"><NumIn value={collDays} step={1} onChange={setCollDays} /></Field>
-          <Field label="Car age band"><Sel value={carAge} onChange={setCarAge} options={Object.keys(ageFactor)} /></Field>
-          <Field label="Km driven / day"><NumIn value={km} step={10} onChange={setKm} /></Field>
-          <Field label={`CNG tank ₹ (₹${cng}/kg)`}><NumIn value={tankCost} step={10} onChange={setTankCost} /></Field>
-          <Field label="Km per tank"><NumIn value={tankKm} step={10} onChange={setTankKm} /></Field>
-          <Field label="Driver gross / day"><NumIn value={gross} step={50} onChange={setGross} /></Field>
+          <Field label="Driver share %"><NumIn value={driverPct} step={1} onChange={setDriverPct} /></Field>
+          <Field label="Company floor / mo"><NumIn value={floor} step={500} onChange={setFloor} /></Field>
+          <Field label="Gross fare / day"><NumIn value={grossFare} step={100} onChange={setGrossFare} /></Field>
+          <Field label="Driver fuel / day"><NumIn value={driverFuel} step={50} onChange={setDriverFuel} /></Field>
+          <Field label="Working days / mo"><NumIn value={days} step={1} onChange={setDays} /></Field>
+          <Field label="Upkeep / mo / car"><NumIn value={maintMo} step={500} onChange={setMaintMo} /></Field>
+          <Field label="Platform sub / mo"><NumIn value={subFee} step={250} onChange={setSubFee} /></Field>
+          <div className="rounded-lg bg-zinc-50 p-2 text-xs">
+            <div className="uppercase tracking-wide text-zinc-500">EMI / car ({sim.rate}% · {sim.tenure} yr)</div>
+            <div style={MONO} className="mt-1 text-sm font-semibold">{inr(emiMo)}</div>
+          </div>
         </div>
       </Card>
 
-      <div className={`rounded-xl border p-3 text-sm font-medium ${verdict.tone === "green" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : verdict.tone === "amber" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>
-        {verdict.t}
+      <div className={`flex items-center gap-2 rounded-lg p-2 text-xs ${floorCoversCost ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800"}`}>
+        <span className="font-semibold">Floor {inr(floor)}</span>
+        <span>{floorCoversCost ? "covers your fixed cost of " : "is BELOW your fixed cost of "}{inr(base)}{floorCoversCost ? " — a slow car can't lose you money." : " — raise it to at least this, or a slow car still loses."}</span>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <H sub="What the rent must cover before you profit">Your side</H>
-          <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between"><span className="text-zinc-500">EMI / day</span><span style={MONO}>{inr(emiDay)}</span></div>
-            <div className="flex justify-between"><span className="text-zinc-500">Running provisions / day</span><span style={MONO}>{inr(opexDay)}</span></div>
-            {sim.mode === "company" && <div className="flex justify-between"><span className="text-zinc-500">Net GST / day</span><span style={MONO}>{inr(gstDay)}</span></div>}
-            <div className="flex justify-between border-t border-zinc-100 pt-1.5 font-semibold"><span>Break-even rent</span><span style={MONO}>{inr(floor)}</span></div>
-            <div className="flex justify-between font-semibold"><span>Your margin / day</span><span style={MONO} className={ownerMargin >= 0 ? "text-emerald-700" : "text-rose-700"}>{inr(ownerMargin)}</span></div>
-            <div className="flex justify-between"><span className="text-zinc-500">Your profit / month</span><span style={MONO} className={ownerMargin >= 0 ? "text-emerald-700" : "text-rose-700"}>{inr(ownerMargin * collDays)}</span></div>
-          </div>
-          <div className="mt-2 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600">Suggested rent for this car: <span style={MONO} className="font-semibold text-zinc-900">{inr(recLow)}–{inr(recHigh)}</span>/day</div>
-        </Card>
-        <Card>
-          <H sub="Whether the driver can live on what's left">Driver's side</H>
-          <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between"><span className="text-zinc-500">Gross earning / day</span><span style={MONO}>{inr(gross)}</span></div>
-            <div className="flex justify-between"><span className="text-zinc-500">− Your rent</span><span style={MONO}>{inr(rent)}</span></div>
-            <div className="flex justify-between"><span className="text-zinc-500">− CNG ({km} km @ ₹{cngPerKm.toFixed(1)}/km)</span><span style={MONO}>{inr(cngDay)}</span></div>
-            <div className="flex justify-between border-t border-zinc-100 pt-1.5 font-semibold"><span>Driver take-home / day</span><span style={MONO} className={driverTakeHome >= 250 ? "text-emerald-700" : driverTakeHome >= 150 ? "text-amber-600" : "text-rose-700"}>{inr(driverTakeHome)}</span></div>
-            <div className="flex justify-between"><span className="text-zinc-500">Driver income / month</span><span style={MONO}>{inr(driverMo)}</span></div>
-          </div>
-          <div className="mt-2 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600">If this drops below ~₹8,000/mo, drivers leave for Ola/Uber self-attach or another owner.</div>
-        </Card>
-      </div>
-
-      <Card>
-        <H sub="Typical fixed-lease band for an Aura-class CNG sedan, by car age">Ludhiana / tricity rate card</H>
-        <div className="mb-2 flex flex-wrap gap-1.5 text-xs">
-          <Chip tone="zinc">Monthly ₹1,100</Chip>
-          <Chip tone="zinc">3-month ₹1,000</Chip>
-          <Chip tone="amber">12-month ₹900</Chip>
-          <span className="text-zinc-400">longer commitment → lower rent, less churn</span>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm">
+          <div className="mb-1 flex items-center justify-between font-bold text-emerald-800"><span>Company / car / month</span>{floorBinds && <Chip tone="amber">floor applied</Chip>}</div>
+          <div className="flex justify-between"><span className="text-zinc-600">{floorBinds ? "Floor take" : `${companyPct}% of ${inr(grossMo)}`}</span><span style={MONO}>{inr(companyShare)}</span></div>
+          <div className="flex justify-between"><span className="text-zinc-600">− EMI + upkeep + subscription</span><span style={MONO} className="text-rose-700">{inr(base)}</span></div>
+          <div className="mt-1 flex justify-between border-t border-emerald-100 pt-1 font-semibold"><span>Net</span><span style={MONO} className={companyNet >= 0 ? "text-emerald-700" : "text-rose-700"}>{inr(companyNet)}</span></div>
+          <div className="flex justify-between text-xs"><span className="text-zinc-500">× 3 cars</span><span style={MONO} className={companyNet >= 0 ? "text-emerald-700" : "text-rose-700"}>{inr(companyNet * 3)}</span></div>
         </div>
-        <Table
-          head={["Car age", "Rent band / day", "Note"]}
-          rows={Object.entries(ageFactor).map(([age, [lo, hi]]) => [
-            age,
-            <span key="b" style={MONO}>{inr(lo)}–{inr(hi)}</span>,
-            age === carAge ? <Chip key="c" tone="amber">selected</Chip> : "",
-          ])}
-        />
-        <p className="mt-2 text-xs text-zinc-400">Bands are practical estimates for Ludhiana & the Chandigarh tricity, not published rates. Real CNG runs about ₹750 a tank for ~150 km (≈₹5/km); Mohali CNG (~₹97.5/kg) is dearer than Ludhiana (~₹84.25/kg), so expect slightly lower rent tolerance there.</p>
-      </Card>
+        <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm">
+          <div className="mb-1 font-bold text-sky-800">Driver / month</div>
+          <div className="flex justify-between"><span className="text-zinc-600">{floorBinds ? "Gross − floor" : `${driverPct}% of ${inr(grossMo)}`}</span><span style={MONO}>{inr(grossMo - companyShare)}</span></div>
+          <div className="flex justify-between"><span className="text-zinc-600">− His CNG</span><span style={MONO} className="text-rose-700">{inr(fuelMo)}</span></div>
+          <div className="mt-1 flex justify-between border-t border-sky-100 pt-1 font-semibold"><span>Take-home</span><span style={MONO} className={driverNet >= 18000 ? "text-emerald-700" : driverNet >= 14000 ? "text-amber-600" : "text-rose-700"}>{inr(driverNet)}</span></div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg bg-amber-50 p-2 text-xs">
+        <span className="text-amber-800">Slow month (−25% gross): driver {inr(driverNetSlow)}, company / car</span>
+        <span style={MONO} className={companyNetSlow >= 0 ? "font-semibold text-emerald-700" : "font-semibold text-rose-700"}>{inr(companyNetSlow)}</span>
+      </div>
 
       <Card>
-        <H sub={`At ₹${rent}/day rent · driver keeps 100% of earnings · ${/Chandigarh|Mohali|tricity/.test(city) ? "Chandigarh" : "Ludhiana"} fares`}>Driver earning ladder</H>
+        <H sub={`Gross fares before the split · ${city} CNG ₹${CITY_CNG[city]}/kg · Dzire Tour S ~18 km/kg city AC`}>Driver earning ladder</H>
+        <div className="mb-2 w-44"><Field label="City"><Sel value={city} onChange={setCity} options={Object.keys(CITY_CNG)} /></Field></div>
         <Table
-          head={["Day length", "Gross / day", "CNG", "Take-home / month"]}
+          head={["Day length", "Gross / day", "Driver 60%", "CNG", "Take-home / month"]}
           rows={[["8 hr · part-time", 1900, 130], ["10 hr · steady", 2300, 160], ["12 hr · full day", 2700, 200], ["13 hr · busy / peak", 3200, 230]].map(([label, g0, k]) => {
             const cityFactor = /Chandigarh|Mohali|tricity/.test(city) ? 1.12 : 1;
             const g = Math.round(g0 * cityFactor);
+            const dShare = g * driverPct / 100;
             const cngD = k * cngPerKm;
-            const th = (g - cngD - rent) * collDays;
+            const th = (dShare - cngD) * days;
             return [
               label,
               `₹${g.toLocaleString("en-IN")}`,
+              `₹${Math.round(dShare).toLocaleString("en-IN")}`,
               `₹${Math.round(cngD)}`,
-              <span key="t" className={th >= 25000 ? "font-semibold text-emerald-700" : th >= 18000 ? "text-amber-600" : "text-zinc-700"}>{inr(th)}</span>,
+              <span key="t" className={th >= 20000 ? "font-semibold text-emerald-700" : th >= 14000 ? "text-amber-600" : "text-zinc-700"}>{inr(th)}</span>,
             ];
           })}
         />
-        <p className="mt-2 text-xs text-zinc-500">A hard 12–13 hr day (8am–9pm) is where the money is: Ludhiana ~₹18–27k/mo, Chandigarh ~₹26–35k (airport + tourism + affluent riders push fares ~12% higher). One caution — don't multiply the ₹110–120-per-6km short-ride rate across the whole day: ~25–30% of km run empty and longer trips pay less per km, so blended is ~₹13–15/km. Fuel also rises with hours (a 13-hr day burns ~1.5 tanks). Your levers to lift him: feed corporate rides, all 3 apps, zero downtime.</p>
-      </Card>
-
-      <Card>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <H sub="Give the driver a corporate client; his reward is a lower rent, you keep the billing">Corporate client · rent-cut deal</H>
-          <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-600">
-            <input type="checkbox" checked={hybrid} onChange={(e) => setHybrid(e.target.checked)} className="accent-amber-500" />
-            Enable
-          </label>
-        </div>
-        {hybrid && (
-          <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Field label="Corporate client / month"><NumIn value={officeValue} step={1000} onChange={setOfficeValue} /></Field>
-              <Field label="Corporate km / day"><NumIn value={officeKm} step={2} onChange={setOfficeKm} /></Field>
-              <Field label={`Reduced rent (vs ₹${rent})`}><NumIn value={corpRent} step={50} onChange={setCorpRent} /></Field>
-              <label className="block text-xs font-medium text-zinc-600">
-                <span className="mb-1 block uppercase tracking-wide">Corporate fuel paid by</span>
-                <div className="flex overflow-hidden rounded-lg border border-zinc-300">
-                  {[["driver", "Driver"], ["owner", "Owner"]].map(([k, l]) => (
-                    <button key={k} onClick={() => setOfficeFuelOwner(k === "owner")}
-                      className={`flex-1 px-2 py-1.5 text-xs font-semibold focus:outline-none ${(officeFuelOwner ? "owner" : "driver") === k ? "bg-zinc-900 text-amber-300" : "bg-white text-zinc-600"}`}>{l}</button>
-                  ))}
-                </div>
-              </label>
-            </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-emerald-50 p-3 text-sm">
-                <div className="mb-1 font-bold text-emerald-800">You (owner) / month / car</div>
-                <div className="flex justify-between"><span className="text-zinc-600">Plain rent (₹{rent})</span><span style={MONO}>{inr(ownerPlainMo)}</span></div>
-                <div className="flex justify-between font-semibold"><span>Rent-cut + corporate</span><span style={MONO} className={ownerHybridMo >= 0 ? "text-emerald-700" : "text-rose-700"}>{inr(ownerHybridMo)}</span></div>
-                <div className="mt-1 flex justify-between border-t border-emerald-100 pt-1 text-xs"><span className="text-zinc-500">Extra profit</span><span style={MONO} className="font-semibold text-emerald-700">+{inr(ownerHybridMo - ownerPlainMo)}</span></div>
-              </div>
-              <div className="rounded-lg bg-sky-50 p-3 text-sm">
-                <div className="mb-1 font-bold text-sky-800">Driver / month</div>
-                <div className="flex justify-between"><span className="text-zinc-600">On ₹{rent} rent</span><span style={MONO}>{inr(driverPlainMo)}</span></div>
-                <div className="flex justify-between font-semibold"><span>On ₹{corpRent} + corporate runs</span><span style={MONO} className={driverHybridMo >= driverPlainMo ? "text-emerald-700" : "text-amber-600"}>{inr(driverHybridMo)}</span></div>
-                <div className="mt-1 flex justify-between border-t border-sky-100 pt-1 text-xs"><span className="text-zinc-500">His gain (rent saved)</span><span style={MONO} className="font-semibold text-sky-700">+{inr(driverHybridMo - driverPlainMo)}</span></div>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-zinc-500">You keep the full ₹{(officeValue / 1000).toFixed(0)}k client and bill it (5% GST, your company name). The driver's only reward is the ₹{rent - corpRent}/day rent cut (≈{inr(driverRentSaveMo)}/mo). Keep the corporate runs light — they fall in peak app hours, so if they're heavy the driver won't accept just ₹{rent - corpRent}/day. Sweeten with a bigger rent cut if needed.</p>
-          </>
-        )}
-        {!hybrid && <p className="text-sm text-zinc-500">Turn this on to model handing a driver a fixed corporate client (₹15–20k/month) in exchange for a lower daily rent — you keep the billing, he gets cheaper rent.</p>}
+        <p className="mt-2 text-xs text-zinc-500">The floor means the driver must cover the car's fixed cost before he keeps his {driverPct}% — a weak car never bleeds the company, and a strong driver never even feels the floor. To split gross you must see it: route settlements through the company account + GPS. The company lifts a driver at zero cost by feeding corporate rides when contracts exist (best effort, never guaranteed), keeping him on all three apps, and never letting the car sit idle.</p>
       </Card>
     </div>
   );
 }
 
-function RevenueModelsTab({ sim }) {
-  const [days, setDays] = useState(26);
+/* ================= CORPORATE PROFITABILITY ================= */
+function CorporateTab({ sim }) {
+  const [bill, setBill] = useState(62000);
+  const [includedKm, setIncludedKm] = useState(2400);
+  const [extraRate, setExtraRate] = useState(14);
+  const [actualKm, setActualKm] = useState(2700);
+  const [driverCost, setDriverCost] = useState(24000);
+  const [fuelMo, setFuelMo] = useState(20000);
   const [maintMo, setMaintMo] = useState(6500);
-  const [rentDay, setRentDay] = useState(1100);
-  const [subFee, setSubFee] = useState(3500);
-  const [subPayer, setSubPayer] = useState("LLP");
-  const [grossFare, setGrossFare] = useState(2600);
-  const [driverFuel, setDriverFuel] = useState(950);
-  const [driverPct, setDriverPct] = useState(60);
-  const [floor, setFloor] = useState(15000);
-  const [corpBill, setCorpBill] = useState(60000);
-  const [corpSalary, setCorpSalary] = useState(20000);
-  const [corpFuel, setCorpFuel] = useState(20000);
-  const [outMargin, setOutMargin] = useState(3000);
-  const [outTrips, setOutTrips] = useState(10);
-  const [dryFlat, setDryFlat] = useState(27000);
 
   const emiMo = emiCalc(sim.price - sim.dp, sim.rate, sim.tenure);
-  const base = emiMo + maintMo;
-  const subLLP = subPayer === "LLP" ? subFee : 0;
-  const subDriver = subPayer === "Driver" ? subFee : 0;
-  const gstOnRent = Math.max(0, rentDay * days * 0.18 - maintMo * 0.18); // 18% output on rent, ITC on upkeep
-
-  // Subscription + fixed rent (the new core model)
-  const subRentNet = rentDay * days - base - subLLP - gstOnRent;
-  const driverTakeHome = (grossFare - rentDay - driverFuel) * days - subDriver;
-  // Alternate models
-  const corpNet = corpBill - corpSalary - corpFuel - base;
-  const outNet = outMargin * outTrips - base;
-  const dryNet = dryFlat - base;
-
-  // Revenue share (% of gross, driver pays own CNG, company floor min)
-  const rsGrossMo = grossFare * days;
-  const rsCngMo = driverFuel * days;
-  const rsCompanyShare = Math.max(rsGrossMo * (100 - driverPct) / 100, floor);
-  const floorBinds = floor > rsGrossMo * (100 - driverPct) / 100;
-  const rsDriver = rsGrossMo - rsCompanyShare - rsCngMo;
-  const rsCompany = rsCompanyShare - base;
-  const floorCoversCost = floor >= base;
-  const rsSlowGross = rsGrossMo * 0.75;
-  const rsCompanyShareSlow = Math.max(rsSlowGross * (100 - driverPct) / 100, floor);
-  const rsCompanySlow = rsCompanyShareSlow - base;
-  const rsDriverSlow = rsSlowGross - rsCompanyShareSlow - rsCngMo * 0.82;
-
-  const models = [
-    { k: "Subscription + rent", net: subRentNet, note: `driver keeps fares, pays ₹${rentDay} rent` },
-    { k: "Corporate contract", net: corpNet, note: "you pay driver + fuel" },
-    { k: "Outstation / airport", net: outNet, note: "client pays tolls + fuel" },
-    { k: "Dry lease", net: dryNet, note: "flat rent, zero headache" },
-  ];
-  const fleet3 = 3 * subRentNet;
+  const extraKm = Math.max(0, actualKm - includedKm);
+  const extraRev = extraKm * extraRate;
+  const revenue = bill + extraRev;
+  const cost = driverCost + fuelMo + emiMo + maintMo;
+  const profit = revenue - cost;
+  const breakEvenBill = cost - extraRev;
+  const perKm = actualKm > 0 ? revenue / actualKm : 0;
 
   return (
     <div className="space-y-4">
+      <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
+        Corporate contracts are an <b>additional benefit</b> the company provides whenever possible. The company actively markets its services and makes every reasonable effort to win contracts and assign them fairly to drivers — but corporate work is <b>not guaranteed</b>; it depends on market demand and successful client acquisition.
+      </div>
       <Card>
-        <H sub="Subscription platform · no per-ride commission · EMI pulled from simulator car price">Shared assumptions</H>
+        <H sub="Dedicated corporate car · salaried driver, company pays fuel · bill at 12% GST with ITC">Corporate profitability</H>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field label="Rent days / month"><NumIn value={days} step={1} onChange={setDays} /></Field>
-          <Field label="Upkeep / mo / car"><NumIn value={maintMo} step={500} onChange={setMaintMo} /></Field>
-          <Field label="Daily rent (to LLP)"><NumIn value={rentDay} step={50} onChange={setRentDay} /></Field>
+          <Field label="Monthly contract value"><NumIn value={bill} step={1000} onChange={setBill} /></Field>
+          <Field label="Included km / mo"><NumIn value={includedKm} step={100} onChange={setIncludedKm} /></Field>
+          <Field label="Extra km rate ₹"><NumIn value={extraRate} step={1} onChange={setExtraRate} /></Field>
+          <Field label="Actual km / mo"><NumIn value={actualKm} step={100} onChange={setActualKm} /></Field>
+          <Field label="Driver cost / mo"><NumIn value={driverCost} step={1000} onChange={setDriverCost} /></Field>
+          <Field label="Fuel / mo (company)"><NumIn value={fuelMo} step={1000} onChange={setFuelMo} /></Field>
+          <Field label="Upkeep / mo"><NumIn value={maintMo} step={500} onChange={setMaintMo} /></Field>
           <div className="rounded-lg bg-zinc-50 p-2 text-xs">
             <div className="uppercase tracking-wide text-zinc-500">EMI / car</div>
             <div style={MONO} className="mt-1 text-sm font-semibold">{inr(emiMo)}</div>
           </div>
         </div>
       </Card>
-
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <Stat label="Revenue / mo" value={inr(revenue)} tone="green" hint={extraKm > 0 ? `incl. ${extraKm} extra km @ ₹${extraRate}` : "no extra km"} />
+        <Stat label="All-in cost / mo" value={inr(cost)} tone="red" hint="driver + fuel + EMI + upkeep" />
+        <Stat label="Profit / mo" value={inr(profit)} tone={profit >= 0 ? "green" : "red"} />
+        <Stat label="Break-even bill" value={inr(breakEvenBill)} tone="amber" hint="sign above this" />
+        <Stat label="Realised ₹/km" value={`₹${perKm.toFixed(1)}`} />
+      </div>
       <Card>
-        <H sub="Per-car net / month · subscription replaces commission">Revenue models</H>
+        <H sub="Same inputs, different contract values">Sensitivity</H>
         <Table
-          head={["Model", "LLP net / car / mo", "Basis"]}
-          rows={models.map((m) => [
-            m.k,
-            <span key="n" className={m.net >= 0 ? "font-semibold text-emerald-700" : "font-semibold text-rose-700"}>{inr(m.net)}</span>,
-            <span key="b" className="text-xs text-zinc-500">{m.note}</span>,
+          head={["Contract value", "Profit / mo", "Verdict"]}
+          rows={[45000, 52000, 57000, 62000, 68000, 75000].map((b) => {
+            const p = b + extraRev - cost;
+            return [
+              inr(b),
+              <span key="p" className={p >= 0 ? "font-semibold text-emerald-700" : "font-semibold text-rose-700"}>{inr(p)}</span>,
+              p < 0 ? "loses money" : p < 5000 ? "barely breaks even" : p < 12000 ? "sign it" : "excellent — lock a 12-month term",
+            ];
+          })}
+        />
+        <p className="mt-2 text-xs text-zinc-500">Don't underprice: a dedicated car costs ~{inrS(cost)} all-in, so a ₹55–57k bill barely breaks even. Bill at 12% GST with ITC to unlock the car purchase credit, and keep the contract in the company's name so the client can't walk with the driver.</p>
+      </Card>
+    </div>
+  );
+}
+
+/* ================= MAINTENANCE ================= */
+function MaintTab() {
+  const [kmMo, setKmMo] = useState(5200);
+  const [svcCost, setSvcCost] = useState(3800);
+  const [svcKm, setSvcKm] = useState(10000);
+  const [tyreCost, setTyreCost] = useState(16000);
+  const [tyreKm, setTyreKm] = useState(50000);
+  const [batCost, setBatCost] = useState(6500);
+  const [batYrs, setBatYrs] = useState(3);
+  const [insYr, setInsYr] = useState(28000);
+  const [miscYr, setMiscYr] = useState(6000);
+
+  const svcMo = kmMo / svcKm * svcCost;
+  const tyreMo = kmMo / tyreKm * tyreCost;
+  const batMo = batCost / (batYrs * 12);
+  const insMo = insYr / 12;
+  const miscMo = miscYr / 12;
+  const totalMo = svcMo + tyreMo + batMo + insMo + miscMo;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <H sub={`Owner-side provisions for a commercial-duty ${VEHICLE} · CNG kit & clutch wear fast in city duty`}>Maintenance calculator</H>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Field label="Km driven / month"><NumIn value={kmMo} step={200} onChange={setKmMo} /></Field>
+          <Field label="Service cost ₹"><NumIn value={svcCost} step={100} onChange={setSvcCost} /></Field>
+          <Field label="Service interval km"><NumIn value={svcKm} step={1000} onChange={setSvcKm} /></Field>
+          <Field label="Tyre set cost ₹"><NumIn value={tyreCost} step={500} onChange={setTyreCost} /></Field>
+          <Field label="Tyre life km"><NumIn value={tyreKm} step={5000} onChange={setTyreKm} /></Field>
+          <Field label="Battery cost ₹"><NumIn value={batCost} step={500} onChange={setBatCost} /></Field>
+          <Field label="Battery life (yrs)"><NumIn value={batYrs} step={1} onChange={setBatYrs} /></Field>
+          <Field label="Insurance / yr"><NumIn value={insYr} step={1000} onChange={setInsYr} /></Field>
+          <Field label="Other repairs / yr"><NumIn value={miscYr} step={500} onChange={setMiscYr} /></Field>
+        </div>
+      </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <Stat label="Servicing / mo" value={inr(svcMo)} />
+        <Stat label="Tyres / mo" value={inr(tyreMo)} />
+        <Stat label="Battery / mo" value={inr(batMo)} />
+        <Stat label="Insurance / mo" value={inr(insMo)} />
+        <Stat label="Other / mo" value={inr(miscMo)} />
+        <Stat label="Total / car / mo" value={inr(totalMo)} tone="amber" hint="provision this much" />
+      </div>
+      <Card>
+        <H sub="Provision at fleet scale · a reserve is survival, not optional">Fleet provision</H>
+        <Table
+          head={["Fleet size", "Monthly provision", "Annual provision"]}
+          rows={[1, 3, 5, 10, 20].map((n) => [`${n} car${n > 1 ? "s" : ""}`, inr(totalMo * n), inrS(totalMo * n * 12)])}
+        />
+        <p className="mt-2 text-xs text-zinc-500">At 3 cars, one major repair or two idle weeks wipes a month's profit — keep the reserve funded before taking profit out. The company bears all servicing and maintenance under the {DRIVER_PCT}/{COMPANY_PCT} model; the driver bears only CNG.</p>
+      </Card>
+    </div>
+  );
+}
+
+/* ================= BREAK-EVEN ================= */
+function BreakEvenTab({ sim }) {
+  const d = simDerive(sim);
+  const capital = sim.dp + sim.processing;
+  const perCarNet = d.profitMo1;
+  const months = perCarNet > 0 ? capital / perCarNet : Infinity;
+  const fixedCost = d.e + d.carOpexMo;
+  const grossBE = fixedCost / (sim.companyPct / 100);
+  const grossBEday = grossBE / 26;
+
+  const curve = useMemo(() => {
+    const out = [];
+    let cum = -capital;
+    for (let m = 0; m <= 48; m += 2) {
+      out.push({ m, "Cumulative net / car": Math.round(cum) });
+      cum += perCarNet * 2;
+    }
+    return out;
+  }, [capital, perCarNet]);
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <H sub="Uses the simulator assumptions · company revenue = 40% of gross with floor">Break-even analysis</H>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Capital / car" value={inr(capital)} hint="down payment + processing" />
+          <Stat label="Company net / car / mo" value={inr(perCarNet)} tone={perCarNet >= 0 ? "green" : "red"} />
+          <Stat label="Break-even" value={months === Infinity ? "never" : `${Math.ceil(months)} mo`} tone="amber" hint="capital recovered" />
+          <Stat label="Break-even gross" value={inr(grossBE)} hint={`${inr(grossBEday)}/day — below this the floor must bind`} />
+        </div>
+        <div className="mt-3 h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={curve} margin={{ left: 4, right: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+              <XAxis dataKey="m" tick={{ fontSize: 11 }} label={{ value: "month", position: "insideBottomRight", offset: -2, fontSize: 10 }} />
+              <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={56} />
+              <Tooltip formatter={tooltipFmt} />
+              <Line type="monotone" dataKey="Cumulative net / car" stroke="#065f46" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="mt-2 text-xs text-zinc-500">Break-even gross is the monthly fare level where the company's {sim.companyPct}% exactly covers EMI + provisions + subscription ({inr(fixedCost)}). The floor of {inr(sim.floor)} exists precisely so months below that level don't come out of the company's pocket.</p>
+      </Card>
+    </div>
+  );
+}
+
+/* ================= CASH FLOW FORECAST ================= */
+function CashFlowTab({ sim }) {
+  const [startCars, setStartCars] = useState(3);
+  const [addEvery, setAddEvery] = useState(6);
+  const [collPct, setCollPct] = useState(96);
+  const [openingCash, setOpeningCash] = useState(150000);
+  const d = simDerive(sim);
+
+  /* seasonality: monsoon (Jun–Sep) dips ~8%, wedding season (Nov–Feb) lifts ~6% */
+  const seasonal = (monthIdx) => {
+    const m = (NOW.getMonth() + monthIdx) % 12;
+    if (m >= 5 && m <= 8) return 0.92;
+    if (m >= 10 || m <= 1) return 1.06;
+    return 1;
+  };
+
+  const rows = useMemo(() => {
+    const out = [];
+    let cash = openingCash, cars = startCars;
+    for (let m = 1; m <= 24; m++) {
+      if (addEvery > 0 && m > 1 && (m - 1) % addEvery === 0) { cars += 1; cash -= sim.dp + sim.processing; }
+      const gross = sim.gross * seasonal(m) * cars;
+      const companyRev = Math.max(gross * sim.companyPct / 100, sim.floor * cars) * collPct / 100;
+      const outgo = (d.e + d.carOpexMo) * cars + d.fleetFixedMo;
+      const net = companyRev - outgo;
+      cash += net;
+      out.push({ m, cars, gross: Math.round(gross), companyRev: Math.round(companyRev), outgo: Math.round(outgo), net: Math.round(net), cash: Math.round(cash) });
+    }
+    return out;
+  }, [startCars, addEvery, collPct, openingCash, sim, d]);
+
+  const minCash = Math.min(...rows.map((r) => r.cash));
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <H sub="24-month forecast · seasonality: monsoon −8%, wedding season +6% · uses simulator assumptions">Cash-flow forecast</H>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Field label="Cars today"><NumIn value={startCars} step={1} min={1} onChange={setStartCars} /></Field>
+          <Field label="Add a car every (mo, 0=never)"><NumIn value={addEvery} step={1} min={0} onChange={setAddEvery} /></Field>
+          <Field label="Collection %"><NumIn value={collPct} step={1} onChange={setCollPct} /></Field>
+          <Field label="Opening cash"><NumIn value={openingCash} step={10000} onChange={setOpeningCash} /></Field>
+        </div>
+      </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Cash at month 12" value={inrS(rows[11].cash)} tone={rows[11].cash >= 0 ? "green" : "red"} />
+        <Stat label="Cash at month 24" value={inrS(rows[23].cash)} tone={rows[23].cash >= 0 ? "green" : "red"} />
+        <Stat label="Lowest cash point" value={inrS(minCash)} tone={minCash >= 0 ? "green" : "red"} hint="keep this above zero" />
+        <Stat label="Fleet at month 24" value={rows[23].cars} hint="cars" />
+      </div>
+      <Card>
+        <div className="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={rows} margin={{ left: 4, right: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+              <XAxis dataKey="m" tick={{ fontSize: 11 }} label={{ value: "month", position: "insideBottomRight", offset: -2, fontSize: 10 }} />
+              <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={56} />
+              <Tooltip formatter={tooltipFmt} />
+              <Legend />
+              <Line type="monotone" dataKey="cash" name="Cash balance" stroke="#065f46" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="net" name="Net / month" stroke="#b45309" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <Table
+          head={["Month", "Cars", "Fleet gross", "Company revenue", "Outgo (EMI+opex)", "Net", "Cash"]}
+          rows={rows.filter((r) => r.m % 3 === 0).map((r) => [
+            `M${r.m}`, r.cars, inrS(r.gross), inrS(r.companyRev), inrS(r.outgo),
+            <span key="n" className={r.net >= 0 ? "text-emerald-700" : "text-rose-700"}>{inrS(r.net)}</span>,
+            <span key="c" className={r.cash >= 0 ? "font-semibold text-emerald-700" : "font-semibold text-rose-700"}>{inrS(r.cash)}</span>,
           ])}
         />
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <H sub="The core model · driver keeps 100% of fares, pays you fixed rent">Subscription + rent</H>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Subscription / mo / car"><NumIn value={subFee} step={250} onChange={setSubFee} /></Field>
-            <label className="block text-xs font-medium text-zinc-600">
-              <span className="mb-1 block uppercase tracking-wide">Subscription paid by</span>
-              <div className="flex overflow-hidden rounded-lg border border-zinc-300">
-                {["LLP", "Driver"].map((k) => (
-                  <button key={k} onClick={() => setSubPayer(k)}
-                    className={`flex-1 px-2 py-1.5 text-xs font-semibold focus:outline-none ${subPayer === k ? "bg-zinc-900 text-amber-300" : "bg-white text-zinc-600"}`}>{k}</button>
-                ))}
-              </div>
-            </label>
-            <Field label="Driver gross fare / day"><NumIn value={grossFare} step={100} onChange={setGrossFare} /></Field>
-            <Field label="Driver fuel / day"><NumIn value={driverFuel} step={50} onChange={setDriverFuel} /></Field>
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg bg-emerald-50 p-3 text-sm">
-              <div className="mb-1 font-bold text-emerald-800">LLP / car / mo</div>
-              <div className="flex justify-between"><span className="text-zinc-600">Rent ({days}d)</span><span style={MONO}>{inr(rentDay * days)}</span></div>
-              <div className="flex justify-between"><span className="text-zinc-600">− EMI + upkeep</span><span style={MONO} className="text-rose-700">{inr(base)}</span></div>
-              {subLLP > 0 && <div className="flex justify-between"><span className="text-zinc-600">− Subscription</span><span style={MONO} className="text-rose-700">{inr(subLLP)}</span></div>}
-              <div className="flex justify-between"><span className="text-zinc-600">− Net GST</span><span style={MONO} className="text-rose-700">{inr(gstOnRent)}</span></div>
-              <div className="mt-1 flex justify-between border-t border-emerald-100 pt-1 font-semibold"><span>Net</span><span style={MONO} className={subRentNet >= 0 ? "text-emerald-700" : "text-rose-700"}>{inr(subRentNet)}</span></div>
-            </div>
-            <div className="rounded-lg bg-sky-50 p-3 text-sm">
-              <div className="mb-1 font-bold text-sky-800">Driver / mo</div>
-              <div className="flex justify-between"><span className="text-zinc-600">Gross fares</span><span style={MONO}>{inr(grossFare * days)}</span></div>
-              <div className="flex justify-between"><span className="text-zinc-600">− Rent</span><span style={MONO} className="text-rose-700">{inr(rentDay * days)}</span></div>
-              <div className="flex justify-between"><span className="text-zinc-600">− Fuel</span><span style={MONO} className="text-rose-700">{inr(driverFuel * days)}</span></div>
-              {subDriver > 0 && <div className="flex justify-between"><span className="text-zinc-600">− Subscription</span><span style={MONO} className="text-rose-700">{inr(subDriver)}</span></div>}
-              <div className="mt-1 flex justify-between border-t border-sky-100 pt-1 font-semibold"><span>Take-home</span><span style={MONO} className={driverTakeHome >= 12000 ? "text-emerald-700" : "text-amber-600"}>{inr(driverTakeHome)}</span></div>
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-zinc-500">If the LLP pays the subscription, margin is thin — either price rent ~₹1,100+, or set the payer to Driver (his fare-keeping easily covers a ₹{Math.round(subFee / days)}/day pass). Flip the toggle to see the swing.</p>
-        </Card>
-
-        <Card>
-          <H sub="Corporate / outstation / dry-lease inputs">Other models</H>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Corporate bill / mo"><NumIn value={corpBill} step={1000} onChange={setCorpBill} /></Field>
-            <Field label="Corp driver salary"><NumIn value={corpSalary} step={1000} onChange={setCorpSalary} /></Field>
-            <Field label="Corp fuel / mo"><NumIn value={corpFuel} step={1000} onChange={setCorpFuel} /></Field>
-            <Field label="Dry lease / mo"><NumIn value={dryFlat} step={1000} onChange={setDryFlat} /></Field>
-            <Field label="Outstation margin/trip"><NumIn value={outMargin} step={250} onChange={setOutMargin} /></Field>
-            <Field label="Outstation trips/mo"><NumIn value={outTrips} step={1} onChange={setOutTrips} /></Field>
-          </div>
-          <div className="mt-2 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600">Corporate turns a loss until the bill covers driver + fuel + EMI + upkeep (≈{inr(corpSalary + corpFuel + base)}). Push billing above that before signing.</div>
-        </Card>
-      </div>
-
-      <Card>
-        <H sub="Default model · 60/40 with a company floor · driver pays own CNG">Revenue share (60 / 40)</H>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field label="Driver share %"><NumIn value={driverPct} step={1} onChange={setDriverPct} /></Field>
-          <Field label="Company floor / mo"><NumIn value={floor} step={500} onChange={setFloor} /></Field>
-          <Field label="Gross fare / day"><NumIn value={grossFare} step={100} onChange={setGrossFare} /></Field>
-          <Field label="Driver fuel / day"><NumIn value={driverFuel} step={50} onChange={setDriverFuel} /></Field>
-        </div>
-        <div className={`mt-2 flex items-center gap-2 rounded-lg p-2 text-xs ${floorCoversCost ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800"}`}>
-          <span className="font-semibold">Floor {inr(floor)}</span>
-          <span>{floorCoversCost ? "covers your fixed cost of " : "is BELOW your fixed cost of "}{inr(base)}{floorCoversCost ? " — a slow car can't lose you money." : " — raise it to at least this, or a slow car still loses."}</span>
-        </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-lg bg-emerald-50 p-3 text-sm">
-            <div className="mb-1 flex items-center justify-between font-bold text-emerald-800"><span>Company / car / month</span>{floorBinds && <Chip tone="amber">floor applied</Chip>}</div>
-            <div className="flex justify-between"><span className="text-zinc-600">{floorBinds ? "Floor take" : `${100 - driverPct}% of ${inr(rsGrossMo)}`}</span><span style={MONO}>{inr(rsCompanyShare)}</span></div>
-            <div className="flex justify-between"><span className="text-zinc-600">− EMI + upkeep + sub</span><span style={MONO} className="text-rose-700">{inr(base)}</span></div>
-            <div className="mt-1 flex justify-between border-t border-emerald-100 pt-1 font-semibold"><span>Net</span><span style={MONO} className={rsCompany >= 0 ? "text-emerald-700" : "text-rose-700"}>{inr(rsCompany)}</span></div>
-            <div className="flex justify-between text-xs"><span className="text-zinc-500">× 3 cars</span><span style={MONO} className={rsCompany >= 0 ? "text-emerald-700" : "text-rose-700"}>{inr(rsCompany * 3)}</span></div>
-          </div>
-          <div className="rounded-lg bg-sky-50 p-3 text-sm">
-            <div className="mb-1 font-bold text-sky-800">Driver / month</div>
-            <div className="flex justify-between"><span className="text-zinc-600">{floorBinds ? "Gross − floor" : `${driverPct}% of ${inr(rsGrossMo)}`}</span><span style={MONO}>{inr(rsGrossMo - rsCompanyShare)}</span></div>
-            <div className="flex justify-between"><span className="text-zinc-600">− His CNG</span><span style={MONO} className="text-rose-700">{inr(rsCngMo)}</span></div>
-            <div className="mt-1 flex justify-between border-t border-sky-100 pt-1 font-semibold"><span>Take-home</span><span style={MONO} className={rsDriver >= 18000 ? "text-emerald-700" : rsDriver >= 14000 ? "text-amber-600" : "text-rose-700"}>{inr(rsDriver)}</span></div>
-          </div>
-        </div>
-        <div className="mt-2 flex items-center justify-between rounded-lg bg-amber-50 p-2 text-xs">
-          <span className="text-amber-800">Slow month (−25% gross): driver {inr(rsDriverSlow)}, company / car</span>
-          <span style={MONO} className={rsCompanySlow >= 0 ? "font-semibold text-emerald-700" : "font-semibold text-rose-700"}>{inr(rsCompanySlow)}</span>
-        </div>
-        <p className="mt-2 text-xs text-zinc-500">The floor means the driver must cover your car's fixed cost before he keeps his 60% — so a weak car never bleeds you (set the floor = your true fixed cost). A good driver never hits it. To split gross you must see it: route money through the LLP account + GPS.</p>
-      </Card>
-
-      <Card>
-        <H sub="What you offer a driver · same car, three ways">The 3 driver options</H>
-        <Table
-          head={["Option", "Driver pays / keeps", "Company gets / car", "Best for"]}
-          rows={[
-            ["60 / 40 split", `keeps 60%, min floor ${inrS(floor)} to you`, <span key="a" className="text-emerald-700">{inr(rsCompany)} net</span>, "most drivers — upside shared"],
-            ["Fixed rent ₹1,000/day", "keeps 100% of fares", <span key="b" className="text-emerald-700">{inr(1000 * days - base)} net</span>, "driver who won't share earnings"],
-            ["Fixed ₹26k/mo (3-mo+)", "keeps 100%, locked term", <span key="c" className="text-emerald-700">{inr(26000 - base)} net</span>, "committed / serious drivers"],
-          ]}
-        />
-        <p className="mt-2 text-xs text-zinc-400">Company net shown after EMI + upkeep + subscription ({inr(base)}). The 60/40 earns you most on a busy car; the fixed options give you a guaranteed floor with zero earnings-tracking. Offer all three — it's how you sign every kind of driver and grow fastest.</p>
-      </Card>
-
-      <Card>
-        <H sub="Your Phase-1 plan · all 3 cars on subscription + fixed rent">3-car fleet total</H>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="Net / car / mo" value={inr(subRentNet)} tone={subRentNet >= 0 ? "green" : "red"} />
-          <Stat label="3-car LLP net / mo" value={inrS(fleet3)} tone={fleet3 >= 0 ? "green" : "red"} hint="before income tax" />
-          <Stat label="Driver take-home" value={inr(driverTakeHome)} tone={driverTakeHome >= 12000 ? "green" : "amber"} hint="per car / month" />
-          <Stat label="Annual LLP net" value={inrS(fleet3 * 12)} tone={fleet3 >= 0 ? "green" : "red"} hint="reinvest into car 4, 5..." />
-        </div>
-        <p className="mt-2 text-xs text-zinc-500">Subscription (no commission) is far cheaper than the old ~22% cut — that's what makes this model work. Keep a maintenance reserve; at 3 cars one big repair can wipe a month's profit. Confirm the exact per-car subscription fee and money-flow (fare to driver vs LLP) at the local Ola/Uber partner office. Output GST/ITC and LLP tax are in the Financial simulator (company mode).</p>
+        <p className="mt-2 text-xs text-zinc-500">Every new car costs {inr(sim.dp + sim.processing)} of cash up front and takes months to pay back — if the lowest cash point goes negative, slow the expansion or raise opening reserves. Corporate contracts (Clients tab) add revenue on top of this forecast when they exist; they are never guaranteed, so this forecast deliberately excludes them.</p>
       </Card>
     </div>
   );
@@ -1296,7 +1422,6 @@ function RevenueModelsTab({ sim }) {
 const CNG_VEHICLES = {
   "Dzire Tour S CNG": { cityAC: 18, cityNon: 21, hwyAC: 24, hwyNon: 27, tankKg: 9.2, seats: 4 },
   "Ertiga CNG": { cityAC: 14, cityNon: 16, hwyAC: 18, hwyNon: 20, tankKg: 9.5, seats: 6 },
-  "Aura CNG": { cityAC: 17, cityNon: 20, hwyAC: 23, hwyNon: 26, tankKg: 8.9, seats: 4 },
 };
 
 function CngTab() {
@@ -1376,7 +1501,7 @@ function CngTab() {
 
 function Money({ sim, setSim }) {
   const [tab, setTab] = useState("emi");
-  const tabs = [["emi", "EMI"], ["rent", "Rent guide"], ["cng", "CNG"], ["models", "Revenue models"], ["sim", "Financial simulator"], ["dep", "Depreciation"], ["scale", "Profit at scale"]];
+  const tabs = [["emi", "EMI"], ["share", "Revenue sharing"], ["corp", "Corporate"], ["cng", "CNG"], ["maint", "Maintenance"], ["dep", "Depreciation"], ["be", "Break-even"], ["scale", "Expansion"], ["cash", "Cash flow"], ["sim", "Projections"]];
   return (
     <div className="space-y-4">
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -1388,12 +1513,15 @@ function Money({ sim, setSim }) {
         ))}
       </div>
       {tab === "emi" && <EmiTab />}
-      {tab === "rent" && <RentGuideTab sim={sim} />}
+      {tab === "share" && <RevShareTab sim={sim} />}
+      {tab === "corp" && <CorporateTab sim={sim} />}
       {tab === "cng" && <CngTab />}
-      {tab === "models" && <RevenueModelsTab sim={sim} />}
-      {tab === "sim" && <SimulatorTab sim={sim} setSim={setSim} />}
+      {tab === "maint" && <MaintTab />}
       {tab === "dep" && <DepTab />}
+      {tab === "be" && <BreakEvenTab sim={sim} />}
       {tab === "scale" && <ScaleTab sim={sim} />}
+      {tab === "cash" && <CashFlowTab sim={sim} />}
+      {tab === "sim" && <SimulatorTab sim={sim} setSim={setSim} />}
     </div>
   );
 }
@@ -1480,24 +1608,31 @@ function Expenses({ expenses, setExpenses, cars }) {
 }
 
 /* ================= CLIENTS & LEADS ================= */
-function Clients({ clients, setClients, leads, setLeads }) {
+function Clients({ clients, setClients, leads, setLeads, cars, drivers }) {
   const [addLead, setAddLead] = useState(false);
   const [lf, setLf] = useState({ name: "", type: "IT Company", value: 50000, note: "" });
   const statusTone = (s) => (s === "Won" ? "green" : s === "Lost" ? "red" : s === "Negotiation" || s === "Quotation" ? "amber" : "blue");
+  const regOf = (id) => cars.find((c) => c.id === id)?.reg;
+  const nameOf = (id) => drivers.find((d) => d.id === id)?.name;
 
   return (
     <div className="space-y-4">
       <H sub="Corporate contracts · employee pickup-drop, airport & hotel duty">Client contracts</H>
+      <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
+        Corporate work is an <b>additional benefit, not a guarantee</b>. The company actively markets its services and makes every reasonable effort to secure contracts and assign them fairly to drivers — availability depends on market demand and successful client acquisition.
+      </div>
       {clients.map((k) => {
         const renew = daysUntil(k.end);
         const invoice = k.billing * (1 + k.gst / 100);
         const profit = k.billing - k.cost - k.penalties;
+        const kCars = (k.carIds || []).map(regOf).filter(Boolean);
+        const kDrivers = (k.driverIds || []).map(nameOf).filter(Boolean);
         return (
           <Card key={k.id}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <div style={DISP} className="font-bold text-zinc-900">{k.name}</div>
-                <div className="text-xs text-zinc-500">{k.type} · {k.cars} car{k.cars > 1 ? "s" : ""} · {k.timings}</div>
+                <div className="text-xs text-zinc-500">{k.type} · {kCars.length || (k.carIds || []).length} car{kCars.length > 1 ? "s" : ""} · {k.timings}</div>
               </div>
               <div className="flex gap-2">
                 {renew <= 90 && <Chip tone={renew <= 30 ? "red" : "amber"}>Renewal in {renew} d</Chip>}
@@ -1505,13 +1640,17 @@ function Clients({ clients, setClients, leads, setLeads }) {
               </div>
             </div>
             <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
-              <div><span className="text-zinc-500">Billing/mo: </span><span style={MONO}>{inr(k.billing)}</span></div>
+              <div><span className="text-zinc-500">Contract value/mo: </span><span style={MONO}>{inr(k.billing)}</span></div>
               <div><span className="text-zinc-500">Invoice (+{k.gst}% GST): </span><span style={MONO}>{inr(invoice)}</span></div>
+              <div><span className="text-zinc-500">Included km: </span><span style={MONO}>{k.includedKm?.toLocaleString("en-IN")} km/mo</span></div>
+              <div><span className="text-zinc-500">Extra km: </span><span style={MONO}>₹{k.extraKmRate}/km</span></div>
               <div><span className="text-zinc-500">Cost alloc.: </span><span style={MONO}>{inr(k.cost)}</span></div>
-              <div><span className="text-zinc-500">Profit/mo: </span><span style={MONO} className="font-semibold text-emerald-700">{inr(profit)}</span></div>
+              <div><span className="text-zinc-500">Profit/mo: </span><span style={MONO} className={`font-semibold ${profit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{inr(profit)}</span></div>
               <div><span className="text-zinc-500">Term: </span>{fmtD(k.start)} → {fmtD(k.end)}</div>
-              <div className="sm:col-span-2"><span className="text-zinc-500">SLA: </span>{k.sla}</div>
               <div><span className="text-zinc-500">Penalties MTD: </span><span style={MONO} className={k.penalties > 0 ? "text-rose-700" : ""}>{inr(k.penalties)}</span></div>
+              <div className="col-span-2"><span className="text-zinc-500">Vehicles: </span>{kCars.length ? kCars.map((r) => <span key={r} className="mr-1.5"><Plate reg={r} /></span>) : "—"}</div>
+              <div className="col-span-2"><span className="text-zinc-500">Drivers: </span>{kDrivers.length ? kDrivers.join(", ") : "—"}</div>
+              <div className="sm:col-span-4"><span className="text-zinc-500">SLA: </span>{k.sla}</div>
             </div>
             <div className="mt-3 flex gap-2">
               <Btn kind="dark" onClick={() => setClients(clients.map((x) => x.id === k.id ? { ...x, invoicePending: !x.invoicePending } : x))}>
@@ -1589,13 +1728,15 @@ function Plan({ sim, stats }) {
 
   const mark = (y) => proj[y - 1];
   const reserve = Math.round(stats.emiMo * 3);
+  /* scenarios on gross fares · company gets max(40%, floor) · driver pays own CNG */
   const scenarios = [
-    { name: "Worst case", rent: 950, coll: 0.85, idle: 4, repair: 2500, tone: "red" },
-    { name: "Average case", rent: 1150, coll: 0.95, idle: 1.5, repair: 1200, tone: "amber" },
-    { name: "Best case", rent: 1200, coll: 0.99, idle: 0.5, repair: 800, tone: "green" },
+    { name: "Worst case", gross: 50000, coll: 0.88, repair: 2500, tone: "red" },
+    { name: "Average case", gross: 68000, coll: 0.96, repair: 1200, tone: "amber" },
+    { name: "Best case", gross: 82000, coll: 0.99, repair: 800, tone: "green" },
   ].map((s) => {
-    const cf = s.rent * (30 - s.idle) * s.coll - d.e - d.carOpexMo - s.repair;
-    return { ...s, cf, fleetCf: cf * stats.active };
+    const companyRev = Math.max(s.gross * sim.companyPct / 100, sim.floor) * s.coll;
+    const cf = companyRev - d.e - d.carOpexMo - s.repair;
+    return { ...s, companyRev, cf, fleetCf: cf * stats.active };
   });
 
   return (
@@ -1628,8 +1769,8 @@ function Plan({ sim, stats }) {
         <div className="mt-3 space-y-1.5 rounded-lg bg-zinc-50 p-3 text-sm text-zinc-700">
           <p>• Keep a cash reserve of <span style={MONO} className="font-semibold">{inr(reserve)}</span> (3 × monthly EMI) before adding any car.</p>
           <p>• Buy in pairs after festive-season demand (Oct–Nov) when driver supply is strongest; avoid adding during monsoon slack.</p>
-          <p>• Prepay the highest-rate loan whenever idle cash exceeds 20% of total outstanding — at ~9.5%, every ₹1L prepaid in year 2 saves roughly ₹30–35k interest.</p>
-          <p>• Prefer 5-yr tenure for cash-flow headroom, then prepay to close in ~4 — the EMI cushion protects you in a bad month.</p>
+          <p>• Prepay loans whenever idle cash exceeds 20% of total outstanding — even at 8%, every ₹1L prepaid in year 2 saves roughly ₹25–30k interest over a 7-year tenure.</p>
+          <p>• The 7-yr tenure keeps EMI low (~₹11,200 on a ₹7.2L loan) for cash-flow headroom — then prepay to close in ~5 so you're not underwater on a depreciating asset.</p>
           <p>• Sell cars around year 5–6: resale falls below 35% and maintenance climbs; recycle proceeds into new units.</p>
         </div>
       </Card>
@@ -1639,11 +1780,11 @@ function Plan({ sim, stats }) {
           <Card key={s.name}>
             <div className="flex items-center justify-between">
               <span style={DISP} className="font-bold text-zinc-900">{s.name}</span>
-              <Chip tone={s.tone}>{s.rent}/day</Chip>
+              <Chip tone={s.tone}>{inrS(s.gross)} gross</Chip>
             </div>
             <div className="mt-2 space-y-1 text-sm text-zinc-600">
+              <div className="flex justify-between"><span>Company {sim.companyPct}% (floor {inrS(sim.floor)})</span><span style={MONO}>{inr(s.companyRev)}</span></div>
               <div className="flex justify-between"><span>Collection</span><span style={MONO}>{Math.round(s.coll * 100)}%</span></div>
-              <div className="flex justify-between"><span>Idle days / mo</span><span style={MONO}>{s.idle}</span></div>
               <div className="flex justify-between"><span>Repairs / mo</span><span style={MONO}>{inr(s.repair)}</span></div>
               <div className="mt-1 flex justify-between border-t border-zinc-100 pt-1 font-semibold"><span>Cash flow / car</span><span style={MONO} className={s.cf >= 0 ? "text-emerald-700" : "text-rose-700"}>{inr(s.cf)}</span></div>
               <div className="flex justify-between font-semibold"><span>Fleet / mo</span><span style={MONO} className={s.fleetCf >= 0 ? "text-emerald-700" : "text-rose-700"}>{inrS(s.fleetCf)}</span></div>
@@ -1654,10 +1795,10 @@ function Plan({ sim, stats }) {
       <Card>
         <H>Risk register</H>
         <div className="grid gap-x-6 gap-y-1.5 text-sm text-zinc-700 sm:grid-cols-2">
-          <p>• <b>Loan risk</b> — EMI is {Math.round(stats.emiMo / Math.max(1, stats.revenueMo) * 100)}% of revenue; keep it under 60%.</p>
-          <p>• <b>Driver default</b> — deposit covers ~{Math.round(25000 / 1150)} days of rent; act on day 3 of non-payment.</p>
+          <p>• <b>Loan risk</b> — EMI is {Math.round(stats.emiMo / Math.max(1, stats.companyRevMo) * 100)}% of company revenue; keep it under 60%.</p>
+          <p>• <b>Driver default</b> — the deposit covers roughly 3–4 weeks of company share; act on day 3 of a missed settlement.</p>
           <p>• <b>Accident risk</b> — comprehensive + zero-dep insurance mandatory; budget a replacement-vehicle fund.</p>
-          <p>• <b>Market risk</b> — Ola/Uber incentive swings change driver earnings; fixed rent shields you but stresses drivers.</p>
+          <p>• <b>Market risk</b> — Ola/Uber incentive swings move gross fares; the 60/40 split shares that swing, and the floor protects the company's fixed cost.</p>
           <p>• <b>Repair risk</b> — CNG kit and clutch wear fast in city duty; the service provision here assumes 5–6k km/month.</p>
           <p>• <b>Seasonality</b> — monsoon (Jun–Sep) dips collections ~5–10%; festive season peaks demand.</p>
         </div>
@@ -1674,7 +1815,7 @@ const TEMPLATES = [
 
 Dear [Name],
 
-We run a dedicated fleet of Hyundai Aura CNG sedans with verified, uniformed drivers for employee transport in [city]. Companies like yours use us for shift pickup-drop and airport duty at a fixed monthly rate — no surge, no per-km surprises.
+We run a dedicated fleet of brand-new Maruti Suzuki Dzire Tour S CNG sedans with verified, uniformed drivers for employee transport in [city]. Companies like yours use us for shift pickup-drop and airport duty at a fixed monthly rate — no surge, no per-km surprises.
 
 What you get: GPS tracking with live ETA, police-verified drivers, replacement vehicle within 60 minutes, monthly GST invoice, and an SLA with penalty clauses we sign up to.
 
@@ -1685,7 +1826,7 @@ Regards,
   },
   {
     k: "wa", t: "WhatsApp pitch · corporate",
-    body: `Hello [Name] ji 🙏 This is [Your name] from [Company]. We provide GPS-tracked Aura CNG cabs with verified drivers for employee pickup-drop — fixed monthly billing with GST invoice, replacement car guarantee. Currently serving [reference client]. Can I send a one-page quote for your [shift/airport] requirement?`,
+    body: `Hello [Name] ji 🙏 This is [Your name] from [Company]. We provide GPS-tracked Maruti Dzire Tour S CNG cabs with verified drivers for employee pickup-drop — fixed monthly billing with GST invoice, replacement car guarantee. Currently serving [reference client]. Can I send a one-page quote for your [shift/airport] requirement?`,
   },
   {
     k: "call", t: "Calling script · corporate",
@@ -1702,14 +1843,14 @@ Regards,
 
 To: [Client], [Address]
 Service: Employee transportation — [route/shift details]
-Vehicle: Hyundai Aura CNG sedan, 4-seater, GPS-tracked
+Vehicle: Maruti Suzuki Dzire Tour S CNG sedan, 4-seater, GPS-tracked
 Driver: Police-verified, uniformed, mobile provided
 
 Commercials
 • Monthly fixed charge per vehicle: ₹[amount]
 • Included: [X] km/month & [Y] hrs/day; extra km @ ₹[rate]
 • Fuel, driver, maintenance, insurance: included
-• GST @ 5% extra · Payment: within 7 days of invoice
+• GST @ 12% extra (with ITC) · Payment: within 7 days of invoice
 • SLA: pickup within 10 min of slot; ₹200 credit per miss
 • Replacement vehicle within 60 minutes of breakdown
 
@@ -1718,18 +1859,19 @@ Authorised signatory: ______________`,
   },
   {
     k: "driver", t: "Driver recruitment message",
-    body: `🚗 Drive our Hyundai Aura CNG on fixed daily rent — whatever you earn above it is yours. No commission, no app cut. Company handles insurance, registration & servicing; you handle CNG and daily running. Deposit ₹20,000–25,000 (refundable). Valid DL + police verification required. Call [phone] — cars available this week in Ludhiana / tricity.`,
+    body: `🚗 Drive a BRAND-NEW Maruti Suzuki Dzire Tour S CNG — keep 60% of everything you earn. Company provides the car, insurance, full servicing & maintenance, platform subscription and support; you pay only CNG. Corporate duty shared with drivers whenever we win contracts (best effort, not guaranteed). Deposit ₹20,000–25,000 (refundable). Commercial DL + badge + police verification required. Call [phone] — cars available this week in Ludhiana / tricity.`,
   },
   {
-    k: "driverpb", t: "Driver message · Hindi + Punjabi (WhatsApp)",
-    body: `गडी चाहीदी है? 🚕 Hyundai Aura CNG फिकस डेली किराए ते चलाओ — उस तों उते जो कमाओ ओ सारा तुहाडा। ना कोई कमीशन, ना app कटौती।
+    k: "driverpb", t: "Driver message · Hindi (WhatsApp)",
+    body: `🚕 नई Maruti Suzuki Dzire Tour S CNG चलाओ — जो कमाओगे उसका 60% आपका।
 
-कंपनी वलों: insurance, registration ते servicing।
-ड्राईवर वलों: CNG ते रोज़ाना खरच।
-डिपाज़ट: ₹20,000–25,000 (वापसीयोग)।
+कंपनी देगी: नई गाड़ी, इंश्योरेंस, पूरी सर्विस-मेंटेनेंस, प्लेटफॉर्म सब्सक्रिप्शन और सपोर्ट।
+ड्राइवर देगा: सिर्फ़ CNG।
+कॉर्पोरेट ड्यूटी: कंपनी दिलाने की पूरी कोशिश करेगी (गारंटी नहीं)।
+डिपॉज़िट: ₹20,000–25,000 (वापसी योग्य)।
 
-ज़रूरी: पक्का DL + पुलिस वेरिफिकेशन।
-संपरक: [phone] — लुधियाणा / त्रीसिटी विƧ1 गडीआं उपलब्ध।`,
+ज़रूरी: कमर्शियल DL + बैज + पुलिस वेरिफिकेशन।
+संपर्क: [phone] — लुधियाना / ट्राईसिटी में गाड़ियां उपलब्ध।`,
   },
 ];
 const DRIVER_CHANNELS = ["Ludhiana bus stand / Clock Tower taxi stands", "Chandigarh ISBT-17 & ISBT-43 stands", "Local gurdwara notice boards", "Ola/Uber driver WhatsApp groups", "Village referrals (Khanna, Doraha, Kharar)", "Existing driver referral (₹1,000 bonus)", "Punjabi Facebook / OLX auto groups", "Ajit / Jagbani classifieds", "Focal Point & Mandi labour chowks"];
@@ -1741,7 +1883,7 @@ const EARN_REF = [
   { city: "Chandigarh / tricity", h8: "1,400–1,900", h10: "1,900–2,500", h12: "2,400–3,200" },
 ];
 const DRIVER_STEPS = [
-  "Post the Hindi/Punjabi WhatsApp message (below) in local Ola/Uber & taxi-union groups and forward to existing drivers.",
+  "Lead with the offer: a brand-new Dzire Tour S CNG, 60% of gross is yours, company covers everything except CNG — post the WhatsApp message (below) in local Ola/Uber & taxi-union groups and forward to existing drivers.",
   "Put a printed notice at Ludhiana bus stand, Clock Tower, ISBT-17/43 and nearby gurdwaras — include ₹1,000 referral bonus.",
   "List on OLX and in Ajit/Jagbani classifieds; these still pull serious local drivers in Punjab.",
   "Screen: valid commercial DL, 2+ yrs experience, local address proof, police verification, and a guarantor from the village.",
@@ -1777,7 +1919,7 @@ function Playbook() {
           head={["City", "8 hours", "10 hours", "12 hours"]}
           rows={EARN_REF.map((r) => [r.city, `₹${r.h8}`, `₹${r.h10}`, `₹${r.h12}`])}
         />
-        <p className="mt-2 text-xs text-zinc-500">These are gross takings. After your ₹1,000 fixed rent and ~₹750 CNG (one tank ≈ 150 km), a 10–12 hr day still leaves the driver a healthy margin — that's why the model works. Short Rapido/Ola city rides pay well (~₹110–120 for 6 km); longer trips average lower per km. Chandigarh runs higher than Ludhiana thanks to airport, tourism and corporate demand. Estimates from local ground rates, not published tariffs.</p>
+        <p className="mt-2 text-xs text-zinc-500">These are gross takings before the split. On the 60/40 share, a ₹2,600 day leaves the driver ₹1,560 before ~₹750 CNG (one tank ≈ 150 km) — a 10–12 hr day is a healthy living, and the company's 40% covers the car. Short Rapido/Ola city rides pay well (~₹110–120 for 6 km); longer trips average lower per km. Chandigarh runs higher than Ludhiana thanks to airport, tourism and corporate demand. Estimates from local ground rates, not published tariffs.</p>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -1812,7 +1954,7 @@ export default function App() {
   const [expenses, setExpenses] = useState(SEED_EXPENSES);
   const [clients, setClients] = useState(SEED_CLIENTS);
   const [leads, setLeads] = useState(SEED_LEADS);
-  const [sim, setSim] = useState({ cars: 5, price: 715000, dp: 100000, rate: 9.5, tenure: 5, rent: 1150, days: 30, insurance: 28000, service: 15000, tyres: 16000, battery: 6500, annualMaint: 6000, misc: 500, parking: 0, accountant: 2000, office: 0, processing: 5000, mode: "company", outputGstPct: 18, itcPerCar: 92000, inputItcPct: 18, corpTaxPct: 25.17, wdvRate: 30, claimItc: true });
+  const [sim, setSim] = useState({ cars: 5, price: 820000, dp: 100000, rate: DEF_RATE, tenure: DEF_TENURE, gross: AVG_GROSS_MO, companyPct: COMPANY_PCT, floor: 20000, subscription: 3500, insurance: 28000, service: 15000, tyres: 16000, battery: 6500, annualMaint: 6000, misc: 500, parking: 0, accountant: 2000, office: 0, processing: 5000, mode: "company", outputGstPct: 18, itcPerCar: 90000, inputItcPct: 18, corpTaxPct: 25.17, wdvRate: 30, claimItc: true });
 
   const stats = useMemo(() => {
     const total = cars.length;
@@ -1820,26 +1962,34 @@ export default function App() {
     const active = activeCars.length;
     const service = cars.filter((c) => c.status === "Service").length;
     const idle = total - active - service;
-    const revenueMo = activeCars.reduce((s, c) => s + c.dailyRent * 30, 0) + clients.reduce((s, k) => s + (k.billing - k.cost), 0) * 0; // client profit shown separately
+    /* 60/40 revenue engine · trailing-30-day driver settlements */
+    const activeDrivers = drivers.filter((d) => d.active && cars.some((c) => c.driverId === d.id));
+    const grossMo = activeDrivers.reduce((s, d) => s + sumG(last30(d.history)), 0);
+    const driverPayoutMo = activeDrivers.reduce((s, d) => s + sumG(last30(d.history)) * (d.share || DRIVER_PCT) / 100, 0);
+    const shareMo = grossMo - driverPayoutMo;                                 // company's 40%
+    const corpProfitMo = clients.reduce((s, k) => s + (k.billing - k.cost - k.penalties), 0);
+    const corpBillingMo = clients.reduce((s, k) => s + k.billing, 0);
+    const companyRevMo = shareMo + corpBillingMo;                             // company revenue incl. corporate billing
     const loans = cars.map(carLoan);
     const emiMo = loans.reduce((s, l) => s + l.emi, 0);
     const loanOut = loans.reduce((s, l) => s + l.remaining, 0);
     const opexMo = total * perCarOpexMo() + 2000;
-    const profitMo = revenueMo - emiMo - opexMo;
+    const profitMo = shareMo + corpProfitMo - emiMo - opexMo;                 // company net
     const pending = drivers.filter((d) => d.active).reduce((s, d) => s + d.pending, 0);
     const fleetValue = cars.reduce((s, c) => s + carValue(c), 0);
     const invested = cars.reduce((s, c) => s + c.onRoad, 0);
     const capital = cars.reduce((s, c) => s + c.downPayment, 0);
     const itcFleet = cars.reduce((s, c) => s + c.onRoad * 0.86 * 18 / 118, 0); // ~18% GST on ex-showroom share
-    const perCarProfit = active > 0 ? (revenueMo - emiMo - opexMo) / active : 0;
+    const perCarProfit = active > 0 ? profitMo / active : 0;
     return {
-      total, active, service, idle, revenueMo, emiMo, opexMo, profitMo, pending, loanOut,
+      total, active, service, idle, grossMo, driverPayoutMo, shareMo, companyRevMo,
+      revenueMo: companyRevMo, emiMo, opexMo, profitMo, pending, loanOut,
       fleetValue, depreciation: invested - fleetValue, capital, itcFleet,
       utilization: total ? active / total : 0,
-      avgRevCar: active ? revenueMo / active : 0,
+      avgRevCar: active ? grossMo / active : 0,
       avgProfitCar: Math.max(0, perCarProfit),
-      defaultRate: revenueMo ? pending / revenueMo : 0,
-      maintPct: revenueMo ? opexMo / revenueMo : 0,
+      defaultRate: shareMo ? pending / shareMo : 0,
+      maintPct: companyRevMo ? opexMo / companyRevMo : 0,
       roi: capital ? (profitMo * 12) / capital : 0,
       breakEvenMo: perCarProfit > 0 ? Math.ceil(100000 / perCarProfit) : 0,
     };
@@ -1862,7 +2012,7 @@ export default function App() {
               </span>
               <div>
                 <div style={DISP} className="text-base font-extrabold uppercase tracking-widest leading-none">Aura Fleet</div>
-                <div className="text-[11px] text-zinc-400">Commercial CNG fleet · Ludhiana / Chandigarh · {fmtD(NOW.toISOString())}</div>
+                <div className="text-[11px] text-zinc-400">{VEHICLE} fleet · 60/40 revenue share · Ludhiana / Chandigarh · {fmtD(NOW.toISOString())}</div>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -1888,12 +2038,12 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pt-4">
-        {tab === "overview" && <Overview cars={cars} drivers={drivers} stats={stats} />}
-        {tab === "fleet" && <Fleet cars={cars} setCars={setCars} drivers={drivers} />}
-        {tab === "drivers" && <Drivers drivers={drivers} setDrivers={setDrivers} cars={cars} />}
+        {tab === "overview" && <Overview cars={cars} drivers={drivers} stats={stats} expenses={expenses} />}
+        {tab === "fleet" && <Fleet cars={cars} setCars={setCars} drivers={drivers} expenses={expenses} />}
+        {tab === "drivers" && <Drivers drivers={drivers} setDrivers={setDrivers} cars={cars} clients={clients} />}
         {tab === "money" && <Money sim={sim} setSim={setSim} />}
         {tab === "expenses" && <Expenses expenses={expenses} setExpenses={setExpenses} cars={cars} />}
-        {tab === "clients" && <Clients clients={clients} setClients={setClients} leads={leads} setLeads={setLeads} />}
+        {tab === "clients" && <Clients clients={clients} setClients={setClients} leads={leads} setLeads={setLeads} cars={cars} drivers={drivers} />}
         {tab === "plan" && <Plan sim={sim} stats={stats} />}
         {tab === "playbook" && <Playbook />}
         <p className="mt-6 text-center text-xs text-zinc-400">Prototype with sample data · figures are estimates, not accounting or tax advice · session data resets on reload</p>

@@ -40,10 +40,11 @@ Secondary car: **Maruti Ertiga CNG** — 6-seater, ~₹3–4/km more fuel, but e
 | On-road price | ~₹8.2 lakh |
 | Down payment | ₹1 lakh |
 | Loan | ~₹7.2 lakh |
-| Tenure | 7 years |
-| **Realistic EMI** | **~₹12,700/month** |
+| Interest rate | **8% p.a.** |
+| Tenure | **7 years (84 months)** |
+| **EMI** | **~₹11,200/month** |
 
-**Honest caveat:** ₹11,200 EMI (at ~9.5%) is optimistic. Commercial/taxi loans carry higher rates (11–14%) and sometimes shorter tenures. Budget ~₹12,700 (7 yr @ 12%); a 5-year loan would be ~₹16,000. Confirm the real rate and max tenure with your lender. A 7-year loan keeps EMI low but leaves you underwater on a depreciating asset for a long time.
+**Financing assumption:** the model runs on **8% p.a. over 7 years** — these are the default values throughout the app (editable in the EMI simulator). Lock this rate in writing with your lender before booking; if your actual quote comes in higher, plug it into the simulator and re-check the floor (§8). The 7-year tenure keeps the EMI low for cash-flow headroom — prepay when cash allows so you're not underwater on a depreciating asset for years.
 
 ---
 
@@ -53,10 +54,10 @@ Before any driver keeps a rupee, each car costs the company roughly:
 
 | Cost | Monthly |
 |---|---|
-| EMI | ~₹12,700 |
+| EMI (8% · 7 yr) | ~₹11,200 |
 | Insurance + servicing + tyres + battery provisions | ~₹4,000–6,500 |
 | Platform subscription | ~₹3,500 |
-| **All-in fixed cost / car** | **~₹18,000–20,000** |
+| **All-in fixed cost / car** | **~₹19,000–21,000** |
 
 This ~₹20,000 is the single most important number. Every pricing decision, and especially the company floor (§8), must be measured against it.
 
@@ -67,7 +68,7 @@ This ~₹20,000 is the single most important number. Every pricing decision, and
 **On the car purchase — your ITC edge.** Since Sept 2025, small CNG cars attract 18% GST. On a ₹8.2L car, the embedded GST is ~₹90,000. As an LLP running passenger transport, you can **claim that ~₹90k credit per car** (plus ITC on insurance, servicing, repairs). Across 3 cars that's ~₹2.7 lakh recovered.
 
 **But you must charge output GST to claim it:**
-- **Driver dry-lease / fixed rent** → **18% GST** on the rent (you absorb it; drivers don't reclaim it).
+- **Company share of driver settlements** → modelled at **18% GST** on the company's revenue (you absorb it; drivers don't reclaim it). Editable in the simulator — confirm the exact treatment of revenue-share settlements with your CA.
 - **Corporate contracts** → choose **5% (with driver, no car ITC)** or **12% (with ITC)**. Use the 12%-with-ITC route on corporate contracts to unlock the car credit.
 - **Uber/Ola rides** → the platform handles 5% under Section 9(5); you don't file it, and you can't claim car ITC on those rides.
 
@@ -92,29 +93,24 @@ Why this matters: a subscription (~₹100–150/day per car) is far cheaper than
 
 ---
 
-## 7. The three driver options (your menu)
+## 7. The driver deal — 60% driver / 40% company revenue share
 
-You offer every driver a choice. This is how you sign all kinds of drivers and grow fastest.
+Every driver joins on the same deal. One model, clean books, no earnings-tracking disputes.
 
-### Option A — 60/40 revenue share (default)
 - Driver keeps **60%** of gross fares; company takes **40%**.
-- Driver pays his **own CNG**; company pays EMI, insurance, servicing, permits, financing, subscription.
+- **The driver pays only his CNG/fuel** — out of his 60%, recorded at every settlement.
+- **The company provides:**
+  - a brand-new **Maruti Suzuki Dzire Tour S CNG**
+  - insurance
+  - regular servicing and maintenance
+  - fleet management
+  - platform subscription where applicable
+  - driver support and operational management
 - **Company floor:** the company's share is never less than the floor (see §8).
-- No guarantee to the driver — his income is his hustle, which keeps him motivated.
+- **Settlements:** weekly, through the company account, with a full statement — the driver ledger in the app auto-computes gross revenue, the 60/40 split, driver fuel, driver net earnings and company earnings.
+- **Corporate duty** is an additional benefit the company provides whenever possible — see §11. It is never guaranteed.
 
-### Option B — Fixed rent ₹1,000/day
-- For a driver who won't share earnings.
-- Driver keeps **100%** of fares, pays you a flat **₹1,000/day** and his own CNG.
-- Dead simple; you don't track his earnings.
-
-### Option C — Fixed ₹26,000/month (3-month+)
-- A committed monthly lease for serious drivers.
-- Same ~₹1,000/day economics, but locked for 3 months or more — better stability and lower churn.
-
-**Company net per car (after ~₹20k fixed cost), on a busy car:**
-- 60/40: ~₹7,000 (busy) — earns most on a high-gross car
-- Fixed ₹1,000/day: ~₹5,000–6,000
-- Fixed ₹26k/month: ~₹6,000
+**Company net per car (after ~₹20k fixed cost):** at ₹68k gross, the company's 40% is ₹27,200 → **~₹7,000 net**; a busy ₹80k+ car nets ₹11,000+.
 
 ---
 
@@ -164,11 +160,13 @@ A full **12–13 hour day, 26–27 days (290–300 hrs/month)** grosses:
 - On **60/40** with his own CNG, take-home lands roughly **₹14,000–19,500/month** depending on gross and fuel. He reaches ₹20k+ only on a busy ₹2,700+/day car with efficient fuel.
 - Chandigarh pays ~₹6–7k/month more than Ludhiana at the same hours (airport, tourism, affluent riders).
 
-**Honest note:** you cannot *guarantee* a driver ₹25k on rent or split alone — his income is his hours. What you control (at zero cost): feed him corporate rides, keep him on all three apps, and never let the car sit idle.
+**Honest note:** you cannot *guarantee* a driver ₹25k on the split alone — his income is his hours. What you control (at zero cost): feed him corporate rides when contracts exist, keep him on all three apps, and never let the car sit idle.
 
 ---
 
 ## 11. Corporate contracts (the profit multiplier)
+
+**Corporate work is an additional benefit, not a guarantee.** The company actively markets its services and makes every reasonable effort to secure corporate contracts and assign them fairly to drivers — but availability depends on market demand and successful client acquisition. Never promise a driver corporate duty; promise best efforts.
 
 Companies pay for reliable employee/manager transport. Two shapes:
 
@@ -226,7 +224,7 @@ Corporate contracts (properly priced) and the subscription-cost saving are what 
 ## 16. Key risks & caveats (read before pitching)
 
 - **Platform policy** — confirm subscription availability and money-flow for *cars* in your city; it's the linchpin.
-- **EMI reality** — commercial loan rates are higher than personal; model ₹12,700, not ₹11,200.
+- **EMI reality** — the model assumes **8% p.a. / 7 years (~₹11,200 EMI)**; commercial quotes can run higher, so lock the rate in writing before booking and re-run the simulator if it moves.
 - **CNG burn** — a busy car's fuel is ₹22–25k, not ₹16–18k; it decides the driver's take-home.
 - **The floor must cover cost** — set it at ~₹20k or a slow car still loses you money.
 - **Corporate underpricing** — a dedicated car needs ₹62k+; ₹55k loses money.
@@ -238,7 +236,14 @@ Corporate contracts (properly priced) and the subscription-cost saving are what 
 
 ## 17. The software
 
-The Aura Fleet app supports this model end to end: fleet register with loan/insurance/permit tracking, driver ledger with the three payment options, a Rent Guide and CNG calculator (Dzire/Ertiga, AC, city/highway), a Revenue Models tab with the 60/40 split + company floor + slow-month stress test, a Financial Simulator with GST/ITC/depreciation/company-tax, depreciation and profit-at-scale tools, corporate client & lead CRM, expense tracking, growth/risk planning, and a Punjab-specific playbook (driver sourcing, corporate pitch, Hindi/Punjabi recruitment message).
+The Aura Fleet app supports this model end to end:
+
+- **Fleet dashboard** — total fleet gross, company revenue, driver payouts, EMI tracker, maintenance tracker, insurance/PUC/fitness reminders, vehicle utilization, and daily/weekly/monthly/yearly reports.
+- **Fleet register** — every Dzire Tour S CNG with registration details, EMI schedule, insurance, fitness certificate, PUC, permit, service history, tyre & battery replacement, accident history, depreciation and current estimated value.
+- **Driver ledger** — personal details & KYC, DL and badge validity, assigned vehicle, revenue history with the automatic 60/40 split (gross revenue → driver 60% → company 40% → fuel entered by the driver → final driver earnings → company earnings), fuel expenses, corporate assignments, app-based earnings, attendance and performance rating. Generates the revenue-share agreement and settlement receipts.
+- **Corporate client CRM** — client name, monthly contract value, included kilometres, extra-km charges, contract duration, renewal reminders, assigned vehicle & driver, and monthly profitability, plus a lead pipeline.
+- **Calculators** — EMI (8% · 7-yr defaults, editable), revenue sharing (60/40 + floor + slow-month stress + driver earning ladder), corporate profitability, CNG costs (Dzire/Ertiga, AC, city/highway), maintenance provisioning, depreciation, break-even analysis, fleet expansion planning, cash-flow forecasting and profit projections with GST/ITC/depreciation/company-tax.
+- **Expense tracking, growth & risk planning**, and a Punjab-specific playbook (driver sourcing on the 60/40 offer, corporate pitch, Hindi recruitment message).
 
 ---
 
