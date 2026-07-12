@@ -8,8 +8,8 @@ import {
 } from "lucide-react";
 
 /* ================= formatting & finance math ================= */
-const MONO = { fontFamily: "'IBM Plex Mono', ui-monospace, monospace" };
-const DISP = { fontFamily: "'Archivo', system-ui, sans-serif" };
+const MONO = { fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontFeatureSettings: "'tnum' 1" };
+const DISP = { fontFamily: "'Inter', system-ui, sans-serif", letterSpacing: "-0.01em" };
 const NOW = new Date();
 const inr = (n) => (n < 0 ? "−₹" : "₹") + Math.round(Math.abs(n)).toLocaleString("en-IN");
 const inrS = (n) => {
@@ -128,62 +128,62 @@ const SEED_LEADS = [
 ];
 const LEAD_STATUSES = ["New", "Contacted", "Meeting", "Quotation", "Negotiation", "Won", "Lost"];
 
-/* ================= tiny UI atoms ================= */
+/* ================= tiny UI atoms · premium design system ================= */
 const Card = ({ children, className = "" }) => (
-  <div className={`rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm transition-shadow duration-200 hover:shadow-md ${className}`}>{children}</div>
+  <div className={`rounded-2xl border border-zinc-900/[0.06] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-300 ease-out hover:shadow-[0_16px_40px_-16px_rgba(16,24,40,0.14)] ${className}`}>{children}</div>
 );
 const H = ({ children, sub }) => (
-  <div className="mb-3">
-    <h2 style={DISP} className="text-lg font-extrabold uppercase tracking-wide text-zinc-900">{children}</h2>
-    {sub && <p className="text-xs text-zinc-500">{sub}</p>}
+  <div className="mb-4">
+    <h2 style={DISP} className="text-[15px] font-semibold tracking-tight text-zinc-900">{children}</h2>
+    {sub && <p className="mt-0.5 text-[12.5px] leading-snug text-zinc-400">{sub}</p>}
   </div>
 );
 const Stat = ({ label, value, tone = "zinc", hint }) => {
-  const tones = { zinc: "text-zinc-900", green: "text-emerald-700", red: "text-rose-700", amber: "text-amber-600" };
-  const bars = { zinc: "bg-zinc-300", green: "bg-emerald-400", red: "bg-rose-400", amber: "bg-amber-400" };
+  const tones = { zinc: "text-zinc-900", green: "text-emerald-600", red: "text-rose-600", amber: "text-amber-600" };
+  const dots = { zinc: "bg-zinc-300", green: "bg-emerald-500", red: "bg-rose-500", amber: "bg-amber-400" };
   return (
-    <div className="relative overflow-hidden rounded-xl border border-zinc-200/80 bg-white p-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
-      <span className={`absolute left-0 top-0 h-full w-1 ${bars[tone]}`} />
-      <div className="pl-1.5">
-        <div className="text-xs uppercase tracking-wider text-zinc-500">{label}</div>
-        <div style={MONO} className={`mt-1 text-xl font-semibold ${tones[tone]}`}>{value}</div>
-        {hint && <div className="mt-0.5 text-xs text-zinc-400">{hint}</div>}
+    <div className="group relative overflow-hidden rounded-2xl border border-zinc-900/[0.06] bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-16px_rgba(16,24,40,0.16)]">
+      <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dots[tone]} transition-transform duration-300 group-hover:scale-125`} />
+        <span className="truncate">{label}</span>
       </div>
+      <div style={MONO} className={`mt-1.5 text-xl font-semibold tracking-tight ${tones[tone]}`}>{value}</div>
+      {hint && <div className="mt-0.5 truncate text-[11.5px] text-zinc-400">{hint}</div>}
     </div>
   );
 };
 const Plate = ({ reg }) => (
-  <span style={MONO} className="inline-block whitespace-nowrap rounded border-2 border-zinc-900 bg-amber-400 px-1.5 py-0.5 text-xs font-bold tracking-wider text-zinc-900">
+  <span style={MONO} className="inline-block whitespace-nowrap rounded-md border-2 border-zinc-900 bg-gradient-to-b from-amber-300 to-amber-400 px-1.5 py-0.5 text-xs font-bold tracking-wider text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_1px_2px_rgba(16,24,40,0.15)]">
     {reg}
   </span>
 );
 const Chip = ({ children, tone = "zinc" }) => {
   const m = {
-    zinc: "bg-zinc-100 text-zinc-700", green: "bg-emerald-100 text-emerald-800",
-    red: "bg-rose-100 text-rose-800", amber: "bg-amber-100 text-amber-800", blue: "bg-sky-100 text-sky-800",
+    zinc: "bg-zinc-50 text-zinc-600 ring-zinc-900/10", green: "bg-emerald-50 text-emerald-700 ring-emerald-600/15",
+    red: "bg-rose-50 text-rose-700 ring-rose-600/15", amber: "bg-amber-50 text-amber-700 ring-amber-600/20", blue: "bg-sky-50 text-sky-700 ring-sky-600/15",
   };
-  return <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${m[tone]}`}>{children}</span>;
+  return <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium leading-5 ring-1 ring-inset ${m[tone]}`}>{children}</span>;
 };
 const Btn = ({ children, onClick, kind = "dark", className = "", disabled }) => {
   const m = {
-    dark: "bg-zinc-900 text-white hover:bg-zinc-700",
-    accent: "bg-amber-400 text-zinc-900 hover:bg-amber-300",
-    ghost: "border border-zinc-300 text-zinc-700 hover:bg-zinc-100",
+    dark: "bg-zinc-900 text-white shadow-[0_1px_2px_rgba(16,24,40,0.25),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-zinc-800",
+    accent: "bg-gradient-to-b from-amber-300 to-amber-400 text-zinc-900 shadow-[0_1px_2px_rgba(146,90,0,0.25),inset_0_1px_0_rgba(255,255,255,0.5)] hover:brightness-105",
+    ghost: "border border-zinc-200 bg-white text-zinc-600 shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900",
   };
   return (
     <button disabled={disabled} onClick={onClick}
-      className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-40 ${m[kind]} ${className}`}>
+      className={`rounded-xl px-3.5 py-2 text-[13px] font-semibold transition-all duration-200 ease-out active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400/30 disabled:opacity-40 ${m[kind]} ${className}`}>
       {children}
     </button>
   );
 };
 const Field = ({ label, children }) => (
-  <label className="block text-xs font-medium text-zinc-600">
-    <span className="mb-1 block uppercase tracking-wide">{label}</span>
+  <label className="block text-xs font-medium text-zinc-500">
+    <span className="mb-1.5 block text-[10.5px] font-semibold uppercase tracking-[0.08em] text-zinc-400">{label}</span>
     {children}
   </label>
 );
-const inputCls = "w-full rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-amber-400";
+const inputCls = "w-full rounded-xl border border-zinc-200 bg-zinc-50/50 px-3 py-2 text-sm text-zinc-900 shadow-[inset_0_1px_2px_rgba(16,24,40,0.03)] transition-all duration-200 placeholder:text-zinc-300 hover:border-zinc-300 focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-amber-400/20";
 const NumIn = ({ value, onChange, step = 1, min }) => (
   <input type="number" step={step} min={min} value={value} className={inputCls} style={MONO}
     onChange={(e) => onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))} />
@@ -200,11 +200,12 @@ const Sel = ({ value, onChange, options }) => (
   </select>
 );
 const Modal = ({ title, onClose, children, wide }) => (
-  <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 sm:items-center">
-    <div className={`max-h-[88vh] w-full overflow-y-auto rounded-2xl bg-white p-4 shadow-xl ${wide ? "max-w-2xl" : "max-w-md"}`}>
-      <div className="mb-3 flex items-center justify-between">
-        <h3 style={DISP} className="text-base font-extrabold uppercase tracking-wide text-zinc-900">{title}</h3>
-        <button onClick={onClose} className="rounded-full px-2 py-0.5 text-zinc-500 hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-400">✕</button>
+  <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/40 p-3 backdrop-blur-[6px] sm:items-center" style={{ animation: "fadeIn .2s ease-out both" }}>
+    <div className={`max-h-[88vh] w-full overflow-y-auto rounded-3xl border border-white/60 bg-white/95 p-5 shadow-[0_32px_80px_-16px_rgba(16,24,40,0.35)] backdrop-blur-xl ${wide ? "max-w-2xl" : "max-w-md"}`}
+      style={{ animation: "modalIn .3s cubic-bezier(0.16,1,0.3,1) both" }}>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 style={DISP} className="text-[15px] font-semibold tracking-tight text-zinc-900">{title}</h3>
+        <button onClick={onClose} aria-label="Close" className="flex h-7 w-7 items-center justify-center rounded-full text-sm text-zinc-400 transition-colors duration-200 hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400/30">✕</button>
       </div>
       {children}
     </div>
@@ -214,15 +215,15 @@ const Table = ({ head, rows }) => (
   <div className="overflow-x-auto">
     <table className="w-full min-w-max text-left text-sm">
       <thead>
-        <tr className="border-b border-zinc-200 text-xs uppercase tracking-wider text-zinc-500">
-          {head.map((h, i) => <th key={i} className={`py-2 pr-4 ${i > 0 ? "text-right" : ""}`}>{h}</th>)}
+        <tr className="border-b border-zinc-100 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+          {head.map((h, i) => <th key={i} className={`py-2.5 pr-4 ${i > 0 ? "text-right" : ""}`}>{h}</th>)}
         </tr>
       </thead>
       <tbody>
         {rows.map((r, i) => (
-          <tr key={i} className="border-b border-zinc-100">
+          <tr key={i} className="border-b border-zinc-50 transition-colors duration-150 last:border-0 hover:bg-zinc-50/70">
             {r.map((c, j) => (
-              <td key={j} style={j > 0 ? MONO : undefined} className={`py-2 pr-4 ${j > 0 ? "text-right" : "font-medium text-zinc-800"}`}>{c}</td>
+              <td key={j} style={j > 0 ? MONO : undefined} className={`py-2.5 pr-4 ${j > 0 ? "text-right" : "font-medium text-zinc-800"}`}>{c}</td>
             ))}
           </tr>
         ))}
@@ -307,10 +308,10 @@ function Overview({ cars, drivers, stats, expenses }) {
       <Card>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <H sub="Fleet performance normalised from the trailing-30-day ledger">Reports · {period.toLowerCase()}</H>
-          <div className="inline-flex rounded-lg border border-zinc-300 p-0.5">
+          <div className="inline-flex rounded-full border border-zinc-200 bg-white p-0.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
             {Object.keys(PERIODS).map((k) => (
               <button key={k} onClick={() => setPeriod(k)}
-                className={`rounded-md px-2.5 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400 ${period === k ? "bg-zinc-900 text-amber-300" : "text-zinc-600"}`}>
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400/30 ${period === k ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-600"}`}>
                 {k}
               </button>
             ))}
@@ -865,10 +866,10 @@ function SimulatorTab({ sim, setSim }) {
       <Card>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <H sub="Every figure is editable — defaults are realistic Indian assumptions">Assumptions</H>
-          <div className="inline-flex rounded-lg border border-zinc-300 p-0.5">
+          <div className="inline-flex rounded-full border border-zinc-200 bg-white p-0.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
             {[["company", "Company · GST + ITC + tax"], ["personal", "No GST · pre-tax"]].map(([k, l]) => (
               <button key={k} onClick={() => setSim({ ...sim, mode: k })}
-                className={`rounded-md px-2.5 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400 ${sim.mode === k ? "bg-zinc-900 text-amber-300" : "text-zinc-600"}`}>
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400/30 ${sim.mode === k ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-600"}`}>
                 {l}
               </button>
             ))}
@@ -1456,9 +1457,9 @@ function CngTab() {
           <Field label="City (CNG price)"><Sel value={city} onChange={setCity} options={Object.keys(CITY_CNG)} /></Field>
           <label className="block text-xs font-medium text-zinc-600">
             <span className="mb-1 block uppercase tracking-wide">Air-con</span>
-            <div className="flex overflow-hidden rounded-lg border border-zinc-300">
+            <div className="flex overflow-hidden rounded-xl border border-zinc-200 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
               {[["on", "AC on"], ["off", "AC off"]].map(([k, l]) => (
-                <button key={k} onClick={() => setAc(k === "on")} className={`flex-1 px-2 py-1.5 text-xs font-semibold focus:outline-none ${(ac ? "on" : "off") === k ? "bg-zinc-900 text-amber-300" : "bg-white text-zinc-600"}`}>{l}</button>
+                <button key={k} onClick={() => setAc(k === "on")} className={`flex-1 px-2 py-1.5 text-xs font-semibold focus:outline-none ${(ac ? "on" : "off") === k ? "bg-zinc-900 text-white shadow-sm" : "bg-white text-zinc-600"}`}>{l}</button>
               ))}
             </div>
           </label>
@@ -1510,7 +1511,7 @@ function Money({ sim, setSim }) {
       <div className="flex gap-2 overflow-x-auto pb-1">
         {tabs.map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-amber-400 ${tab === k ? "bg-zinc-900 text-amber-300 shadow-sm" : "border border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"}`}>
+            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all duration-200 ease-out focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400/30 ${tab === k ? "bg-zinc-900 text-white shadow-md shadow-zinc-900/20" : "border border-zinc-200 bg-white text-zinc-500 shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:border-zinc-300 hover:text-zinc-900 hover:shadow-md"}`}>
             {l}
           </button>
         ))}
@@ -2004,43 +2005,60 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-100 pb-10" style={DISP}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap'); @media (prefers-reduced-motion: reduce){*{transition:none!important}}`}</style>
-      <header className="sticky top-0 z-40 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 text-white shadow-lg ring-1 ring-white/5">
-        <div className="mx-auto max-w-6xl px-4 pt-3">
+    <div className="min-h-screen bg-zinc-50 pb-12 text-zinc-900" style={DISP}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+        html{scroll-behavior:smooth}
+        body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+        ::selection{background:#fbbf24;color:#18181b}
+        *::-webkit-scrollbar{height:8px;width:8px}
+        *::-webkit-scrollbar-track{background:transparent}
+        *::-webkit-scrollbar-thumb{background:#d4d4d8;border-radius:9999px;border:2px solid transparent;background-clip:content-box}
+        *::-webkit-scrollbar-thumb:hover{background:#a1a1aa;border:2px solid transparent;background-clip:content-box}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+        @keyframes modalIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+        main>div{animation:fadeUp .45s cubic-bezier(.16,1,.3,1) both}
+        .recharts-default-tooltip{border-radius:14px!important;border:1px solid rgba(16,24,40,.06)!important;box-shadow:0 16px 40px -12px rgba(16,24,40,.22)!important;padding:10px 14px!important;font-size:12px!important;backdrop-filter:blur(8px);background:rgba(255,255,255,.96)!important}
+        .recharts-tooltip-label{font-weight:600;color:#18181b}
+        @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+      `}</style>
+      <header className="sticky top-0 z-40 bg-zinc-950/90 text-white backdrop-blur-xl">
+        <div className="mx-auto max-w-6xl px-4 pt-3.5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-400 text-zinc-900 shadow-sm ring-2 ring-amber-300/40">
-                <Car size={20} strokeWidth={2.5} />
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-300 to-amber-500 text-zinc-900 shadow-[0_0_24px_rgba(251,191,36,0.35),inset_0_1px_0_rgba(255,255,255,0.4)]">
+                <Car size={19} strokeWidth={2.5} />
               </span>
               <div>
-                <div style={DISP} className="text-sm font-extrabold uppercase tracking-wider leading-none sm:text-base">{COMPANY}</div>
-                <div className="text-[11px] text-zinc-400">Fleet CRM · {VEHICLE} · 60/40 revenue share · Ludhiana / Chandigarh · {fmtD(NOW.toISOString())}</div>
+                <div style={DISP} className="text-sm font-bold leading-none tracking-tight sm:text-[15px]">{COMPANY}</div>
+                <div className="mt-1 text-[11px] font-medium text-zinc-500">Fleet CRM · {VEHICLE} · 60/40 revenue share · Ludhiana / Chandigarh · {fmtD(NOW.toISOString())}</div>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-5">
               <div className="hidden text-right sm:block">
-                <div className="text-[11px] uppercase tracking-wider text-zinc-400">Cars · active</div>
-                <div style={MONO} className="text-sm font-bold text-zinc-100">{stats.total} · {stats.active}</div>
+                <div className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-zinc-500">Cars · active</div>
+                <div style={MONO} className="mt-0.5 text-sm font-semibold text-zinc-100">{stats.total} · {stats.active}</div>
               </div>
               <div className="text-right">
-                <div className="flex items-center justify-end gap-1 text-[11px] uppercase tracking-wider text-zinc-400"><IndianRupee size={11} /> Net / month</div>
-                <div style={MONO} className={`text-sm font-bold ${stats.profitMo >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{inrS(stats.profitMo)}</div>
+                <div className="flex items-center justify-end gap-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-zinc-500"><IndianRupee size={10} /> Net / month</div>
+                <div style={MONO} className={`mt-0.5 text-sm font-semibold ${stats.profitMo >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{inrS(stats.profitMo)}</div>
               </div>
             </div>
           </div>
-          <nav className="-mx-4 mt-2 flex gap-1 overflow-x-auto px-4 pb-2">
+          <nav className="-mx-4 mt-3 flex gap-1 overflow-x-auto px-4 pb-3">
             {NAV.map(([k, l, Icon]) => (
               <button key={k} onClick={() => setTab(k)}
-                className={`flex items-center gap-1.5 whitespace-nowrap rounded-t-lg px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-amber-400 ${tab === k ? "bg-zinc-100 text-zinc-900" : "text-zinc-300 hover:bg-white/10 hover:text-white"}`}>
-                <Icon size={15} strokeWidth={2.2} /> {l}
+                className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all duration-200 ease-out focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400/30 ${tab === k ? "bg-white text-zinc-900 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.4)]" : "text-zinc-400 hover:bg-white/[0.08] hover:text-white"}`}>
+                <Icon size={14} strokeWidth={2.2} /> {l}
               </button>
             ))}
           </nav>
         </div>
+        <div className="h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pt-4">
+      <main className="mx-auto max-w-6xl px-4 pt-6">
         {tab === "overview" && <Overview cars={cars} drivers={drivers} stats={stats} expenses={expenses} />}
         {tab === "fleet" && <Fleet cars={cars} setCars={setCars} drivers={drivers} expenses={expenses} />}
         {tab === "drivers" && <Drivers drivers={drivers} setDrivers={setDrivers} cars={cars} clients={clients} />}
