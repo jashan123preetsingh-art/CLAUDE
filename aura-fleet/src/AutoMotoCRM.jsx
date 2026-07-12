@@ -2089,87 +2089,112 @@ function Playbook() {
 }
 
 /* ================= PLAN BOOK · growth blueprint ================= */
-/* The master roadmap: every mobility business the company can build,
-   sequenced with hard gates so cash flow — not ambition — drives expansion. */
+/* The master roadmap on a hard 10-year clock: Ludhiana + Chandigarh No.1 in
+   year 1, Punjab by year 3, North India inside 5, India top-tier by 10.
+   Every phase carries revenue projections and a gate — ambition sets the
+   map, cash flow sets the pace. All figures are planning estimates. */
+
 const MISSION_LADDER = [
-  { stage: "Ludhiana + Chandigarh", when: "Years 0–2", goal: "Prove the machine: 10 → 50 profitable cabs, corporate desk, EV gig-scooter pilot", tone: "amber" },
-  { stage: "Punjab", when: "Years 2–4", goal: "Amritsar, Jalandhar, Patiala · 150+ vehicles · commercial fleet + driver academy", tone: "green" },
-  { stage: "North India", when: "Years 4–7", goal: "Delhi NCR, Jaipur, Dehradun · 500+ vehicles · fleet services & financing layer", tone: "blue" },
-  { stage: "India & beyond", when: "Years 7–10+", goal: "Multi-city platform · SaaS + logistics · 2,000+ vehicles · first overseas market", tone: "zinc" },
+  { stage: "Ludhiana + Chandigarh · No.1", when: "YEAR 1", goal: "50 cabs + 25 EV gig scooters + 8 corporate contracts — the biggest organised fleet in the tricity", rev: "₹1.9–2.2 Cr revenue · ₹45–65 L net", tone: "amber" },
+  { stage: "Punjab", when: "YEAR 2–3", goal: "Amritsar, Jalandhar, Patiala · ~300 vehicles · commercial fleet + driver academy live", rev: "₹8–10 Cr revenue · ₹1.5–2.2 Cr net", tone: "green" },
+  { stage: "North India", when: "YEAR 4–5", goal: "Delhi NCR, Jaipur, Dehradun · 1,200–1,500 vehicles · fleet services + financing layer", rev: "₹35–45 Cr revenue · ₹6–9 Cr net", tone: "blue" },
+  { stage: "India top-tier → Asia", when: "YEAR 7–10", goal: "4,000–10,000 vehicles · SaaS + logistics + EV network · among India's top fleet operators, visible on Asia's map", rev: "₹150–400 Cr revenue · ₹25–60 Cr net", tone: "zinc" },
+];
+
+/* what year-1 domination actually costs — the honest bill */
+const YEAR1_MATH = [
+  ["Fleet pace", "~4 cars + 2 scooters added every month, every month — one slow quarter kills the year-1 target"],
+  ["Capital needed", "₹75 L – 1 Cr: ~₹52 L down payments (50 cars), ~₹8–25 L scooters (financed vs cash), ~₹20 L working capital + reserve"],
+  ["People", "45+ verified drivers hired and retained, 1 supervisor by car #15, 1 accountant/CA on retainer from day one"],
+  ["Paper", "LLP + GSTIN month 1 · aggregator licence filed at car #20 (approvals are slow — file early)"],
+  ["Definition of №1", "Largest organised, GST-billing, corporate-contracted fleet in the tricity — not more cars than every unorganised operator combined; that's the title that wins contracts"],
 ];
 
 const BOSS_SEQUENCE = [
-  ["Win one boring thing first.", "The 60/40 Dzire fleet in Ludhiana/Chandigarh is the engine. Nothing else gets a rupee until 10 cars run profitably for 6 straight months. Focus is the strategy."],
-  ["Expand into what your customers already ask for.", "Corporate clients who trust you with employee cabs will hand you staff buses, airport runs and delivery vans without a single cold call. Sell deeper before you sell wider."],
-  ["The second business is EV gig scooters, not more categories.", "Same rent-an-asset model you already run, ticket size ₹1L instead of ₹8L, payback in 12–14 months, and Zomato/Swiggy/Blinkit riders in Ludhiana are a queue of ready customers. Pilot 10 scooters at ~25 cars."],
-  ["Commercial fleet when Ludhiana's factories pull you in.", "Hosiery and auto-parts units that use your worker cabs also ship freight daily. Cargo three-wheelers and Dost/Ace mini-trucks at 30–50 cars, anchored on 2–3 factory contracts before buying a single van."],
-  ["Services are margin, not a new company.", "GPS, FASTag, maintenance, driver supply — you already do these for yourself. Selling them to other small fleet owners costs almost nothing and makes competitors your customers."],
-  ["The driver ecosystem is the moat.", "Whoever owns the best drivers wins every mobility segment. Training academy, verified pool, loans against settlement history, rewards — build it from day one as retention, monetise it at scale."],
-  ["Software last, licences early.", "Productise this CRM as SaaS only after 100+ of your own vehicles prove it. But file for the aggregator licence at 20 cars — approvals are slow and stopping growth to wait for paper is how fleets die."],
+  ["Win one boring thing first.", "The 60/40 Dzire fleet is the engine. Nothing else gets a rupee until 10 cars run profitably for 2 straight quarters. Focus is the strategy."],
+  ["Expand into what your customers already ask for.", "Corporate clients who trust you with employee cabs hand you staff buses, airport runs and delivery vans without a cold call. Sell deeper before you sell wider."],
+  ["EV gig scooters are business #2 — inside year 1.", "Same rent-an-asset model, ₹1L ticket instead of ₹8L, 12–14 month payback, and Zomato/Swiggy/Blinkit riders in Ludhiana are a ready queue. Pilot 10 at car #25."],
+  ["Commercial fleet when Ludhiana's factories pull you in (year 2).", "Hosiery and auto-parts units already using your worker cabs ship freight daily. Cargo 3-wheelers and Dost/Ace mini-trucks — anchored on 2–3 signed contracts before buying a single van."],
+  ["Services are margin, not a new company (year 2–3).", "GPS, FASTag, maintenance, driver supply — you already run these for yourself. Selling them to other fleet owners costs almost nothing and turns competitors into customers."],
+  ["The driver ecosystem is the moat (day one, forever).", "Whoever owns the best 10,000 drivers in North India wins every segment on this page. Build it free as retention, monetise it at scale."],
+  ["Software last, licences early.", "Productise this CRM as SaaS after 100+ own vehicles prove it. File the aggregator licence at 20 cars — stopping growth to wait for paper is how fleets die."],
+];
+
+/* stage-by-stage revenue build — company revenue (our share/billing), not driver gross */
+const PROJECTIONS = [
+  { stage: "Year 1 · Tricity №1", fleet: "50 cabs · 25 scooters · 8 corp", split: "Cabs ₹1.6 Cr · Scooters ₹12 L · Corporate premium ₹25–45 L", rev: "₹1.9–2.2 Cr", net: "₹45–65 L" },
+  { stage: "Year 2–3 · Punjab", fleet: "150 cabs · 100 scooters · 30 vans · 5 buses", split: "Cabs ₹4.9 Cr · EV ₹48 L · Commercial ₹1.8 Cr · Buses ₹90 L · Services ₹30 L", rev: "₹8–10 Cr", net: "₹1.5–2.2 Cr" },
+  { stage: "Year 4–5 · North India", fleet: "600 cabs · 400 scooters · 150 vans · 30 buses", split: "Cabs ₹19 Cr · EV ₹2.4 Cr · Commercial ₹9 Cr · Buses ₹5 Cr · Services ₹2 Cr", rev: "₹35–45 Cr", net: "₹6–9 Cr" },
+  { stage: "Year 7–10 · India top-tier", fleet: "4,000–10,000 mixed + SaaS + financing", split: "Fleet ops ₹120–300 Cr · Logistics ₹20–60 Cr · Services/SaaS/financing ₹10–40 Cr", rev: "₹150–400 Cr", net: "₹25–60 Cr" },
 ];
 
 const PHASES = [
   {
-    id: "p1", name: "Ride-hailing fleet", horizon: "NOW · years 0–2", tag: "Now",
-    gate: "You are here. Gate to next phase: 10 cars × 6 months of profit, collection ≥95%, one corporate anchor client.",
+    id: "p1", name: "Ride-hailing fleet", horizon: "NOW · year 0–1", tag: "Now",
+    gate: "You are here. Gate to scale: 10 cars × 2 profitable quarters, collection ≥95%, one corporate anchor client.",
+    potential: "Unit maths: each cab pays the company ~₹27k/mo (40% of ₹68k gross). At 100 cabs ≈ ₹3.2 Cr/yr revenue, ₹70–90 L net. At 1,000 cabs ≈ ₹32 Cr/yr, ₹7–9 Cr net.",
     ventures: [
       ["Uber fleet", "Live model — subscription, not commission", "Now"],
       ["Ola fleet", "Same cars, second demand pipe", "Now"],
       ["Rapido cabs", "Third app, zero extra cost", "Now"],
-      ["Corporate employee transport", "The profit multiplier — factories, IT parks, hospitals", "Now"],
-      ["Airport taxi service", "Mohali airport queue + hotel tie-ups", "Next"],
+      ["Corporate employee transport", "The profit multiplier — factories, IT parks, hospitals · ₹8–15k net/car/mo extra", "Now"],
+      ["Airport taxi service", "Mohali airport queue + hotel tie-ups · premium ₹/km", "Next"],
       ["Hotel taxi partnerships", "Fixed monthly desks at 3–4 star hotels", "Next"],
-      ["Outstation cabs", "Ludhiana–Delhi/Amritsar; wedding season premium", "Next"],
-      ["Chauffeur / drive-my-car service", "Drivers-only product; zero vehicle capital", "Later"],
-      ["Self-drive rental cars", "Different risk profile — needs deposits + tracking maturity", "Later"],
+      ["Outstation cabs", "Ludhiana–Delhi/Amritsar · wedding season premium Nov–Feb", "Next"],
+      ["Chauffeur / drive-my-car", "Drivers-only product; zero vehicle capital", "Later"],
+      ["Self-drive rentals", "Different risk profile — needs deposits + tracking maturity", "Later"],
     ],
   },
   {
-    id: "p3", name: "Electric mobility", horizon: "PILOT at ~25 cars · years 1–3", tag: "Next",
-    gate: "Gate: cab business self-funding, ₹12–15L free capital, one food/grocery platform tie-up signed.",
+    id: "p3", name: "Electric mobility", horizon: "PILOT in year 1 · scale year 2–4", tag: "Now",
+    gate: "Gate: cab business self-funding, ₹8–12 L free capital, one delivery-platform tie-up signed.",
+    potential: "Unit maths: scooter rents ₹3.5–4.5k/mo, costs ~₹2k financed → ₹1.5–2.5k net each, payback 12–14 months. At 2,000 scooters + 300 EV cabs ≈ ₹12–15 Cr/yr revenue, ₹4–5 Cr net. EV cabs cut fuel from ₹4.4/km to ~₹1.1/km — margin nearly doubles per car.",
     ventures: [
-      ["Gig-worker electric scooters", "10-scooter pilot · ₹3,500–4,500/mo rent to Zomato/Swiggy/Blinkit riders · 12–14 mo payback", "Next"],
-      ["EV rental & subscription", "Weekly/monthly plans; same 60/40 discipline, smaller ticket", "Next"],
-      ["Battery swapping network", "Partner first (Battery Smart model), build later", "Later"],
+      ["Gig-worker electric scooters", "10-scooter pilot → 25 by year-end · Zomato/Swiggy/Blinkit riders", "Now"],
+      ["EV rental & subscription", "Weekly/monthly plans, same 60/40 discipline", "Next"],
+      ["Electric cab fleet", "Switch new cabs to EV as charging matures — the margin unlock", "Next"],
+      ["Battery swapping network", "Partner first (Battery Smart model), build at density", "Later"],
       ["EV leasing to businesses", "Delivery fleets lease 20 at a time — B2B ticket", "Later"],
-      ["Charging stations", "Real estate game; start with your own fleet hub", "Later"],
-      ["Fast charging hubs", "Highway + city hub play once fleet density justifies it", "Watch"],
-      ["Fleet charging management", "Software layer on top of your own hubs", "Watch"],
+      ["Charging stations & hubs", "Start with your own fleet hub; sell to others at scale", "Later"],
+      ["Fleet charging management", "Software layer on your own hubs", "Watch"],
     ],
   },
   {
-    id: "p2", name: "Commercial fleet", horizon: "at 30–50 cars · years 2–4", tag: "Next",
-    gate: "Gate: 2–3 signed factory/e-commerce contracts BEFORE the first van is bought — never speculate on freight.",
+    id: "p2", name: "Commercial fleet", horizon: "year 2–4", tag: "Next",
+    gate: "Gate: 2–3 signed factory/e-commerce contracts BEFORE the first van — never speculate on freight.",
+    potential: "Unit maths: a contracted van bills ₹45–55k/mo, nets ₹6–8k. At 500 vehicles ≈ ₹30–35 Cr/yr billing, ₹4–6 Cr net. Ludhiana angle: hosiery + auto-parts freight is the anchor demand.",
     ventures: [
       ["Last-mile delivery fleet", "E-commerce parcel runs — steady B2B billing", "Next"],
-      ["Cargo three-wheelers & mini trucks", "Tata Ace/Dost on hosiery & auto-parts routes", "Next"],
+      ["Cargo 3-wheelers & mini trucks", "Tata Ace/Dost on factory routes", "Next"],
       ["E-commerce delivery vehicles", "Dedicated fleets for Flipkart/Amazon/Delhivery hubs", "Next"],
       ["FMCG distribution vehicles", "Fixed daily routes, monthly contracts", "Later"],
       ["Courier fleet", "Franchise tie-ups (DTDC/Ecom Express)", "Later"],
       ["Cold chain vehicles", "Dairy/pharma — higher capex, premium rates", "Later"],
-      ["General logistics fleet", "Scale play after route density exists", "Later"],
+      ["General logistics fleet", "Scale play once route density exists", "Later"],
     ],
   },
   {
-    id: "p4", name: "Public & group mobility", horizon: "at 50+ vehicles · years 3-5", tag: "Later",
-    gate: "Gate: corporate desk running 10+ contracts; buses need contract cover for 100% of EMI before purchase.",
+    id: "p4", name: "Public & group mobility", horizon: "year 3–5", tag: "Later",
+    gate: "Gate: corporate desk running 10+ contracts; a bus needs contract cover for 100% of its EMI before purchase.",
+    potential: "Unit maths: a staff bus bills ₹1.2–1.8 L/mo, nets ₹15–25k. At 100 buses ≈ ₹15–20 Cr/yr, ₹2–3 Cr net. Annual school/college contracts make revenue predictable.",
     ventures: [
       ["Staff transportation (buses/vans)", "Natural upgrade for existing factory clients", "Next"],
-      ["School & college transport", "Annual contracts, predictable, reputation-led", "Later"],
+      ["School & college transport", "Annual contracts, reputation-led", "Later"],
       ["Shuttle services", "Focal Point ↔ city fixed routes", "Later"],
       ["Tourist coaches", "Amritsar/Himachal circuits, wedding season", "Later"],
-      ["Event transport", "Weddings, political rallies, expos — surge revenue", "Later"],
+      ["Event transport", "Weddings, rallies, expos — surge revenue", "Later"],
     ],
   },
   {
-    id: "p5", name: "Fleet services (margin layer)", horizon: "build alongside · years 1–5", tag: "Next",
+    id: "p5", name: "Fleet services (margin layer)", horizon: "year 2–5 alongside", tag: "Next",
     gate: "Rule: only sell services you already run internally at 50+ vehicles of your own.",
+    potential: "At 5,000 external vehicles served ≈ ₹6–10 Cr/yr at 30–40% margin — the highest-margin rupees in the company. Makes competitors your customers.",
     ventures: [
       ["Fleet maintenance hub", "Your workshop serves other owners at margin", "Next"],
       ["GPS tracking as a service", "You already fit AIS-140 — resell + monitor", "Next"],
       ["Driver supply to other fleets", "Your verified pool, placement fees", "Next"],
       ["FASTag & fuel card management", "Commission on every card issued", "Later"],
-      ["Fleet financing referrals", "NBFC partnerships; later an NBFC licence of your own", "Later"],
+      ["Fleet financing referrals", "NBFC partnerships; later your own NBFC licence", "Later"],
       ["Commercial insurance desk", "Broker tie-up, renewal commissions", "Later"],
       ["Fleet CRM licensing", "This software, sold to small fleet owners", "Watch"],
       ["AI dispatch & route optimisation", "Buy/partner first; build when data justifies", "Watch"],
@@ -2178,63 +2203,103 @@ const PHASES = [
   {
     id: "p6", name: "Driver ecosystem (the moat)", horizon: "day one → forever", tag: "Now",
     gate: "Start free (verification, WhatsApp community); monetise pieces only past 100 drivers.",
+    potential: "At 10,000 drivers ≈ ₹3–5 Cr/yr from training fees, placement, financing and insurance commissions — plus the real prize: the best drivers in North India work for you first.",
     ventures: [
       ["Driver recruitment & verification", "Already your process — formalise it", "Now"],
       ["Driver community & referrals", "₹1,000 referral engine, WhatsApp-first", "Now"],
       ["Driver training academy", "Badge prep + customer skills; charge outsiders", "Next"],
       ["Driver rewards & leaderboard", "Best drivers get newest cars — retention lever", "Next"],
       ["Driver loans", "Advance against settlement history — you hold the data", "Later"],
-      ["Driver health & accident cover", "Group policies, deducted from settlements", "Later"],
-      ["Driver wallet", "Instant settlement payouts; needs scale + compliance", "Watch"],
+      ["Driver health & accident cover", "Group policies via settlements", "Later"],
+      ["Driver wallet", "Instant payouts; needs scale + compliance", "Watch"],
     ],
   },
   {
-    id: "p7", name: "Software products (SaaS)", horizon: "at 100+ vehicles · years 4–6", tag: "Later",
-    gate: "Gate: your own operations must run on it flawlessly first. Sell proof, not promises.",
+    id: "p7", name: "Software products (SaaS)", horizon: "year 4–6", tag: "Later",
+    gate: "Gate: your own operations run on it flawlessly at 100+ vehicles. Sell proof, not promises.",
+    potential: "At 20,000 external vehicles on platform @ ₹150–250/vehicle/mo ≈ ₹4–6 Cr ARR at ~70% margin. Small revenue, huge valuation multiple — SaaS rupees are worth 5–10× fleet rupees to investors.",
     ventures: [
       ["Fleet management software", "This CRM, multi-tenant with login + billing", "Later"],
-      ["Driver app", "Settlements, attendance, earnings in the driver's pocket", "Later"],
-      ["Customer booking app", "Corporate booking portal first, consumer later", "Later"],
+      ["Driver app", "Settlements, attendance, earnings in the pocket", "Later"],
+      ["Customer booking app", "Corporate portal first, consumer later", "Later"],
       ["Business dashboard & AI analytics", "Utilisation, driver scoring, demand prediction", "Later"],
       ["Dispatch software", "For your shuttle/bus phase, then external", "Watch"],
-      ["Live tracking + maintenance + expense modules", "Bundled tiers of the same platform", "Watch"],
+      ["Tracking + maintenance + expense modules", "Bundled tiers of one platform", "Watch"],
     ],
   },
   {
-    id: "p8", name: "Logistics network", horizon: "years 5–8", tag: "Later",
+    id: "p8", name: "Logistics network", horizon: "year 5–8", tag: "Later",
     gate: "Gate: commercial fleet profitable in 3+ cities; anchor 3PL contract in hand.",
+    potential: "Contract logistics across 3 cities ≈ ₹20–60 Cr/yr at thin 5–8% net — volume business that feeds the fleet. Porter's ₹2,700 Cr revenue shows the ceiling.",
     ventures: [
       ["Hyperlocal delivery", "Your EV scooters + vans already do this — brand it", "Later"],
       ["B2B logistics", "Ludhiana industrial freight, contracted lanes", "Later"],
       ["Cross-state transport", "Punjab → Delhi/Jammu/Himachal corridors", "Later"],
-      ["Warehousing & fulfilment centres", "Real-estate heavy; partner before owning", "Watch"],
+      ["Warehousing & fulfilment", "Real-estate heavy; partner before owning", "Watch"],
       ["Freight marketplace", "Platform play — needs serious tech + liquidity", "Watch"],
     ],
   },
   {
-    id: "p9", name: "Future mobility", horizon: "watch list · years 8+", tag: "Watch",
+    id: "p9", name: "Future mobility", horizon: "watch list · year 7+", tag: "Watch",
     gate: "Rule: watch, partner, pilot — never pioneer capital-heavy tech from Ludhiana.",
+    potential: "The prize isn't building robotaxis — it's being the fleet partner OEMs need when they arrive. Whoever runs 10,000 vehicles with clean data gets that call.",
     ventures: [
       ["Mobility as a Service (MaaS)", "One subscription across cabs, scooters, shuttles", "Watch"],
       ["Connected vehicles & smart traffic", "OEM/city partnerships", "Watch"],
       ["AI dispatch network", "Your data + rented models", "Watch"],
-      ["Autonomous vehicles / robotaxis", "Enter as fleet operator when OEMs need partners", "Watch"],
+      ["Autonomous vehicles / robotaxis", "Enter as the fleet-operations partner", "Watch"],
       ["Drone delivery", "Regulatory play; revisit every 2 years", "Watch"],
     ],
   },
   {
-    id: "p10", name: "Global expansion", horizon: "after India density · years 8+", tag: "Watch",
+    id: "p10", name: "Global expansion", horizon: "year 8–10", tag: "Watch",
     gate: "Gate: 3 profitable Indian cities + a repeatable city-launch SOP. First market: UAE (Punjabi diaspora, fleet-friendly rules).",
+    potential: "Careem sold to Uber for $3.1B; Grab clears ~$2.8B/yr. Realistic 10-year win: India's top-3 organised fleet operator with one working overseas market — that's an Asia-relevant company.",
     ventures: [
       ["India multi-city", "Punjab → North India → metros", "Later"],
       ["UAE", "Dubai/Sharjah fleet permits, diaspora operators", "Watch"],
       ["Canada & Australia", "Punjabi trucking/taxi networks to plug into", "Watch"],
-      ["UK · USA · Southeast Asia · Europe", "Only behind a partner or acquisition", "Watch"],
+      ["UK · USA · SEA · Europe", "Only behind a partner or acquisition", "Watch"],
     ],
   },
 ];
 
+/* who already proved each play — approximate public figures, study not worship */
+const BENCH_INDIA = [
+  ["Everest Fleet", "Uber's biggest India fleet partner, 20,000+ cars", "THE benchmark — exactly our model at scale. Beat them in North India."],
+  ["Rapido", "~₹1,000 Cr revenue, India's #1 bike-taxi", "Won by owning a cheaper vehicle class first — our scooter logic."],
+  ["Porter", "~₹2,700 Cr revenue, mini-truck logistics", "Proof that commercial fleet (Phase 2) is a ₹1,000 Cr+ market."],
+  ["Zypp Electric", "20,000+ EV scooters for gig delivery", "Our Phase-3 playbook already working in Delhi — copy to Ludhiana."],
+  ["MoveInSync", "Corporate employee transport, ~₹400 Cr", "Corporate contracts alone can be the whole company."],
+  ["Ola / Uber India", "Demand platforms, billions in GMV", "Don't fight them — supply cars to them, then own the customer they ignore (corporate, B2B)."],
+  ["BluSmart ⚠️", "Grew to 8,000 EVs, collapsed in 2025", "The warning: leased growth + weak governance kills faster than competition. Our gates exist because of stories like this."],
+];
+const BENCH_ASIA = [
+  ["Grab (SEA)", "~$2.8B revenue super-app", "Started as taxi booking in one city — Kuala Lumpur, 2012. Same starting point as us."],
+  ["Gojek / GoTo (Indonesia)", "Motorbike fleet → super-app", "Two-wheelers first, then everything — validates scooters as an empire seed."],
+  ["DiDi (China)", "World's largest ride-hailing", "Density in one city before the next — never spread thin."],
+  ["Careem (Middle East)", "Sold to Uber for $3.1B", "A regional player the giants had to buy — the realistic 'Asia top' outcome."],
+  ["Kakao Mobility (Korea)", "Taxis → parking, navigation, payment", "Own the driver relationship, expand the wallet around it."],
+  ["inDrive", "Price-bargain model, 700M+ downloads", "There is always room for a different deal structure — like our 60/40."],
+];
+
+const FUTURE_EV = [
+  ["Fuel economics flip", "CNG ₹4.4/km → EV ~₹1.0–1.2/km. On a 5,500 km month that's ₹18k saved per car — the driver's take-home and the company's floor both get room."],
+  ["Maintenance drops ~40%", "No clutch, no oil, fewer moving parts — the service provision per car shrinks as the fleet electrifies."],
+  ["TCO crossover ~2–3 years", "EVs cost more upfront, less per km. Fleets cross over faster than private owners because they run 3× the kilometres."],
+  ["Battery swap changes gig", "2-minute swaps beat 4-hour charges for delivery riders — partner with swap networks before building."],
+  ["Policy tailwind", "State EV subsidies, registration waivers and commercial EV mandates all favour organised fleets over individual owners."],
+];
 const RESEARCH_ITEMS = ["Problem statement", "Market size (TAM / SAM / SOM)", "Revenue model", "Unit economics per vehicle/asset", "Competitor analysis", "Required licences & permits", "Technology stack", "Investment required", "Timeline to breakeven", "SOPs (operations manual)", "KPIs to track weekly", "Risks & kill criteria", "Scaling strategy"];
+
+const FUTURE_AI = [
+  ["Dispatch & utilisation", "AI assignment lifts revenue-per-vehicle 10–20% by cutting dead kilometres — at 1,000 cars that's crores, free."],
+  ["Driver scoring", "Your settlement history IS the dataset: predict churn, reward consistency, price risk on driver loans nobody else can underwrite."],
+  ["Predictive maintenance", "Catch the clutch/CNG-kit failure before the breakdown — one avoided idle week pays a month of software."],
+  ["Dynamic corporate pricing", "Price contracts on actual route data instead of gut feel — win bids competitors can't calculate."],
+  ["Leakage detection", "AI on GPS + settlements flags unreported rides automatically — protects the 40% at scale."],
+  ["The operations truth", "AI makes every fleet's software equal. What it can't copy: 10,000 verified drivers, workshop bays, charging hubs, corporate relationships. In an operations-centric business, AI is leverage for whoever owns the assets — that's the plan."],
+];
 
 function PlanBook() {
   const [sel, setSel] = useState("p1");
@@ -2244,12 +2309,12 @@ function PlanBook() {
   return (
     <div className="space-y-4">
       <Card className="bg-zinc-950 !border-zinc-800 text-white">
-        <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-amber-400">The mission</div>
+        <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-amber-400">The mission · a 10-year clock</div>
         <h2 style={DISP} className="mt-1 text-lg font-bold tracking-tight text-white">
-          Build {COMPANY} into the biggest mobility company — Ludhiana first, then Punjab, then North India, then India.
+          {COMPANY}: №1 in Ludhiana + Chandigarh in year 1 · Punjab by year 3 · North India inside 5 · India's top tier by 10.
         </h2>
         <p className="mt-1.5 max-w-3xl text-[12.5px] leading-relaxed text-zinc-400">
-          Every mobility business worth building lives in this Plan Book — cabs, commercial fleets, EVs, buses, services, drivers, software, logistics — each with a hard gate that must be passed before a rupee moves. Ambition sets the map; cash flow sets the pace.
+          Every mobility business worth building lives in this Plan Book with its own revenue maths and a hard gate. Ambition sets the map; cash flow sets the pace. Figures are planning estimates, not promises.
         </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-4">
           {MISSION_LADDER.map((m, i) => (
@@ -2259,9 +2324,37 @@ function PlanBook() {
               </div>
               <div style={DISP} className="mt-1 text-[13.5px] font-semibold text-white">{m.stage}</div>
               <div className="mt-1 text-[11.5px] leading-snug text-zinc-400">{m.goal}</div>
+              <div style={MONO} className="mt-1.5 text-[11px] font-semibold text-emerald-400">{m.rev}</div>
             </div>
           ))}
         </div>
+      </Card>
+
+      <Card>
+        <H sub="№1 in the tricity in 12 months is possible — this is the bill. Sign up to all five or move the date.">What year-1 domination actually takes</H>
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          {YEAR1_MATH.map(([k, v]) => (
+            <div key={k} className="rounded-xl border border-zinc-900/[0.06] bg-zinc-50/60 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-600">{k}</div>
+              <div className="mt-1 text-[12.5px] leading-snug text-zinc-600">{v}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <H sub="Company revenue = our 40% share + rentals + contract billing (not driver gross) · planning estimates">Revenue projections · stage by stage</H>
+        <Table
+          head={["Stage", "Fleet", "Sector split (revenue / yr)", "Revenue / yr", "Company net / yr"]}
+          rows={PROJECTIONS.map((r) => [
+            <span key="s" className="font-semibold">{r.stage}</span>,
+            <span key="f" className="text-xs">{r.fleet}</span>,
+            <span key="p" className="text-xs text-zinc-500">{r.split}</span>,
+            <span key="r" className="font-semibold text-emerald-700">{r.rev}</span>,
+            <span key="n" className="font-semibold text-emerald-700">{r.net}</span>,
+          ])}
+        />
+        <p className="mt-2 text-xs leading-relaxed text-zinc-400">Built from unit economics: cab ≈ ₹27k company revenue/mo · scooter ≈ ₹4k · van ≈ ₹50k billing · bus ≈ ₹1.5L billing. Net assumes the ₹20k floor discipline holds and reserves stay funded. Miss the year-1 fleet pace and every later line slips by the same months — the clock is the strategy.</p>
       </Card>
 
       <Card>
@@ -2294,8 +2387,11 @@ function PlanBook() {
               <H sub={phase.horizon}>{phase.name}</H>
               <Chip tone={tagTone[phase.tag]}>{phase.tag}</Chip>
             </div>
-            <div className="mb-4 rounded-xl border border-amber-200/70 bg-amber-50 p-3 text-[12.5px] leading-relaxed text-amber-900">
+            <div className="mb-3 rounded-xl border border-amber-200/70 bg-amber-50 p-3 text-[12.5px] leading-relaxed text-amber-900">
               <span className="font-semibold">Unlock rule · </span>{phase.gate}
+            </div>
+            <div className="mb-4 rounded-xl border border-emerald-200/70 bg-emerald-50 p-3 text-[12.5px] leading-relaxed text-emerald-900">
+              <span className="font-semibold">Revenue potential · </span>{phase.potential}
             </div>
             <div className="grid gap-2.5 sm:grid-cols-2">
               {phase.ventures.map(([n, note, tag]) => (
@@ -2324,6 +2420,62 @@ function PlanBook() {
             </p>
           </Card>
         </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <H sub="Approximate public figures · study them, don't worship them">Benchmarks · India's mobility leaders</H>
+          <div className="space-y-2">
+            {BENCH_INDIA.map(([n, scale, lesson]) => (
+              <div key={n} className="rounded-xl border border-zinc-900/[0.06] bg-zinc-50/60 p-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-[13px] font-semibold text-zinc-900">{n}</span>
+                  <span style={MONO} className="text-[11px] text-zinc-500">{scale}</span>
+                </div>
+                <div className="mt-0.5 text-[11.5px] leading-snug text-zinc-500">{lesson}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <H sub="The 10-year peer group — every one of them started with one vehicle class in one city">Benchmarks · Asia's giants</H>
+          <div className="space-y-2">
+            {BENCH_ASIA.map(([n, scale, lesson]) => (
+              <div key={n} className="rounded-xl border border-zinc-900/[0.06] bg-zinc-50/60 p-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-[13px] font-semibold text-zinc-900">{n}</span>
+                  <span style={MONO} className="text-[11px] text-zinc-500">{scale}</span>
+                </div>
+                <div className="mt-0.5 text-[11.5px] leading-snug text-zinc-500">{lesson}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <H sub="Why the fleet that electrifies first wins the margin war">Future of transport · how EV changes the maths</H>
+          <div className="space-y-2">
+            {FUTURE_EV.map(([k, v]) => (
+              <div key={k} className="flex gap-2.5">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                <p className="text-[12.5px] leading-relaxed text-zinc-600"><span className="font-semibold text-zinc-900">{k}.</span> {v}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <H sub="AI is leverage for whoever owns the assets — and we own the assets">Future of transport · how AI changes the maths</H>
+          <div className="space-y-2">
+            {FUTURE_AI.map(([k, v]) => (
+              <div key={k} className="flex gap-2.5">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" />
+                <p className="text-[12.5px] leading-relaxed text-zinc-600"><span className="font-semibold text-zinc-900">{k}.</span> {v}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
     </div>
   );
