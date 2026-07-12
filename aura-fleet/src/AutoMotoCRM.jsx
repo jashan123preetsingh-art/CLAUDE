@@ -2075,7 +2075,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-zinc-50 pb-12 text-zinc-900" style={DISP}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
         html{scroll-behavior:smooth}
         body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
         ::selection{background:#fbbf24;color:#18181b}
