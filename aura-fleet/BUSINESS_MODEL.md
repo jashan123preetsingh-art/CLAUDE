@@ -95,12 +95,18 @@ Why this matters: a subscription (~₹100–150/day per car) is far cheaper than
 
 ---
 
-## 7. The driver deal — 60% driver / 40% company revenue share
+## 7. The driver deals — revenue share (default) or fixed rent
 
-Every driver joins on the same deal. One model, clean books, no earnings-tracking disputes.
+Two clean deals, chosen per driver in the CRM. **Standard security deposit: ₹10,000 — all models.**
 
-- Driver keeps **60%** of gross fares; company takes **40%**.
-- **The driver pays only his CNG/fuel** — out of his 60%, recorded at every settlement.
+### Deal A — Revenue share (default 60/40, adjustable)
+The company can set the split per driver — 60/40 default, 55/45 for a proven high-grosser, etc. The floor (§8) applies.
+
+### Deal B — Fixed rent ₹26,000/month
+₹1,000 per working day, **Sundays excluded** (≈26 days). The driver keeps 100% of fares above rent + CNG. Zero earnings-tracking; suits Ludhiana's strong market where busy cars gross ₹80–90k/month — a fixed-rent driver on ₹85k gross takes home ~₹35k after rent and fuel, and the company's ₹26k comfortably clears the ~₹20k fixed cost.
+
+### Common to both deals
+- **The driver pays only his CNG/fuel**, recorded at every settlement.
 - **The company provides:**
   - a brand-new **Maruti Suzuki Dzire Tour S CNG**
   - insurance
@@ -108,8 +114,8 @@ Every driver joins on the same deal. One model, clean books, no earnings-trackin
   - fleet management
   - platform subscription where applicable
   - driver support and operational management
-- **Company floor:** the company's share is never less than the floor (see §8).
-- **Settlements:** weekly, through the company account, with a full statement — the driver ledger in the app auto-computes gross revenue, the 60/40 split, driver fuel, driver net earnings and company earnings.
+- **Company floor (Deal A):** the company's share is never less than the floor (see §8).
+- **Settlements:** weekly, through the company account, with a full statement — the driver ledger in the app auto-computes gross revenue, the split or rent, driver fuel, driver net earnings and company earnings.
 - **Corporate duty** is an additional benefit the company provides whenever possible — see §11. It is never guaranteed.
 
 **Company net per car (after ~₹20k fixed cost):** at ₹68k gross, the company's 40% is ₹27,200 → **~₹7,000 net**; a busy ₹80k+ car nets ₹11,000+.
@@ -158,7 +164,7 @@ A full **12–13 hour day, 26–27 days (290–300 hrs/month)** grosses:
 | 10 hr | ₹1,700–2,300 | ₹1,900–2,500 |
 | 12 hr | ₹2,100–2,900 | ₹2,400–3,200 |
 
-- **₹65–70k/month gross** = ~₹2,500–2,700/day = a solid full-day driver.
+- **₹65–70k/month gross** = ~₹2,500–2,700/day = a solid full-day driver; busy Ludhiana cars reach **₹80–90k gross**.
 - On **60/40** with his own CNG, take-home lands roughly **₹14,000–19,500/month** depending on gross and fuel. He reaches ₹20k+ only on a busy ₹2,700+/day car with efficient fuel.
 - Chandigarh pays ~₹6–7k/month more than Ludhiana at the same hours (airport, tourism, affluent riders).
 
@@ -185,7 +191,7 @@ Target sectors: Ludhiana Focal Point & hosiery/auto-parts factories (night-shift
 
 - **Centralized banking** — payouts route through the LLP account first, then to drivers. Never driver-direct.
 - **AIS-140 GPS + immobilizer** — live tracking, geofence alerts if a car leaves the zone or idles too long; remote engine cut-off if needed.
-- **Security deposit / escrow** — ₹10,000–25,000 per driver (can be built ₹1,000/week from payouts), forfeitable for damage, unpaid dues, or absconding.
+- **Security deposit / escrow** — **₹10,000 standard, all models** (raise case-by-case for repeat risk), forfeitable for damage, unpaid dues, or absconding.
 - **Mandatory KYC + police verification** — commercial badge DL, Aadhaar, PAN, local police verification before the key is handed over.
 
 ---

@@ -102,7 +102,10 @@ const VEHICLE = "Maruti Suzuki Dzire Tour S CNG";
 const DRIVER_PCT = 60;                 // driver keeps 60% of gross fares
 const COMPANY_PCT = 100 - DRIVER_PCT;  // company takes 40%
 const AVG_GROSS_MO = 68000;
-const APPS_LIST = ["Uber", "Ola", "Rapido"]; // platforms every cab runs on            // planning estimate · gross fares / car / month
+const APPS_LIST = ["Uber", "Ola", "Rapido"]; // platforms every cab runs on
+const FIXED_RENT_DAY = 1000;   // fixed model: Rs 1,000/day, Sundays excluded
+const FIXED_RENT_MO = 26000;   // = 26 working days
+const DEF_DEPOSIT = 10000;     // standard security deposit, all models            // planning estimate · gross fares / car / month
 const DEF_RATE = 8;                    // default commercial-loan interest % p.a.
 const DEF_TENURE = 7;                  // default loan tenure, years
 
@@ -115,6 +118,9 @@ const perCarOpexMo = (o = OPEX) =>
 const last30 = (h) => h.filter((e) => (NOW - new Date(e.d)) / 86400000 <= 30);
 const sumG = (h) => h.reduce((s, e) => s + (e.gross || 0), 0);
 const sumF = (h) => h.reduce((s, e) => s + (e.fuel || 0), 0);
+/* what the company earns from one settlement entry, per the driver's deal */
+const entryCompany = (e, d) => d.model === "fixed" ? (e.rent || 0) : (e.gross || 0) * (100 - (d.share || DRIVER_PCT)) / 100;
+const dealLabel = (d) => d.model === "fixed" ? `Fixed ${inrS(d.fixedRent || FIXED_RENT_MO)}/mo` : `${d.share || DRIVER_PCT}/${100 - (d.share || DRIVER_PCT)} share`;
 
 const carLoan = (c) => {
   const P = c.onRoad - c.downPayment;
@@ -139,11 +145,11 @@ const SEED_CARS = [
 /* drivers work the 60/40 revenue share: driver keeps 60% of gross fares and pays his own CNG;
    history = weekly settlements { d, gross, fuel } — the ledger computes the split automatically */
 const SEED_DRIVERS = [
-  { id: "d1", name: "Gurpreet Singh", mobile: "98140 22xx7", aadhaar: "XXXX XXXX 4821", pan: "AXBPP1234K", dl: "PB10 20190004821", dlExpiry: "2029-04-18", badge: "LDH/B/2019/4821", badgeExpiry: "2027-04-18", address: "Model Town, Ludhiana", emergency: "Harleen Kaur · 98550 22xx1", policeVerified: true, deposit: 25000, joined: "2024-03-12", share: DRIVER_PCT, companyEarned: 612000, pending: 0, lateDays: 3, rating: 4.6, complaints: 0, attendance: 26, active: true, clientId: "k1", apps: ["Uber", "Ola", "Rapido"], appHrs: 10, corpHrs: 2, history: [{ d: "2026-07-06", gross: 16800, fuel: 5300 }, { d: "2026-06-29", gross: 17400, fuel: 5450 }, { d: "2026-06-22", gross: 16200, fuel: 5100 }, { d: "2026-06-15", gross: 15900, fuel: 5200 }, { d: "2026-06-08", gross: 16400, fuel: 5150 }, { d: "2026-06-01", gross: 15700, fuel: 5050 }, { d: "2026-05-25", gross: 16900, fuel: 5350 }, { d: "2026-05-18", gross: 15400, fuel: 5000 }, { d: "2026-05-11", gross: 16100, fuel: 5200 }, { d: "2026-05-04", gross: 17200, fuel: 5400 }, { d: "2026-04-27", gross: 15800, fuel: 5100 }, { d: "2026-04-20", gross: 16600, fuel: 5250 }] },
-  { id: "d2", name: "Harjinder Singh", mobile: "97790 88xx2", aadhaar: "XXXX XXXX 7734", pan: "BYCPJ5678L", dl: "PB10 20170007734", dlExpiry: "2027-09-02", badge: "LDH/B/2017/7734", badgeExpiry: "2026-08-10", address: "Focal Point, Ludhiana", emergency: "Manpreet Singh · 90410 45xx8", policeVerified: true, deposit: 25000, joined: "2024-08-05", share: DRIVER_PCT, companyEarned: 508400, pending: 6400, lateDays: 9, rating: 4.1, complaints: 1, attendance: 24, active: true, clientId: "k1", apps: ["Uber", "Ola"], appHrs: 9, corpHrs: 3, history: [{ d: "2026-06-29", gross: 14800, fuel: 5050 }, { d: "2026-06-21", gross: 16600, fuel: 5350 }, { d: "2026-06-14", gross: 16100, fuel: 5300 }] },
-  { id: "d3", name: "Manjinder Singh", mobile: "99880 31xx4", aadhaar: "XXXX XXXX 2210", pan: "CZDPS9012M", dl: "CH01 20200002210", dlExpiry: "2030-01-22", badge: "CHD/B/2020/2210", badgeExpiry: "2028-01-22", address: "Sector 22, Chandigarh", emergency: "Rajwinder Kaur · 98153 77xx0", policeVerified: true, deposit: 30000, joined: "2025-01-18", share: DRIVER_PCT, companyEarned: 421600, pending: 0, lateDays: 1, rating: 4.8, complaints: 0, attendance: 27, active: true, clientId: "k2", apps: ["Uber", "Ola", "Rapido"], appHrs: 10, corpHrs: 2, history: [{ d: "2026-07-06", gross: 19200, fuel: 5900 }, { d: "2026-06-29", gross: 18700, fuel: 5750 }, { d: "2026-06-22", gross: 18900, fuel: 5800 }, { d: "2026-06-15", gross: 18300, fuel: 5700 }, { d: "2026-06-08", gross: 18800, fuel: 5750 }, { d: "2026-06-01", gross: 19500, fuel: 5950 }, { d: "2026-05-25", gross: 18100, fuel: 5600 }, { d: "2026-05-18", gross: 18600, fuel: 5700 }, { d: "2026-05-11", gross: 19100, fuel: 5850 }, { d: "2026-05-04", gross: 18400, fuel: 5650 }, { d: "2026-04-27", gross: 17900, fuel: 5550 }, { d: "2026-04-20", gross: 18200, fuel: 5600 }] },
-  { id: "d4", name: "Balwinder Singh", mobile: "80540 55xx9", aadhaar: "XXXX XXXX 9902", pan: "DAEPM3456N", dl: "PB65 20180009902", dlExpiry: "2028-06-30", badge: "MOH/B/2018/9902", badgeExpiry: "2027-06-30", address: "Phase 7, Mohali", emergency: "Simran Kaur · 98140 90xx3", policeVerified: true, deposit: 25000, joined: "2025-06-22", share: DRIVER_PCT, companyEarned: 301800, pending: 6900, lateDays: 5, rating: 4.3, complaints: 0, attendance: 25, active: true, clientId: null, apps: ["Uber", "Ola", "Rapido"], appHrs: 12, corpHrs: 0, history: [{ d: "2026-06-30", gross: 17300, fuel: 5600 }, { d: "2026-06-23", gross: 16900, fuel: 5500 }] },
-  { id: "d5", name: "Sukhwinder Singh", mobile: "91530 12xx6", aadhaar: "XXXX XXXX 5566", pan: "EBFPK7890P", dl: "PB10 20160005566", dlExpiry: "2026-07-30", badge: "LDH/B/2016/5566", badgeExpiry: "2026-07-30", address: "Dugri, Ludhiana", emergency: "Gagandeep Singh · 95610 34xx2", policeVerified: true, deposit: 20000, joined: "2025-11-08", share: DRIVER_PCT, companyEarned: 158200, pending: 5200, lateDays: 12, rating: 3.7, complaints: 2, attendance: 19, active: true, clientId: null, apps: ["Uber", "Rapido"], appHrs: 8, corpHrs: 0, history: [{ d: "2026-06-26", gross: 11800, fuel: 4300 }, { d: "2026-06-15", gross: 13600, fuel: 4700 }] },
+  { id: "d1", name: "Gurpreet Singh", mobile: "98140 22xx7", aadhaar: "XXXX XXXX 4821", pan: "AXBPP1234K", dl: "PB10 20190004821", dlExpiry: "2029-04-18", badge: "LDH/B/2019/4821", badgeExpiry: "2027-04-18", address: "Model Town, Ludhiana", emergency: "Harleen Kaur · 98550 22xx1", policeVerified: true, deposit: 10000, joined: "2024-03-12", share: DRIVER_PCT, companyEarned: 612000, pending: 0, lateDays: 3, rating: 4.6, complaints: 0, attendance: 26, active: true, clientId: "k1", apps: ["Uber", "Ola", "Rapido"], appHrs: 10, corpHrs: 2, history: [{ d: "2026-07-06", gross: 16800, fuel: 5300 }, { d: "2026-06-29", gross: 17400, fuel: 5450 }, { d: "2026-06-22", gross: 16200, fuel: 5100 }, { d: "2026-06-15", gross: 15900, fuel: 5200 }, { d: "2026-06-08", gross: 16400, fuel: 5150 }, { d: "2026-06-01", gross: 15700, fuel: 5050 }, { d: "2026-05-25", gross: 16900, fuel: 5350 }, { d: "2026-05-18", gross: 15400, fuel: 5000 }, { d: "2026-05-11", gross: 16100, fuel: 5200 }, { d: "2026-05-04", gross: 17200, fuel: 5400 }, { d: "2026-04-27", gross: 15800, fuel: 5100 }, { d: "2026-04-20", gross: 16600, fuel: 5250 }] },
+  { id: "d2", name: "Harjinder Singh", mobile: "97790 88xx2", aadhaar: "XXXX XXXX 7734", pan: "BYCPJ5678L", dl: "PB10 20170007734", dlExpiry: "2027-09-02", badge: "LDH/B/2017/7734", badgeExpiry: "2026-08-10", address: "Focal Point, Ludhiana", emergency: "Manpreet Singh · 90410 45xx8", policeVerified: true, deposit: 10000, joined: "2024-08-05", share: DRIVER_PCT, companyEarned: 508400, pending: 6400, lateDays: 9, rating: 4.1, complaints: 1, attendance: 24, active: true, clientId: "k1", apps: ["Uber", "Ola"], appHrs: 9, corpHrs: 3, history: [{ d: "2026-06-29", gross: 14800, fuel: 5050 }, { d: "2026-06-21", gross: 16600, fuel: 5350 }, { d: "2026-06-14", gross: 16100, fuel: 5300 }] },
+  { id: "d3", name: "Manjinder Singh", mobile: "99880 31xx4", aadhaar: "XXXX XXXX 2210", pan: "CZDPS9012M", dl: "CH01 20200002210", dlExpiry: "2030-01-22", badge: "CHD/B/2020/2210", badgeExpiry: "2028-01-22", address: "Sector 22, Chandigarh", emergency: "Rajwinder Kaur · 98153 77xx0", policeVerified: true, deposit: 10000, joined: "2025-01-18", share: DRIVER_PCT, companyEarned: 421600, pending: 0, lateDays: 1, rating: 4.8, complaints: 0, attendance: 27, active: true, clientId: "k2", apps: ["Uber", "Ola", "Rapido"], appHrs: 10, corpHrs: 2, history: [{ d: "2026-07-06", gross: 19200, fuel: 5900 }, { d: "2026-06-29", gross: 18700, fuel: 5750 }, { d: "2026-06-22", gross: 18900, fuel: 5800 }, { d: "2026-06-15", gross: 18300, fuel: 5700 }, { d: "2026-06-08", gross: 18800, fuel: 5750 }, { d: "2026-06-01", gross: 19500, fuel: 5950 }, { d: "2026-05-25", gross: 18100, fuel: 5600 }, { d: "2026-05-18", gross: 18600, fuel: 5700 }, { d: "2026-05-11", gross: 19100, fuel: 5850 }, { d: "2026-05-04", gross: 18400, fuel: 5650 }, { d: "2026-04-27", gross: 17900, fuel: 5550 }, { d: "2026-04-20", gross: 18200, fuel: 5600 }] },
+  { id: "d4", name: "Balwinder Singh", mobile: "80540 55xx9", aadhaar: "XXXX XXXX 9902", pan: "DAEPM3456N", dl: "PB65 20180009902", dlExpiry: "2028-06-30", badge: "MOH/B/2018/9902", badgeExpiry: "2027-06-30", address: "Phase 7, Mohali", emergency: "Simran Kaur · 98140 90xx3", policeVerified: true, deposit: 10000, joined: "2025-06-22", model: "fixed", fixedRent: 26000, share: DRIVER_PCT, companyEarned: 301800, pending: 6900, lateDays: 5, rating: 4.3, complaints: 0, attendance: 25, active: true, clientId: null, apps: ["Uber", "Ola", "Rapido"], appHrs: 12, corpHrs: 0, history: [{ d: "2026-06-30", gross: 17300, fuel: 5600, rent: 6000 }, { d: "2026-06-23", gross: 16900, fuel: 5500, rent: 6000 }] },
+  { id: "d5", name: "Sukhwinder Singh", mobile: "91530 12xx6", aadhaar: "XXXX XXXX 5566", pan: "EBFPK7890P", dl: "PB10 20160005566", dlExpiry: "2026-07-30", badge: "LDH/B/2016/5566", badgeExpiry: "2026-07-30", address: "Dugri, Ludhiana", emergency: "Gagandeep Singh · 95610 34xx2", policeVerified: true, deposit: 10000, joined: "2025-11-08", share: DRIVER_PCT, companyEarned: 158200, pending: 5200, lateDays: 12, rating: 3.7, complaints: 2, attendance: 19, active: true, clientId: null, apps: ["Uber", "Rapido"], appHrs: 8, corpHrs: 0, history: [{ d: "2026-06-26", gross: 11800, fuel: 4300 }, { d: "2026-06-15", gross: 13600, fuel: 4700 }] },
   { id: "d6", name: "Jaspreet Singh", mobile: "98550 67xx1", aadhaar: "XXXX XXXX 3141", pan: "FCGPG2345Q", dl: "PB10 20150003141", dlExpiry: "2027-05-14", badge: "LDH/B/2015/3141", badgeExpiry: "2026-05-14", address: "Kharar, Mohali", emergency: "Navjot Kaur · 90280 11xx5", policeVerified: true, deposit: 0, joined: "2024-05-01", share: DRIVER_PCT, companyEarned: 336000, pending: 0, lateDays: 14, rating: 3.9, complaints: 1, attendance: 0, active: false, clientId: null, apps: ["Uber"], appHrs: 0, corpHrs: 0, history: [{ d: "2026-01-31", gross: 15400, fuel: 5100 }] },
 ];
 
@@ -342,8 +348,8 @@ function Overview({ cars, drivers, stats, expenses }) {
         <Stat label="Active with driver" value={stats.active} tone="green" />
         <Stat label="In service / idle" value={`${stats.service} / ${stats.idle}`} tone="amber" />
         <Stat label="Fleet gross (30d)" value={inrS(stats.grossMo)} tone="green" hint="driver fares, all apps" />
-        <Stat label="Company revenue" value={inrS(stats.companyRevMo)} tone="green" hint={`${COMPANY_PCT}% share + corporate`} />
-        <Stat label="Driver payouts" value={inrS(stats.driverPayoutMo)} hint={`${DRIVER_PCT}% of gross`} />
+        <Stat label="Company revenue" value={inrS(stats.companyRevMo)} tone="green" hint="share + rent + corporate" />
+        <Stat label="Driver payouts" value={inrS(stats.driverPayoutMo)} hint="drivers’ portion of gross" />
         <Stat label="Monthly EMI" value={inrS(stats.emiMo)} hint={`${stats.total} loans @ 8% · 7 yr`} />
         <Stat label="Maintenance (30d)" value={inr(maintMo)} tone="amber" hint="repairs, tyres, service" />
         <Stat label="Company net" value={inrS(stats.profitMo)} tone={stats.profitMo >= 0 ? "green" : "red"} hint="after EMI + provisions" />
@@ -368,8 +374,8 @@ function Overview({ cars, drivers, stats, expenses }) {
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           <Stat label="Fleet gross" value={inrS(stats.grossMo * pf)} tone="green" />
-          <Stat label={`Company ${COMPANY_PCT}% + corp`} value={inrS(stats.companyRevMo * pf)} tone="green" />
-          <Stat label={`Driver ${DRIVER_PCT}%`} value={inrS(stats.driverPayoutMo * pf)} />
+          <Stat label="Company + corp" value={inrS(stats.companyRevMo * pf)} tone="green" />
+          <Stat label="Driver payouts" value={inrS(stats.driverPayoutMo * pf)} />
           <Stat label="EMI" value={inrS(stats.emiMo * pf)} />
           <Stat label="Company net" value={inrS(stats.profitMo * pf)} tone={stats.profitMo >= 0 ? "green" : "red"} />
         </div>
@@ -567,8 +573,10 @@ ${COMPANY_LEGAL}
 This agreement is made on ${fmtD(NOW.toISOString())} between ${COMPANY_LEGAL} ("the Company", First Party) and ${d.name}, holder of DL ${d.dl}, residing at ${d.address} (Second Party / Driver).
 
 1. VEHICLE. The Company provides a ${VEHICLE} bearing registration ${reg} in roadworthy condition, with valid insurance, registration, permit and fitness certificate.
-2. REVENUE SHARE. All fares and ride earnings are gross revenue. The Driver keeps ${d.share || DRIVER_PCT}% of gross revenue; the Company receives ${100 - (d.share || DRIVER_PCT)}%. Earnings shall be settled weekly through the Company account, with a full statement of gross fares.
-3. FUEL. The Driver bears all CNG/fuel expenses out of his share, and shall record fuel spend at each settlement.
+${d.model === "fixed"
+  ? `2. RENT. The Driver shall pay the Company a fixed rent of ${inr(FIXED_RENT_DAY)} per working day, Sundays excluded (approximately ${inr(d.fixedRent || FIXED_RENT_MO)} per month), settled weekly through the Company account. All fares and ride earnings above the rent remain the Driver's.`
+  : `2. REVENUE SHARE. All fares and ride earnings are gross revenue. The Driver keeps ${d.share || DRIVER_PCT}% of gross revenue; the Company receives ${100 - (d.share || DRIVER_PCT)}%. Earnings shall be settled weekly through the Company account, with a full statement of gross fares.`}
+3. FUEL. The Driver bears all CNG/fuel expenses out of his earnings, and shall record fuel spend at each settlement.
 4. COMPANY PROVIDES: the vehicle, insurance, regular servicing and maintenance, fleet management, platform subscription where applicable, and driver support and operational management.
 5. DRIVER BEARS: CNG/fuel, daily cleaning, parking, and challans/fines caused by him.
 6. CORPORATE DUTY. The Company will make reasonable best efforts to secure corporate contracts and assign them fairly among drivers. Corporate work is an additional benefit and is NOT guaranteed; availability depends on market demand and client acquisition.
@@ -584,14 +592,17 @@ Witness 1: _________________                          Witness 2: _______________
 function receiptText(d, car, entry) {
   const gross = entry?.gross || 0, fuel = entry?.fuel || 0;
   const pct = d.share || DRIVER_PCT;
-  const driverShare = gross * pct / 100, companyShare = gross - driverShare;
+  const isFixed = d.model === "fixed";
+  const companyShare = isFixed ? (entry?.rent || 0) : gross * (100 - pct) / 100;
+  const driverShare = gross - companyShare;
   return `SETTLEMENT RECEIPT · ${COMPANY_LEGAL} · ${fmtD(NOW.toISOString())}
 
 Driver: ${d.name} (DL ${d.dl}) · Vehicle: ${car ? car.reg : "—"} (${VEHICLE})
 
 Gross revenue for the period:        ${inr(gross)}
-Driver share (${pct}%):                ${inr(driverShare)}
-Company share (${100 - pct}%):               ${inr(companyShare)}
+${isFixed ? `Rent (fixed model, ${inr(FIXED_RENT_DAY)}/day):     ${inr(companyShare)}
+Driver keeps (gross − rent):         ${inr(driverShare)}` : `Driver share (${pct}%):                ${inr(driverShare)}
+Company share (${100 - pct}%):               ${inr(companyShare)}`}
 Fuel (CNG) reported by driver:       ${inr(fuel)}
 Driver net earnings (share − fuel):  ${inr(driverShare - fuel)}
 
@@ -603,21 +614,21 @@ Received by: ____________________ (Authorised signatory, ${COMPANY_LEGAL})`;
 
 
 /* group a driver's settlements by month for the earnings view */
-const monthlyLedger = (h, pct) => {
+const monthlyLedger = (h, d) => {
   const m = {};
   h.forEach((e) => {
     const k = (e.d || '').slice(0, 7);
     if (!k) return;
-    m[k] = m[k] || { gross: 0, fuel: 0, n: 0 };
-    m[k].gross += e.gross || 0; m[k].fuel += e.fuel || 0; m[k].n += 1;
+    m[k] = m[k] || { gross: 0, fuel: 0, company: 0, n: 0 };
+    m[k].gross += e.gross || 0; m[k].fuel += e.fuel || 0; m[k].company += entryCompany(e, d); m[k].n += 1;
   });
   return Object.entries(m)
     .sort((a, b) => b[0].localeCompare(a[0]))
     .map(([k, v]) => ({
       month: new Date(k + '-15').toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
       key: k, gross: v.gross, fuel: v.fuel, n: v.n,
-      driver: v.gross * pct / 100 - v.fuel,
-      company: v.gross * (100 - pct) / 100,
+      driver: v.gross - v.company - v.fuel,
+      company: v.company,
     }));
 };
 
@@ -627,6 +638,7 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
   const [settle, setSettle] = useState(null);
   const [sGross, setSGross] = useState(16000);
   const [sFuel, setSFuel] = useState(5200);
+  const [sDays, setSDays] = useState(6);
   const [sReceived, setSReceived] = useState(true);
   const [pay, setPay] = useState(null);
   const [payAmt, setPayAmt] = useState(0);
@@ -636,21 +648,28 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
   const [dAppHrs, setDAppHrs] = useState(10);
   const [dCorpHrs, setDCorpHrs] = useState(0);
   const [dClient, setDClient] = useState("");
-  const blank = { name: "", mobile: "", deposit: 25000, dl: "", address: "", appHrs: 10, clientId: "" };
+  const [dModel, setDModel] = useState("share");
+  const [dPct, setDPct] = useState(DRIVER_PCT);
+  const [dRent, setDRent] = useState(FIXED_RENT_MO);
+  const blank = { name: "", mobile: "", deposit: DEF_DEPOSIT, dl: "", address: "", appHrs: 10, clientId: "", model: "share", share: DRIVER_PCT };
   const [f, setF] = useState(blank);
   const carOf = (d) => cars.find((c) => c.driverId === d.id);
   const clientOf = (d) => clients.find((k) => k.id === d.clientId);
 
   const save = () => {
     if (!f.name.trim()) return;
-    setDrivers([{ ...f, id: "d" + Date.now(), aadhaar: "XXXX XXXX —", pan: "—", dlExpiry: "", badge: "—", badgeExpiry: "", emergency: "—", policeVerified: false, joined: NOW.toISOString().slice(0, 10), share: DRIVER_PCT, companyEarned: 0, pending: 0, lateDays: 0, rating: 5, complaints: 0, attendance: 0, active: true, clientId: f.clientId || null, apps: APPS_LIST, appHrs: f.appHrs || 10, corpHrs: f.clientId ? 2 : 0, history: [] }, ...drivers]);
+    setDrivers([{ ...f, id: "d" + Date.now(), aadhaar: "XXXX XXXX —", pan: "—", dlExpiry: "", badge: "—", badgeExpiry: "", emergency: "—", policeVerified: false, joined: NOW.toISOString().slice(0, 10), model: f.model || "share", share: f.share || DRIVER_PCT, fixedRent: FIXED_RENT_MO, companyEarned: 0, pending: 0, lateDays: 0, rating: 5, complaints: 0, attendance: 0, active: true, clientId: f.clientId || null, apps: APPS_LIST, appHrs: f.appHrs || 10, corpHrs: f.clientId ? 2 : 0, history: [] }, ...drivers]);
     setF(blank); setAdd(false);
   };
   const recordSettlement = () => {
-    const companyShare = sGross * (100 - (settle.share || DRIVER_PCT)) / 100;
+    const isFixed = settle.model === "fixed";
+    const rent = isFixed ? sDays * FIXED_RENT_DAY : 0;
+    const companyShare = isFixed ? rent : sGross * (100 - (settle.share || DRIVER_PCT)) / 100;
+    const entry = { d: NOW.toISOString().slice(0, 10), gross: sGross, fuel: sFuel };
+    if (isFixed) entry.rent = rent;
     setDrivers(drivers.map((d) => d.id === settle.id ? {
       ...d,
-      history: [{ d: NOW.toISOString().slice(0, 10), gross: sGross, fuel: sFuel }, ...d.history],
+      history: [entry, ...d.history],
       companyEarned: d.companyEarned + (sReceived ? companyShare : 0),
       pending: d.pending + (sReceived ? 0 : companyShare),
     } : d));
@@ -661,7 +680,7 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
     setPay(null);
   };
   const saveDuty = () => {
-    setDrivers(drivers.map((d) => d.id === duty.id ? { ...d, apps: dApps, appHrs: dAppHrs, corpHrs: dCorpHrs, clientId: dClient || null } : d));
+    setDrivers(drivers.map((d) => d.id === duty.id ? { ...d, apps: dApps, appHrs: dAppHrs, corpHrs: dCorpHrs, clientId: dClient || null, model: dModel, share: dPct, fixedRent: dRent } : d));
     setDuty(null);
   };
   const copyDoc = async (t) => { try { await navigator.clipboard.writeText(t); } catch (e) { /* noop */ } };
@@ -681,10 +700,11 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
         const car = carOf(d);
         const client = clientOf(d);
         const pct = d.share || DRIVER_PCT;
+        const isFixed = d.model === "fixed";
         const h30 = last30(d.history);
         const gross30 = sumG(h30), fuel30 = sumF(h30);
-        const driverShare30 = gross30 * pct / 100;
-        const companyShare30 = gross30 - driverShare30;
+        const companyShare30 = h30.reduce((s2, e) => s2 + entryCompany(e, d), 0);
+        const driverShare30 = gross30 - companyShare30;
         const driverNet30 = driverShare30 - fuel30;
         return (
           <Card key={d.id} className={d.active ? "" : "opacity-60"}>
@@ -693,7 +713,7 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
                 <div className="flex items-center gap-2">
                   <span style={DISP} className="font-bold text-zinc-900">{d.name}</span>
                   <Chip tone={d.active ? "green" : "zinc"}>{d.active ? "Active" : "Inactive"}</Chip>
-                  <Chip tone="blue">{pct}/{100 - pct} share</Chip>
+                  <Chip tone="blue">{dealLabel(d)}</Chip>
                   {d.policeVerified && <Chip tone="blue">Police verified</Chip>}
                   {client && <Chip tone="green">Corporate · {client.name.split(",")[0]}</Chip>}
                 </div>
@@ -706,8 +726,8 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
               <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">Revenue ledger · trailing 30 days (app-based earnings)</div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
                 <div><span className="text-zinc-500">Gross revenue: </span><span style={MONO} className="font-semibold">{inr(gross30)}</span></div>
-                <div><span className="text-zinc-500">Driver {pct}%: </span><span style={MONO}>{inr(driverShare30)}</span></div>
-                <div><span className="text-zinc-500">Company {100 - pct}%: </span><span style={MONO} className="font-semibold text-emerald-700">{inr(companyShare30)}</span></div>
+                <div><span className="text-zinc-500">{isFixed ? "Driver after rent" : `Driver ${pct}%`}: </span><span style={MONO}>{inr(driverShare30)}</span></div>
+                <div><span className="text-zinc-500">{isFixed ? "Rent to company" : `Company ${100 - pct}%`}: </span><span style={MONO} className="font-semibold text-emerald-700">{inr(companyShare30)}</span></div>
                 <div><span className="text-zinc-500">Fuel (driver): </span><span style={MONO} className="text-rose-700">{inr(fuel30)}</span></div>
                 <div><span className="text-zinc-500">Driver net: </span><span style={MONO} className={driverNet30 >= 15000 ? "font-semibold text-emerald-700" : "font-semibold text-amber-600"}>{inr(driverNet30)}</span></div>
                 <div><span className="text-zinc-500">Company earnings: </span><span style={MONO} className="font-semibold text-emerald-700">{inr(companyShare30)}</span></div>
@@ -734,11 +754,11 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
               </div>
             )}
             {earnOpen === d.id && (() => {
-              const months = monthlyLedger(d.history, pct);
+              const months = monthlyLedger(d.history, d);
               const lifeGross = d.history.reduce((s2, e) => s2 + (e.gross || 0), 0);
               const lifeFuel = d.history.reduce((s2, e) => s2 + (e.fuel || 0), 0);
-              const lifeDriver = lifeGross * pct / 100 - lifeFuel;
-              const lifeCompany = lifeGross * (100 - pct) / 100;
+              const lifeCompany = d.history.reduce((s2, e) => s2 + entryCompany(e, d), 0);
+              const lifeDriver = lifeGross - lifeCompany - lifeFuel;
               const avgWk = d.history.length ? lifeGross / d.history.length : 0;
               const chart = months.slice(0, 6).reverse();
               return (
@@ -746,8 +766,8 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
                   <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-zinc-400">Earnings history · {d.name.split(" ")[0]} · all recorded settlements</div>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                     <Stat label="Lifetime gross" value={inrS(lifeGross)} />
-                    <Stat label={`Driver ${pct}% − fuel`} value={inrS(lifeDriver)} tone="green" hint="his take-home" />
-                    <Stat label={`Company ${100 - pct}%`} value={inrS(lifeCompany)} tone="green" />
+                    <Stat label="Driver take-home" value={inrS(lifeDriver)} tone="green" hint={isFixed ? "gross − rent − fuel" : `${pct}% − fuel`} />
+                    <Stat label="Company earned" value={inrS(lifeCompany)} tone="green" hint={isFixed ? "fixed rent" : `${100 - pct}% share`} />
                     <Stat label="Fuel spent" value={inrS(lifeFuel)} tone="red" />
                     <Stat label="Avg / settlement" value={inr(avgWk)} tone="amber" hint={`${d.history.length} settlements`} />
                   </div>
@@ -784,7 +804,7 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
             <div className="mt-3 flex flex-wrap gap-2">
               <Btn kind="dark" onClick={() => { setSettle(d); setSGross(16000); setSFuel(5200); setSReceived(true); }}>Record settlement</Btn>
               <Btn kind="ghost" onClick={() => setEarnOpen(earnOpen === d.id ? null : d.id)}>{earnOpen === d.id ? "Hide earnings" : "Earnings history"}</Btn>
-              <Btn kind="ghost" onClick={() => { setDuty(d); setDApps(d.apps || APPS_LIST); setDAppHrs(d.appHrs || 10); setDCorpHrs(d.corpHrs || 0); setDClient(d.clientId || ""); }}>Duty & apps</Btn>
+              <Btn kind="ghost" onClick={() => { setDuty(d); setDApps(d.apps || APPS_LIST); setDAppHrs(d.appHrs || 10); setDCorpHrs(d.corpHrs || 0); setDClient(d.clientId || ""); setDModel(d.model || "share"); setDPct(d.share || DRIVER_PCT); setDRent(d.fixedRent || FIXED_RENT_MO); }}>Deal & duty</Btn>
               {d.pending > 0 && <Btn kind="ghost" onClick={() => { setPay(d); setPayAmt(d.pending); }}>Collect pending</Btn>}
               <Btn kind="ghost" onClick={() => setDoc({ title: "Revenue-share agreement", text: agreementText(d, car) })}>Agreement</Btn>
               <Btn kind="ghost" onClick={() => setDoc({ title: "Settlement receipt", text: receiptText(d, car, d.history[0]) })}>Receipt</Btn>
@@ -796,13 +816,15 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
 
       {add && (
         <Modal title="Add driver" onClose={() => setAdd(false)}>
-          <div className="mb-3 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600">Every driver joins on the <span className="font-semibold text-zinc-900">{DRIVER_PCT}% driver / {COMPANY_PCT}% company</span> revenue share and pays his own CNG. The company provides the car, insurance, servicing, fleet management, platform subscription and support.</div>
+          <div className="mb-3 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600">Two deals: <span className="font-semibold text-zinc-900">revenue share</span> (default {DRIVER_PCT}/{COMPANY_PCT}, adjustable — 55/45 works too) or <span className="font-semibold text-zinc-900">fixed {inrS(FIXED_RENT_MO)}/month</span> ({inr(FIXED_RENT_DAY)}/day, Sundays off, driver keeps all fares). Standard security deposit {inr(DEF_DEPOSIT)}. Driver pays his own CNG in both; the company provides the car, insurance, servicing, subscription and support.</div>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2"><Field label="Full name"><TextIn value={f.name} onChange={(v) => setF({ ...f, name: v })} /></Field></div>
             <Field label="Mobile"><TextIn value={f.mobile} onChange={(v) => setF({ ...f, mobile: v })} /></Field>
             <Field label="Driving licence"><TextIn value={f.dl} onChange={(v) => setF({ ...f, dl: v })} /></Field>
             <Field label="Security deposit"><NumIn value={f.deposit} step={1000} onChange={(v) => setF({ ...f, deposit: v })} /></Field>
             <Field label="Avg app hours / day"><NumIn value={f.appHrs} step={0.5} onChange={(v) => setF({ ...f, appHrs: v })} /></Field>
+            <Field label="Payment model"><Sel value={f.model === "fixed" ? "Fixed rent" : "Revenue share"} onChange={(v) => setF({ ...f, model: v === "Fixed rent" ? "fixed" : "share" })} options={["Revenue share", "Fixed rent"]} /></Field>
+            {f.model !== "fixed" && <Field label="Driver share %"><NumIn value={f.share} step={1} min={40} onChange={(v) => setF({ ...f, share: v })} /></Field>}
             <div className="col-span-2">
               <Field label="Corporate assignment (optional · best effort)">
                 <select className={inputCls} value={f.clientId} onChange={(e) => setF({ ...f, clientId: e.target.value })}>
@@ -818,7 +840,27 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
         </Modal>
       )}
       {duty && (
-        <Modal title={`Duty & apps · ${duty.name}`} onClose={() => setDuty(null)}>
+        <Modal title={`Deal & duty · ${duty.name}`} onClose={() => setDuty(null)}>
+          <div className="mb-3">
+            <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-zinc-400">Payment model</div>
+            <div className="flex overflow-hidden rounded-xl border border-zinc-200 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+              {[["share", "Revenue share"], ["fixed", `Fixed ${inrS(FIXED_RENT_MO)}/mo`]].map(([k, l]) => (
+                <button key={k} onClick={() => setDModel(k)}
+                  className={`flex-1 px-2 py-2 text-[12px] font-semibold transition-all duration-200 focus:outline-none ${dModel === k ? "bg-zinc-900 text-white" : "bg-white text-zinc-500 hover:text-zinc-900"}`}>{l}</button>
+              ))}
+            </div>
+            {dModel === "share" ? (
+              <div className="mt-2 grid grid-cols-2 items-end gap-3">
+                <Field label="Driver share %"><NumIn value={dPct} step={1} min={40} onChange={setDPct} /></Field>
+                <div className="rounded-lg bg-zinc-50 p-2 text-xs text-zinc-500">Company gets <span style={MONO} className="font-semibold text-emerald-700">{100 - dPct}%</span> — set 55 for a 55/45 deal, 60 default</div>
+              </div>
+            ) : (
+              <div className="mt-2 grid grid-cols-2 items-end gap-3">
+                <Field label="Fixed rent / month"><NumIn value={dRent} step={500} onChange={setDRent} /></Field>
+                <div className="rounded-lg bg-zinc-50 p-2 text-xs text-zinc-500"><span style={MONO} className="font-semibold text-zinc-900">{inr(FIXED_RENT_DAY)}/day</span> · Sundays off · driver keeps 100% of fares</div>
+              </div>
+            )}
+          </div>
           <div className="mb-3">
             <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-zinc-400">Cab runs on these apps</div>
             <div className="flex gap-2">
@@ -848,17 +890,21 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
       )}
       {settle && (() => {
         const pct = settle.share || DRIVER_PCT;
-        const dShare = sGross * pct / 100, cShare = sGross - dShare;
+        const isFixed = settle.model === "fixed";
+        const cShare = isFixed ? sDays * FIXED_RENT_DAY : sGross * (100 - pct) / 100;
+        const dShare = sGross - cShare;
         return (
           <Modal title={`Record settlement · ${settle.name}`} onClose={() => setSettle(null)}>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Gross revenue (all apps)"><NumIn value={sGross} step={100} onChange={setSGross} /></Field>
               <Field label="Fuel spent by driver"><NumIn value={sFuel} step={50} onChange={setSFuel} /></Field>
+              {isFixed && <Field label="Days worked (Sundays off)"><NumIn value={sDays} step={1} min={0} onChange={setSDays} /></Field>}
             </div>
+            {isFixed && <p className="mt-2 text-xs text-zinc-500">Fixed model: rent = <span style={MONO} className="font-semibold text-zinc-900">{sDays} days × {inr(FIXED_RENT_DAY)} = {inr(sDays * FIXED_RENT_DAY)}</span> · driver keeps all fares above rent + fuel.</p>}
             <div className="mt-3 space-y-1.5 rounded-lg bg-zinc-50 p-3 text-sm">
               <div className="flex justify-between"><span className="text-zinc-500">Gross revenue</span><span style={MONO}>{inr(sGross)}</span></div>
-              <div className="flex justify-between"><span className="text-zinc-500">Driver share ({pct}%)</span><span style={MONO}>{inr(dShare)}</span></div>
-              <div className="flex justify-between"><span className="text-zinc-500">Company share ({100 - pct}%)</span><span style={MONO} className="font-semibold text-emerald-700">{inr(cShare)}</span></div>
+              <div className="flex justify-between"><span className="text-zinc-500">{isFixed ? "Driver keeps (gross − rent)" : `Driver share (${pct}%)`}</span><span style={MONO}>{inr(dShare)}</span></div>
+              <div className="flex justify-between"><span className="text-zinc-500">{isFixed ? `Rent (${sDays} d × ${inr(FIXED_RENT_DAY)})` : `Company share (${100 - pct}%)`}</span><span style={MONO} className="font-semibold text-emerald-700">{inr(cShare)}</span></div>
               <div className="flex justify-between"><span className="text-zinc-500">− Fuel (driver's cost)</span><span style={MONO} className="text-rose-700">{inr(sFuel)}</span></div>
               <div className="flex justify-between border-t border-zinc-200 pt-1.5 font-semibold"><span>Driver takes home</span><span style={MONO} className="text-sky-700">{inr(dShare - sFuel)}</span></div>
               <div className="flex justify-between font-semibold"><span>Company earns</span><span style={MONO} className="text-emerald-700">{inr(cShare)}</span></div>
@@ -2581,8 +2627,8 @@ export default function App() {
     /* 60/40 revenue engine · trailing-30-day driver settlements */
     const activeDrivers = drivers.filter((d) => d.active && cars.some((c) => c.driverId === d.id));
     const grossMo = activeDrivers.reduce((s, d) => s + sumG(last30(d.history)), 0);
-    const driverPayoutMo = activeDrivers.reduce((s, d) => s + sumG(last30(d.history)) * (d.share || DRIVER_PCT) / 100, 0);
-    const shareMo = grossMo - driverPayoutMo;                                 // company's 40%
+    const shareMo = activeDrivers.reduce((s, d) => s + last30(d.history).reduce((x, e) => x + entryCompany(e, d), 0), 0); // share deals + fixed rents
+    const driverPayoutMo = grossMo - shareMo;
     const corpProfitMo = clients.reduce((s, k) => s + (k.billing - k.cost - k.penalties), 0);
     const corpBillingMo = clients.reduce((s, k) => s + k.billing, 0);
     const companyRevMo = shareMo + corpBillingMo;                             // company revenue incl. corporate billing
