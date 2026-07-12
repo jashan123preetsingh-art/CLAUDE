@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
 } from "recharts";
 import {
-  LayoutDashboard, Car, Users, Calculator, Wallet, Building2, TrendingUp, BookOpen, Bell, IndianRupee,
+  LayoutDashboard, Car, Users, Calculator, Wallet, Building2, TrendingUp, BookOpen, Bell, IndianRupee, Rocket,
 } from "lucide-react";
 
 /* ================= formatting & finance math ================= */
@@ -110,9 +110,9 @@ const SEED_CARS = [
 /* drivers work the 60/40 revenue share: driver keeps 60% of gross fares and pays his own CNG;
    history = weekly settlements { d, gross, fuel } — the ledger computes the split automatically */
 const SEED_DRIVERS = [
-  { id: "d1", name: "Gurpreet Singh", mobile: "98140 22xx7", aadhaar: "XXXX XXXX 4821", pan: "AXBPP1234K", dl: "PB10 20190004821", dlExpiry: "2029-04-18", badge: "LDH/B/2019/4821", badgeExpiry: "2027-04-18", address: "Model Town, Ludhiana", emergency: "Harleen Kaur · 98550 22xx1", policeVerified: true, deposit: 25000, joined: "2024-03-12", share: DRIVER_PCT, companyEarned: 612000, pending: 0, lateDays: 3, rating: 4.6, complaints: 0, attendance: 26, active: true, clientId: "k1", history: [{ d: "2026-07-06", gross: 16800, fuel: 5300 }, { d: "2026-06-29", gross: 17400, fuel: 5450 }, { d: "2026-06-22", gross: 16200, fuel: 5100 }, { d: "2026-06-15", gross: 15900, fuel: 5200 }] },
+  { id: "d1", name: "Gurpreet Singh", mobile: "98140 22xx7", aadhaar: "XXXX XXXX 4821", pan: "AXBPP1234K", dl: "PB10 20190004821", dlExpiry: "2029-04-18", badge: "LDH/B/2019/4821", badgeExpiry: "2027-04-18", address: "Model Town, Ludhiana", emergency: "Harleen Kaur · 98550 22xx1", policeVerified: true, deposit: 25000, joined: "2024-03-12", share: DRIVER_PCT, companyEarned: 612000, pending: 0, lateDays: 3, rating: 4.6, complaints: 0, attendance: 26, active: true, clientId: "k1", history: [{ d: "2026-07-06", gross: 16800, fuel: 5300 }, { d: "2026-06-29", gross: 17400, fuel: 5450 }, { d: "2026-06-22", gross: 16200, fuel: 5100 }, { d: "2026-06-15", gross: 15900, fuel: 5200 }, { d: "2026-06-08", gross: 16400, fuel: 5150 }, { d: "2026-06-01", gross: 15700, fuel: 5050 }, { d: "2026-05-25", gross: 16900, fuel: 5350 }, { d: "2026-05-18", gross: 15400, fuel: 5000 }, { d: "2026-05-11", gross: 16100, fuel: 5200 }, { d: "2026-05-04", gross: 17200, fuel: 5400 }, { d: "2026-04-27", gross: 15800, fuel: 5100 }, { d: "2026-04-20", gross: 16600, fuel: 5250 }] },
   { id: "d2", name: "Harjinder Singh", mobile: "97790 88xx2", aadhaar: "XXXX XXXX 7734", pan: "BYCPJ5678L", dl: "PB10 20170007734", dlExpiry: "2027-09-02", badge: "LDH/B/2017/7734", badgeExpiry: "2026-08-10", address: "Focal Point, Ludhiana", emergency: "Manpreet Singh · 90410 45xx8", policeVerified: true, deposit: 25000, joined: "2024-08-05", share: DRIVER_PCT, companyEarned: 508400, pending: 6400, lateDays: 9, rating: 4.1, complaints: 1, attendance: 24, active: true, clientId: "k1", history: [{ d: "2026-06-29", gross: 14800, fuel: 5050 }, { d: "2026-06-21", gross: 16600, fuel: 5350 }, { d: "2026-06-14", gross: 16100, fuel: 5300 }] },
-  { id: "d3", name: "Manjinder Singh", mobile: "99880 31xx4", aadhaar: "XXXX XXXX 2210", pan: "CZDPS9012M", dl: "CH01 20200002210", dlExpiry: "2030-01-22", badge: "CHD/B/2020/2210", badgeExpiry: "2028-01-22", address: "Sector 22, Chandigarh", emergency: "Rajwinder Kaur · 98153 77xx0", policeVerified: true, deposit: 30000, joined: "2025-01-18", share: DRIVER_PCT, companyEarned: 421600, pending: 0, lateDays: 1, rating: 4.8, complaints: 0, attendance: 27, active: true, clientId: "k2", history: [{ d: "2026-07-06", gross: 19200, fuel: 5900 }, { d: "2026-06-29", gross: 18700, fuel: 5750 }, { d: "2026-06-22", gross: 18900, fuel: 5800 }, { d: "2026-06-15", gross: 18300, fuel: 5700 }] },
+  { id: "d3", name: "Manjinder Singh", mobile: "99880 31xx4", aadhaar: "XXXX XXXX 2210", pan: "CZDPS9012M", dl: "CH01 20200002210", dlExpiry: "2030-01-22", badge: "CHD/B/2020/2210", badgeExpiry: "2028-01-22", address: "Sector 22, Chandigarh", emergency: "Rajwinder Kaur · 98153 77xx0", policeVerified: true, deposit: 30000, joined: "2025-01-18", share: DRIVER_PCT, companyEarned: 421600, pending: 0, lateDays: 1, rating: 4.8, complaints: 0, attendance: 27, active: true, clientId: "k2", history: [{ d: "2026-07-06", gross: 19200, fuel: 5900 }, { d: "2026-06-29", gross: 18700, fuel: 5750 }, { d: "2026-06-22", gross: 18900, fuel: 5800 }, { d: "2026-06-15", gross: 18300, fuel: 5700 }, { d: "2026-06-08", gross: 18800, fuel: 5750 }, { d: "2026-06-01", gross: 19500, fuel: 5950 }, { d: "2026-05-25", gross: 18100, fuel: 5600 }, { d: "2026-05-18", gross: 18600, fuel: 5700 }, { d: "2026-05-11", gross: 19100, fuel: 5850 }, { d: "2026-05-04", gross: 18400, fuel: 5650 }, { d: "2026-04-27", gross: 17900, fuel: 5550 }, { d: "2026-04-20", gross: 18200, fuel: 5600 }] },
   { id: "d4", name: "Balwinder Singh", mobile: "80540 55xx9", aadhaar: "XXXX XXXX 9902", pan: "DAEPM3456N", dl: "PB65 20180009902", dlExpiry: "2028-06-30", badge: "MOH/B/2018/9902", badgeExpiry: "2027-06-30", address: "Phase 7, Mohali", emergency: "Simran Kaur · 98140 90xx3", policeVerified: true, deposit: 25000, joined: "2025-06-22", share: DRIVER_PCT, companyEarned: 301800, pending: 6900, lateDays: 5, rating: 4.3, complaints: 0, attendance: 25, active: true, clientId: null, history: [{ d: "2026-06-30", gross: 17300, fuel: 5600 }, { d: "2026-06-23", gross: 16900, fuel: 5500 }] },
   { id: "d5", name: "Sukhwinder Singh", mobile: "91530 12xx6", aadhaar: "XXXX XXXX 5566", pan: "EBFPK7890P", dl: "PB10 20160005566", dlExpiry: "2026-07-30", badge: "LDH/B/2016/5566", badgeExpiry: "2026-07-30", address: "Dugri, Ludhiana", emergency: "Gagandeep Singh · 95610 34xx2", policeVerified: true, deposit: 20000, joined: "2025-11-08", share: DRIVER_PCT, companyEarned: 158200, pending: 5200, lateDays: 12, rating: 3.7, complaints: 2, attendance: 19, active: true, clientId: null, history: [{ d: "2026-06-26", gross: 11800, fuel: 4300 }, { d: "2026-06-15", gross: 13600, fuel: 4700 }] },
   { id: "d6", name: "Jaspreet Singh", mobile: "98550 67xx1", aadhaar: "XXXX XXXX 3141", pan: "FCGPG2345Q", dl: "PB10 20150003141", dlExpiry: "2027-05-14", badge: "LDH/B/2015/3141", badgeExpiry: "2026-05-14", address: "Kharar, Mohali", emergency: "Navjot Kaur · 90280 11xx5", policeVerified: true, deposit: 0, joined: "2024-05-01", share: DRIVER_PCT, companyEarned: 336000, pending: 0, lateDays: 14, rating: 3.9, complaints: 1, attendance: 0, active: false, clientId: null, history: [{ d: "2026-01-31", gross: 15400, fuel: 5100 }] },
@@ -571,6 +571,26 @@ Balance pending after this settlement: ${inr(Math.max(0, d.pending))}
 Received by: ____________________ (Authorised signatory, ${COMPANY_LEGAL})`;
 }
 
+
+/* group a driver's settlements by month for the earnings view */
+const monthlyLedger = (h, pct) => {
+  const m = {};
+  h.forEach((e) => {
+    const k = (e.d || '').slice(0, 7);
+    if (!k) return;
+    m[k] = m[k] || { gross: 0, fuel: 0, n: 0 };
+    m[k].gross += e.gross || 0; m[k].fuel += e.fuel || 0; m[k].n += 1;
+  });
+  return Object.entries(m)
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([k, v]) => ({
+      month: new Date(k + '-15').toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
+      key: k, gross: v.gross, fuel: v.fuel, n: v.n,
+      driver: v.gross * pct / 100 - v.fuel,
+      company: v.gross * (100 - pct) / 100,
+    }));
+};
+
 function Drivers({ drivers, setDrivers, cars, clients }) {
   const [add, setAdd] = useState(false);
   const [doc, setDoc] = useState(null);
@@ -580,6 +600,7 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
   const [sReceived, setSReceived] = useState(true);
   const [pay, setPay] = useState(null);
   const [payAmt, setPayAmt] = useState(0);
+  const [earnOpen, setEarnOpen] = useState(null);
   const blank = { name: "", mobile: "", deposit: 25000, dl: "", address: "" };
   const [f, setF] = useState(blank);
   const carOf = (d) => cars.find((c) => c.driverId === d.id);
@@ -671,8 +692,57 @@ function Drivers({ drivers, setDrivers, cars, clients }) {
                 ))}
               </div>
             )}
+            {earnOpen === d.id && (() => {
+              const months = monthlyLedger(d.history, pct);
+              const lifeGross = d.history.reduce((s2, e) => s2 + (e.gross || 0), 0);
+              const lifeFuel = d.history.reduce((s2, e) => s2 + (e.fuel || 0), 0);
+              const lifeDriver = lifeGross * pct / 100 - lifeFuel;
+              const lifeCompany = lifeGross * (100 - pct) / 100;
+              const avgWk = d.history.length ? lifeGross / d.history.length : 0;
+              const chart = months.slice(0, 6).reverse();
+              return (
+                <div className="mt-3 rounded-xl border border-zinc-900/[0.06] bg-white p-3.5">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-zinc-400">Earnings history · {d.name.split(" ")[0]} · all recorded settlements</div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                    <Stat label="Lifetime gross" value={inrS(lifeGross)} />
+                    <Stat label={`Driver ${pct}% − fuel`} value={inrS(lifeDriver)} tone="green" hint="his take-home" />
+                    <Stat label={`Company ${100 - pct}%`} value={inrS(lifeCompany)} tone="green" />
+                    <Stat label="Fuel spent" value={inrS(lifeFuel)} tone="red" />
+                    <Stat label="Avg / settlement" value={inr(avgWk)} tone="amber" hint={`${d.history.length} settlements`} />
+                  </div>
+                  {chart.length > 1 && (
+                    <div className="mt-3 h-44">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chart} margin={{ left: 4, right: 8, top: 4 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f3" vertical={false} />
+                          <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                          <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={52} />
+                          <Tooltip formatter={tooltipFmt} />
+                          <Legend />
+                          <Bar dataKey="driver" name="Driver net" fill="#0284c7" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="company" name="Company share" fill="#059669" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                  <div className="mt-3">
+                    <Table
+                      head={["Month", "Settlements", "Gross", "Fuel", "Driver net", "Company share"]}
+                      rows={months.map((m) => [
+                        m.month, m.n, inr(m.gross),
+                        <span key="f" className="text-rose-600">{inr(m.fuel)}</span>,
+                        <span key="d" className="font-semibold text-sky-700">{inr(m.driver)}</span>,
+                        <span key="c" className="font-semibold text-emerald-700">{inr(m.company)}</span>,
+                      ])}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11.5px] text-zinc-400">Built automatically from recorded settlements — record every week's gross + fuel and this becomes the driver's full performance record. A new driver below ~₹14,000/month take-home after 2 full months is a churn risk; feed him corporate runs or coach his hours.</p>
+                </div>
+              );
+            })()}
             <div className="mt-3 flex flex-wrap gap-2">
               <Btn kind="dark" onClick={() => { setSettle(d); setSGross(16000); setSFuel(5200); setSReceived(true); }}>Record settlement</Btn>
+              <Btn kind="ghost" onClick={() => setEarnOpen(earnOpen === d.id ? null : d.id)}>{earnOpen === d.id ? "Hide earnings" : "Earnings history"}</Btn>
               {d.pending > 0 && <Btn kind="ghost" onClick={() => { setPay(d); setPayAmt(d.pending); }}>Collect pending</Btn>}
               <Btn kind="ghost" onClick={() => setDoc({ title: "Revenue-share agreement", text: agreementText(d, car) })}>Agreement</Btn>
               <Btn kind="ghost" onClick={() => setDoc({ title: "Settlement receipt", text: receiptText(d, car, d.history[0]) })}>Receipt</Btn>
@@ -2018,6 +2088,247 @@ function Playbook() {
   );
 }
 
+/* ================= PLAN BOOK · growth blueprint ================= */
+/* The master roadmap: every mobility business the company can build,
+   sequenced with hard gates so cash flow — not ambition — drives expansion. */
+const MISSION_LADDER = [
+  { stage: "Ludhiana + Chandigarh", when: "Years 0–2", goal: "Prove the machine: 10 → 50 profitable cabs, corporate desk, EV gig-scooter pilot", tone: "amber" },
+  { stage: "Punjab", when: "Years 2–4", goal: "Amritsar, Jalandhar, Patiala · 150+ vehicles · commercial fleet + driver academy", tone: "green" },
+  { stage: "North India", when: "Years 4–7", goal: "Delhi NCR, Jaipur, Dehradun · 500+ vehicles · fleet services & financing layer", tone: "blue" },
+  { stage: "India & beyond", when: "Years 7–10+", goal: "Multi-city platform · SaaS + logistics · 2,000+ vehicles · first overseas market", tone: "zinc" },
+];
+
+const BOSS_SEQUENCE = [
+  ["Win one boring thing first.", "The 60/40 Dzire fleet in Ludhiana/Chandigarh is the engine. Nothing else gets a rupee until 10 cars run profitably for 6 straight months. Focus is the strategy."],
+  ["Expand into what your customers already ask for.", "Corporate clients who trust you with employee cabs will hand you staff buses, airport runs and delivery vans without a single cold call. Sell deeper before you sell wider."],
+  ["The second business is EV gig scooters, not more categories.", "Same rent-an-asset model you already run, ticket size ₹1L instead of ₹8L, payback in 12–14 months, and Zomato/Swiggy/Blinkit riders in Ludhiana are a queue of ready customers. Pilot 10 scooters at ~25 cars."],
+  ["Commercial fleet when Ludhiana's factories pull you in.", "Hosiery and auto-parts units that use your worker cabs also ship freight daily. Cargo three-wheelers and Dost/Ace mini-trucks at 30–50 cars, anchored on 2–3 factory contracts before buying a single van."],
+  ["Services are margin, not a new company.", "GPS, FASTag, maintenance, driver supply — you already do these for yourself. Selling them to other small fleet owners costs almost nothing and makes competitors your customers."],
+  ["The driver ecosystem is the moat.", "Whoever owns the best drivers wins every mobility segment. Training academy, verified pool, loans against settlement history, rewards — build it from day one as retention, monetise it at scale."],
+  ["Software last, licences early.", "Productise this CRM as SaaS only after 100+ of your own vehicles prove it. But file for the aggregator licence at 20 cars — approvals are slow and stopping growth to wait for paper is how fleets die."],
+];
+
+const PHASES = [
+  {
+    id: "p1", name: "Ride-hailing fleet", horizon: "NOW · years 0–2", tag: "Now",
+    gate: "You are here. Gate to next phase: 10 cars × 6 months of profit, collection ≥95%, one corporate anchor client.",
+    ventures: [
+      ["Uber fleet", "Live model — subscription, not commission", "Now"],
+      ["Ola fleet", "Same cars, second demand pipe", "Now"],
+      ["Rapido cabs", "Third app, zero extra cost", "Now"],
+      ["Corporate employee transport", "The profit multiplier — factories, IT parks, hospitals", "Now"],
+      ["Airport taxi service", "Mohali airport queue + hotel tie-ups", "Next"],
+      ["Hotel taxi partnerships", "Fixed monthly desks at 3–4 star hotels", "Next"],
+      ["Outstation cabs", "Ludhiana–Delhi/Amritsar; wedding season premium", "Next"],
+      ["Chauffeur / drive-my-car service", "Drivers-only product; zero vehicle capital", "Later"],
+      ["Self-drive rental cars", "Different risk profile — needs deposits + tracking maturity", "Later"],
+    ],
+  },
+  {
+    id: "p3", name: "Electric mobility", horizon: "PILOT at ~25 cars · years 1–3", tag: "Next",
+    gate: "Gate: cab business self-funding, ₹12–15L free capital, one food/grocery platform tie-up signed.",
+    ventures: [
+      ["Gig-worker electric scooters", "10-scooter pilot · ₹3,500–4,500/mo rent to Zomato/Swiggy/Blinkit riders · 12–14 mo payback", "Next"],
+      ["EV rental & subscription", "Weekly/monthly plans; same 60/40 discipline, smaller ticket", "Next"],
+      ["Battery swapping network", "Partner first (Battery Smart model), build later", "Later"],
+      ["EV leasing to businesses", "Delivery fleets lease 20 at a time — B2B ticket", "Later"],
+      ["Charging stations", "Real estate game; start with your own fleet hub", "Later"],
+      ["Fast charging hubs", "Highway + city hub play once fleet density justifies it", "Watch"],
+      ["Fleet charging management", "Software layer on top of your own hubs", "Watch"],
+    ],
+  },
+  {
+    id: "p2", name: "Commercial fleet", horizon: "at 30–50 cars · years 2–4", tag: "Next",
+    gate: "Gate: 2–3 signed factory/e-commerce contracts BEFORE the first van is bought — never speculate on freight.",
+    ventures: [
+      ["Last-mile delivery fleet", "E-commerce parcel runs — steady B2B billing", "Next"],
+      ["Cargo three-wheelers & mini trucks", "Tata Ace/Dost on hosiery & auto-parts routes", "Next"],
+      ["E-commerce delivery vehicles", "Dedicated fleets for Flipkart/Amazon/Delhivery hubs", "Next"],
+      ["FMCG distribution vehicles", "Fixed daily routes, monthly contracts", "Later"],
+      ["Courier fleet", "Franchise tie-ups (DTDC/Ecom Express)", "Later"],
+      ["Cold chain vehicles", "Dairy/pharma — higher capex, premium rates", "Later"],
+      ["General logistics fleet", "Scale play after route density exists", "Later"],
+    ],
+  },
+  {
+    id: "p4", name: "Public & group mobility", horizon: "at 50+ vehicles · years 3-5", tag: "Later",
+    gate: "Gate: corporate desk running 10+ contracts; buses need contract cover for 100% of EMI before purchase.",
+    ventures: [
+      ["Staff transportation (buses/vans)", "Natural upgrade for existing factory clients", "Next"],
+      ["School & college transport", "Annual contracts, predictable, reputation-led", "Later"],
+      ["Shuttle services", "Focal Point ↔ city fixed routes", "Later"],
+      ["Tourist coaches", "Amritsar/Himachal circuits, wedding season", "Later"],
+      ["Event transport", "Weddings, political rallies, expos — surge revenue", "Later"],
+    ],
+  },
+  {
+    id: "p5", name: "Fleet services (margin layer)", horizon: "build alongside · years 1–5", tag: "Next",
+    gate: "Rule: only sell services you already run internally at 50+ vehicles of your own.",
+    ventures: [
+      ["Fleet maintenance hub", "Your workshop serves other owners at margin", "Next"],
+      ["GPS tracking as a service", "You already fit AIS-140 — resell + monitor", "Next"],
+      ["Driver supply to other fleets", "Your verified pool, placement fees", "Next"],
+      ["FASTag & fuel card management", "Commission on every card issued", "Later"],
+      ["Fleet financing referrals", "NBFC partnerships; later an NBFC licence of your own", "Later"],
+      ["Commercial insurance desk", "Broker tie-up, renewal commissions", "Later"],
+      ["Fleet CRM licensing", "This software, sold to small fleet owners", "Watch"],
+      ["AI dispatch & route optimisation", "Buy/partner first; build when data justifies", "Watch"],
+    ],
+  },
+  {
+    id: "p6", name: "Driver ecosystem (the moat)", horizon: "day one → forever", tag: "Now",
+    gate: "Start free (verification, WhatsApp community); monetise pieces only past 100 drivers.",
+    ventures: [
+      ["Driver recruitment & verification", "Already your process — formalise it", "Now"],
+      ["Driver community & referrals", "₹1,000 referral engine, WhatsApp-first", "Now"],
+      ["Driver training academy", "Badge prep + customer skills; charge outsiders", "Next"],
+      ["Driver rewards & leaderboard", "Best drivers get newest cars — retention lever", "Next"],
+      ["Driver loans", "Advance against settlement history — you hold the data", "Later"],
+      ["Driver health & accident cover", "Group policies, deducted from settlements", "Later"],
+      ["Driver wallet", "Instant settlement payouts; needs scale + compliance", "Watch"],
+    ],
+  },
+  {
+    id: "p7", name: "Software products (SaaS)", horizon: "at 100+ vehicles · years 4–6", tag: "Later",
+    gate: "Gate: your own operations must run on it flawlessly first. Sell proof, not promises.",
+    ventures: [
+      ["Fleet management software", "This CRM, multi-tenant with login + billing", "Later"],
+      ["Driver app", "Settlements, attendance, earnings in the driver's pocket", "Later"],
+      ["Customer booking app", "Corporate booking portal first, consumer later", "Later"],
+      ["Business dashboard & AI analytics", "Utilisation, driver scoring, demand prediction", "Later"],
+      ["Dispatch software", "For your shuttle/bus phase, then external", "Watch"],
+      ["Live tracking + maintenance + expense modules", "Bundled tiers of the same platform", "Watch"],
+    ],
+  },
+  {
+    id: "p8", name: "Logistics network", horizon: "years 5–8", tag: "Later",
+    gate: "Gate: commercial fleet profitable in 3+ cities; anchor 3PL contract in hand.",
+    ventures: [
+      ["Hyperlocal delivery", "Your EV scooters + vans already do this — brand it", "Later"],
+      ["B2B logistics", "Ludhiana industrial freight, contracted lanes", "Later"],
+      ["Cross-state transport", "Punjab → Delhi/Jammu/Himachal corridors", "Later"],
+      ["Warehousing & fulfilment centres", "Real-estate heavy; partner before owning", "Watch"],
+      ["Freight marketplace", "Platform play — needs serious tech + liquidity", "Watch"],
+    ],
+  },
+  {
+    id: "p9", name: "Future mobility", horizon: "watch list · years 8+", tag: "Watch",
+    gate: "Rule: watch, partner, pilot — never pioneer capital-heavy tech from Ludhiana.",
+    ventures: [
+      ["Mobility as a Service (MaaS)", "One subscription across cabs, scooters, shuttles", "Watch"],
+      ["Connected vehicles & smart traffic", "OEM/city partnerships", "Watch"],
+      ["AI dispatch network", "Your data + rented models", "Watch"],
+      ["Autonomous vehicles / robotaxis", "Enter as fleet operator when OEMs need partners", "Watch"],
+      ["Drone delivery", "Regulatory play; revisit every 2 years", "Watch"],
+    ],
+  },
+  {
+    id: "p10", name: "Global expansion", horizon: "after India density · years 8+", tag: "Watch",
+    gate: "Gate: 3 profitable Indian cities + a repeatable city-launch SOP. First market: UAE (Punjabi diaspora, fleet-friendly rules).",
+    ventures: [
+      ["India multi-city", "Punjab → North India → metros", "Later"],
+      ["UAE", "Dubai/Sharjah fleet permits, diaspora operators", "Watch"],
+      ["Canada & Australia", "Punjabi trucking/taxi networks to plug into", "Watch"],
+      ["UK · USA · Southeast Asia · Europe", "Only behind a partner or acquisition", "Watch"],
+    ],
+  },
+];
+
+const RESEARCH_ITEMS = ["Problem statement", "Market size (TAM / SAM / SOM)", "Revenue model", "Unit economics per vehicle/asset", "Competitor analysis", "Required licences & permits", "Technology stack", "Investment required", "Timeline to breakeven", "SOPs (operations manual)", "KPIs to track weekly", "Risks & kill criteria", "Scaling strategy"];
+
+function PlanBook() {
+  const [sel, setSel] = useState("p1");
+  const phase = PHASES.find((p) => p.id === sel);
+  const tagTone = { Now: "green", Next: "amber", Later: "blue", Watch: "zinc" };
+
+  return (
+    <div className="space-y-4">
+      <Card className="bg-zinc-950 !border-zinc-800 text-white">
+        <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-amber-400">The mission</div>
+        <h2 style={DISP} className="mt-1 text-lg font-bold tracking-tight text-white">
+          Build {COMPANY} into the biggest mobility company — Ludhiana first, then Punjab, then North India, then India.
+        </h2>
+        <p className="mt-1.5 max-w-3xl text-[12.5px] leading-relaxed text-zinc-400">
+          Every mobility business worth building lives in this Plan Book — cabs, commercial fleets, EVs, buses, services, drivers, software, logistics — each with a hard gate that must be passed before a rupee moves. Ambition sets the map; cash flow sets the pace.
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+          {MISSION_LADDER.map((m, i) => (
+            <div key={m.stage} className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
+              <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
+                <span style={MONO} className="text-amber-400">{i + 1}</span> {m.when}
+              </div>
+              <div style={DISP} className="mt-1 text-[13.5px] font-semibold text-white">{m.stage}</div>
+              <div className="mt-1 text-[11.5px] leading-snug text-zinc-400">{m.goal}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <H sub="Honest sequencing — what actually gets built when, and why">The businessman's sequence</H>
+        <ol className="space-y-2.5">
+          {BOSS_SEQUENCE.map(([head, body], i) => (
+            <li key={i} className="flex gap-3">
+              <span style={MONO} className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-[11px] font-semibold text-amber-400">{i + 1}</span>
+              <p className="text-[13px] leading-relaxed text-zinc-600"><span className="font-semibold text-zinc-900">{head}</span> {body}</p>
+            </li>
+          ))}
+        </ol>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
+        <div className="space-y-1">
+          <div className="mb-2 px-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-zinc-400">📚 Plan Book · 10 phases</div>
+          {PHASES.map((p) => (
+            <button key={p.id} onClick={() => setSel(p.id)}
+              className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400/30 ${sel === p.id ? "bg-zinc-900 text-white shadow-md shadow-zinc-900/20" : "bg-white text-zinc-600 shadow-[0_1px_2px_rgba(16,24,40,0.04)] ring-1 ring-zinc-900/[0.06] hover:text-zinc-900"}`}>
+              <span className="truncate">{p.name}</span>
+              <Chip tone={tagTone[p.tag]}>{p.tag}</Chip>
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-4">
+          <Card>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <H sub={phase.horizon}>{phase.name}</H>
+              <Chip tone={tagTone[phase.tag]}>{phase.tag}</Chip>
+            </div>
+            <div className="mb-4 rounded-xl border border-amber-200/70 bg-amber-50 p-3 text-[12.5px] leading-relaxed text-amber-900">
+              <span className="font-semibold">Unlock rule · </span>{phase.gate}
+            </div>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {phase.ventures.map(([n, note, tag]) => (
+                <div key={n} className="flex items-start justify-between gap-2 rounded-xl border border-zinc-900/[0.06] bg-zinc-50/60 p-3 transition-colors duration-200 hover:bg-white">
+                  <div>
+                    <div className="text-[13px] font-semibold text-zinc-900">{n}</div>
+                    <div className="mt-0.5 text-[11.5px] leading-snug text-zinc-500">{note}</div>
+                  </div>
+                  <Chip tone={tagTone[tag]}>{tag}</Chip>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <H sub="Before ANY venture above gets funded, it must have a one-pager answering all 13 — no exceptions">Research checklist · per venture</H>
+            <div className="flex flex-wrap gap-1.5">
+              {RESEARCH_ITEMS.map((r, i) => (
+                <span key={r} className="inline-flex items-center gap-1.5 rounded-full bg-zinc-50 px-2.5 py-1 text-[11.5px] font-medium text-zinc-600 ring-1 ring-inset ring-zinc-900/10">
+                  <span style={MONO} className="text-[10px] text-amber-600">{String(i + 1).padStart(2, "0")}</span>{r}
+                </span>
+              ))}
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-zinc-400">
+              The kill criteria matter most: write down, before starting, the numbers at which you stop. A venture that can't state its kill criteria isn't researched — it's a wish. Every one-pager gets reviewed against the phase's unlock rule, and the live fleet numbers in this CRM are the proof the gate is passed.
+            </p>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ================= APP ================= */
 export default function App() {
   const [tab, setTab] = useState("overview");
@@ -2069,7 +2380,7 @@ export default function App() {
 
   const NAV = [
     ["overview", "Overview", LayoutDashboard], ["fleet", "Fleet", Car], ["drivers", "Drivers", Users], ["money", "Calculators", Calculator],
-    ["expenses", "Expenses", Wallet], ["clients", "Clients & Leads", Building2], ["plan", "Plan & Risk", TrendingUp], ["playbook", "Playbook", BookOpen],
+    ["expenses", "Expenses", Wallet], ["clients", "Clients & Leads", Building2], ["plan", "Plan & Risk", TrendingUp], ["planbook", "Plan Book", Rocket], ["playbook", "Sales Kit", BookOpen],
   ];
 
   return (
@@ -2133,6 +2444,7 @@ export default function App() {
         {tab === "expenses" && <Expenses expenses={expenses} setExpenses={setExpenses} cars={cars} />}
         {tab === "clients" && <Clients clients={clients} setClients={setClients} leads={leads} setLeads={setLeads} cars={cars} drivers={drivers} />}
         {tab === "plan" && <Plan sim={sim} stats={stats} />}
+        {tab === "planbook" && <PlanBook />}
         {tab === "playbook" && <Playbook />}
         <footer className="mt-10 border-t border-zinc-200/70 pt-5 text-center">
           <div style={DISP} className="text-[13px] font-semibold tracking-tight text-zinc-700">{COMPANY_LEGAL}</div>
