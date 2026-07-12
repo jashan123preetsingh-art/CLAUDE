@@ -48,6 +48,8 @@ const resaleFrac = (y) => {
 };
 
 /* ================= business model constants ================= */
+const COMPANY = "Auto Moto Mobility Solutions";
+const COMPANY_LEGAL = "Auto Moto Mobility Solutions LLP";
 const VEHICLE = "Maruti Suzuki Dzire Tour S CNG";
 const DRIVER_PCT = 60;                 // driver keeps 60% of gross fares
 const COMPANY_PCT = 100 - DRIVER_PCT;  // company takes 40%
@@ -509,8 +511,9 @@ function Fleet({ cars, setCars, drivers, expenses }) {
 function agreementText(d, car) {
   const reg = car ? car.reg : "____________";
   return `REVENUE-SHARE DRIVER AGREEMENT
+${COMPANY_LEGAL}
 
-This agreement is made on ${fmtD(NOW.toISOString())} between the Company (First Party) and ${d.name}, holder of DL ${d.dl}, residing at ${d.address} (Second Party / Driver).
+This agreement is made on ${fmtD(NOW.toISOString())} between ${COMPANY_LEGAL} ("the Company", First Party) and ${d.name}, holder of DL ${d.dl}, residing at ${d.address} (Second Party / Driver).
 
 1. VEHICLE. The Company provides a ${VEHICLE} bearing registration ${reg} in roadworthy condition, with valid insurance, registration, permit and fitness certificate.
 2. REVENUE SHARE. All fares and ride earnings are gross revenue. The Driver keeps ${d.share || DRIVER_PCT}% of gross revenue; the Company receives ${100 - (d.share || DRIVER_PCT)}%. Earnings shall be settled weekly through the Company account, with a full statement of gross fares.
@@ -524,14 +527,14 @@ This agreement is made on ${fmtD(NOW.toISOString())} between the Company (First 
 10. TERMINATION. Either party may terminate with 15 days written notice. Deposit is refunded within 7 days of vehicle return, after inspection and dues.
 11. JURISDICTION. Courts at the Company's registered city shall have exclusive jurisdiction.
 
-Company: ____________________      Driver: ____________________
-Witness 1: _________________       Witness 2: _________________`;
+For ${COMPANY_LEGAL}: ____________________      Driver: ____________________
+Witness 1: _________________                          Witness 2: _________________`;
 }
 function receiptText(d, car, entry) {
   const gross = entry?.gross || 0, fuel = entry?.fuel || 0;
   const pct = d.share || DRIVER_PCT;
   const driverShare = gross * pct / 100, companyShare = gross - driverShare;
-  return `SETTLEMENT RECEIPT · ${fmtD(NOW.toISOString())}
+  return `SETTLEMENT RECEIPT · ${COMPANY_LEGAL} · ${fmtD(NOW.toISOString())}
 
 Driver: ${d.name} (DL ${d.dl}) · Vehicle: ${car ? car.reg : "—"} (${VEHICLE})
 
@@ -544,7 +547,7 @@ Driver net earnings (share − fuel):  ${inr(driverShare - fuel)}
 Company share received with thanks.
 Balance pending after this settlement: ${inr(Math.max(0, d.pending))}
 
-Received by: ____________________ (Authorised signatory)`;
+Received by: ____________________ (Authorised signatory, ${COMPANY_LEGAL})`;
 }
 
 function Drivers({ drivers, setDrivers, cars, clients }) {
@@ -1194,7 +1197,7 @@ function CorporateTab({ sim }) {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
-        Corporate contracts are an <b>additional benefit</b> the company provides whenever possible. The company actively markets its services and makes every reasonable effort to win contracts and assign them fairly to drivers — but corporate work is <b>not guaranteed</b>; it depends on market demand and successful client acquisition.
+        Corporate contracts are an <b>additional benefit</b> {COMPANY} provides whenever possible. The company actively markets its services and makes every reasonable effort to win contracts and assign them fairly to drivers — but corporate work is <b>not guaranteed</b>; it depends on market demand and successful client acquisition.
       </div>
       <Card>
         <H sub="Dedicated corporate car · salaried driver, company pays fuel · bill at 12% GST with ITC">Corporate profitability</H>
@@ -1232,7 +1235,7 @@ function CorporateTab({ sim }) {
             ];
           })}
         />
-        <p className="mt-2 text-xs text-zinc-500">Don't underprice: a dedicated car costs ~{inrS(cost)} all-in, so a ₹55–57k bill barely breaks even. Bill at 12% GST with ITC to unlock the car purchase credit, and keep the contract in the company's name so the client can't walk with the driver.</p>
+        <p className="mt-2 text-xs text-zinc-500">Don't underprice: a dedicated car costs ~{inrS(cost)} all-in, so a ₹55–57k bill barely breaks even. Bill at 12% GST with ITC to unlock the car purchase credit, and keep the contract in {COMPANY}'s name so the client can't walk with the driver.</p>
       </Card>
     </div>
   );
@@ -1619,7 +1622,7 @@ function Clients({ clients, setClients, leads, setLeads, cars, drivers }) {
     <div className="space-y-4">
       <H sub="Corporate contracts · employee pickup-drop, airport & hotel duty">Client contracts</H>
       <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
-        Corporate work is an <b>additional benefit, not a guarantee</b>. The company actively markets its services and makes every reasonable effort to secure contracts and assign them fairly to drivers — availability depends on market demand and successful client acquisition.
+        Corporate work is an <b>additional benefit, not a guarantee</b>. {COMPANY} actively markets its services and makes every reasonable effort to secure contracts and assign them fairly to drivers — availability depends on market demand and successful client acquisition.
       </div>
       {clients.map((k) => {
         const renew = daysUntil(k.end);
@@ -1815,18 +1818,18 @@ const TEMPLATES = [
 
 Dear [Name],
 
-We run a dedicated fleet of brand-new Maruti Suzuki Dzire Tour S CNG sedans with verified, uniformed drivers for employee transport in [city]. Companies like yours use us for shift pickup-drop and airport duty at a fixed monthly rate — no surge, no per-km surprises.
+At ${COMPANY} we run a dedicated fleet of brand-new Maruti Suzuki Dzire Tour S CNG sedans with verified, uniformed drivers for employee transport in [city]. Companies like yours use us for shift pickup-drop and airport duty at a fixed monthly rate — no surge, no per-km surprises.
 
 What you get: GPS tracking with live ETA, police-verified drivers, replacement vehicle within 60 minutes, monthly GST invoice, and an SLA with penalty clauses we sign up to.
 
 Could we take 15 minutes this week to map your routes and share a quote? A 30-day pilot with one vehicle is on us to prove reliability.
 
 Regards,
-[Your name] · [Company] · [Phone]`,
+[Your name] · ${COMPANY} · [Phone]`,
   },
   {
     k: "wa", t: "WhatsApp pitch · corporate",
-    body: `Hello [Name] ji 🙏 This is [Your name] from [Company]. We provide GPS-tracked Maruti Dzire Tour S CNG cabs with verified drivers for employee pickup-drop — fixed monthly billing with GST invoice, replacement car guarantee. Currently serving [reference client]. Can I send a one-page quote for your [shift/airport] requirement?`,
+    body: `Hello [Name] ji 🙏 This is [Your name] from ${COMPANY}. We provide GPS-tracked Maruti Dzire Tour S CNG cabs with verified drivers for employee pickup-drop — fixed monthly billing with GST invoice, replacement car guarantee. Currently serving [reference client]. Can I send a one-page quote for your [shift/airport] requirement?`,
   },
   {
     k: "call", t: "Calling script · corporate",
@@ -1839,7 +1842,7 @@ Regards,
   },
   {
     k: "quote", t: "Quotation format",
-    body: `QUOTATION · [Company name] · [Date] · Ref: Q-[no]
+    body: `QUOTATION · ${COMPANY_LEGAL} · [Date] · Ref: Q-[no]
 
 To: [Client], [Address]
 Service: Employee transportation — [route/shift details]
@@ -1855,15 +1858,15 @@ Commercials
 • Replacement vehicle within 60 minutes of breakdown
 
 Validity: 15 days · Agreement: 12 months, exit with 30-day notice
-Authorised signatory: ______________`,
+For ${COMPANY_LEGAL} · Authorised signatory: ______________`,
   },
   {
     k: "driver", t: "Driver recruitment message",
-    body: `🚗 Drive a BRAND-NEW Maruti Suzuki Dzire Tour S CNG — keep 60% of everything you earn. Company provides the car, insurance, full servicing & maintenance, platform subscription and support; you pay only CNG. Corporate duty shared with drivers whenever we win contracts (best effort, not guaranteed). Deposit ₹20,000–25,000 (refundable). Commercial DL + badge + police verification required. Call [phone] — cars available this week in Ludhiana / tricity.`,
+    body: `🚗 Drive a BRAND-NEW Maruti Suzuki Dzire Tour S CNG with ${COMPANY} — keep 60% of everything you earn. The company provides the car, insurance, full servicing & maintenance, platform subscription and support; you pay only CNG. Corporate duty shared with drivers whenever we win contracts (best effort, not guaranteed). Deposit ₹20,000–25,000 (refundable). Commercial DL + badge + police verification required. Call [phone] — cars available this week in Ludhiana / tricity.`,
   },
   {
     k: "driverpb", t: "Driver message · Hindi (WhatsApp)",
-    body: `🚕 नई Maruti Suzuki Dzire Tour S CNG चलाओ — जो कमाओगे उसका 60% आपका।
+    body: `🚕 Auto Moto Mobility Solutions के साथ नई Maruti Suzuki Dzire Tour S CNG चलाओ — जो कमाओगे उसका 60% आपका।
 
 कंपनी देगी: नई गाड़ी, इंश्योरेंस, पूरी सर्विस-मेंटेनेंस, प्लेटफॉर्म सब्सक्रिप्शन और सपोर्ट।
 ड्राइवर देगा: सिर्फ़ CNG।
@@ -2011,8 +2014,8 @@ export default function App() {
                 <Car size={20} strokeWidth={2.5} />
               </span>
               <div>
-                <div style={DISP} className="text-base font-extrabold uppercase tracking-widest leading-none">Aura Fleet</div>
-                <div className="text-[11px] text-zinc-400">{VEHICLE} fleet · 60/40 revenue share · Ludhiana / Chandigarh · {fmtD(NOW.toISOString())}</div>
+                <div style={DISP} className="text-sm font-extrabold uppercase tracking-wider leading-none sm:text-base">{COMPANY}</div>
+                <div className="text-[11px] text-zinc-400">Fleet CRM · {VEHICLE} · 60/40 revenue share · Ludhiana / Chandigarh · {fmtD(NOW.toISOString())}</div>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -2046,7 +2049,7 @@ export default function App() {
         {tab === "clients" && <Clients clients={clients} setClients={setClients} leads={leads} setLeads={setLeads} cars={cars} drivers={drivers} />}
         {tab === "plan" && <Plan sim={sim} stats={stats} />}
         {tab === "playbook" && <Playbook />}
-        <p className="mt-6 text-center text-xs text-zinc-400">Prototype with sample data · figures are estimates, not accounting or tax advice · session data resets on reload</p>
+        <p className="mt-6 text-center text-xs text-zinc-400">{COMPANY} · fleet CRM prototype with sample data · figures are estimates, not accounting or tax advice · session data resets on reload</p>
       </main>
     </div>
   );

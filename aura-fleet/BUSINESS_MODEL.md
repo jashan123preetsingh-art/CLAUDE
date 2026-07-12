@@ -1,7 +1,9 @@
-# Aura Fleet — Full Business Model
+# Auto Moto Mobility Solutions — Full Business Model
 
 *Commercial CNG cab fleet · Ludhiana & Chandigarh tricity, Punjab*
 *Goal: build Punjab's largest fleet agency, one profitable car at a time.*
+
+**Company:** Auto Moto Mobility Solutions (operating as an LLP — see §2). Cars, loans, insurance, corporate contracts and driver agreements all sit in the company's name.
 
 This document lays out the complete model we've worked through — the vision, the legal and financial structure, how the cars earn, how drivers are paid, the real numbers, the risks, and the honest caveats. Every figure here is an estimate to be confirmed on the ground; where a number is optimistic, it's flagged.
 
@@ -25,7 +27,7 @@ Why LLP:
 - **Separate identity & credibility** — banks and corporate clients take a registered entity seriously.
 - **Low compliance** — cheaper and lighter than a Private Limited (no heavy audit burden).
 
-**Requirement:** the car invoice, RC, loan and insurance must all be in the **LLP's name with its GSTIN**. A car in a personal name gets zero ITC. Confirm the dealer will issue a proper tax invoice to the LLP before booking.
+**Requirement:** the car invoice, RC, loan and insurance must all be in **Auto Moto Mobility Solutions LLP's name with its GSTIN**. A car in a personal name gets zero ITC. Confirm the dealer will issue a proper tax invoice to the LLP before booking.
 
 ---
 
@@ -173,7 +175,7 @@ Companies pay for reliable employee/manager transport. Two shapes:
 - **Light / manager commute** (morning + evening, ~2–3 hrs): bill **₹18,000–25,000/month**. The driver folds it into his day and still runs apps. You keep the billing; his reward is a small rent cut or it feeds his gross.
 - **Dedicated car** (manager 9–10 hrs): bill **₹45,000–65,000/month**. Here the driver is salaried (~₹22–26k), no apps.
 
-**Honest caveat — don't underprice corporate.** A dedicated car costs you driver + fuel + EMI + upkeep (~₹52k). A ₹55–57k bill barely breaks even; **sign at ₹62–65k+**. Bill corporate at **12%-with-ITC** to unlock the car credit, and keep the contract **in the LLP's name** so the client can't walk with the driver.
+**Honest caveat — don't underprice corporate.** A dedicated car costs you driver + fuel + EMI + upkeep (~₹52k). A ₹55–57k bill barely breaks even; **sign at ₹62–65k+**. Bill corporate at **12%-with-ITC** to unlock the car credit, and keep the contract **in Auto Moto Mobility Solutions LLP's name** so the client can't walk with the driver.
 
 Target sectors: Ludhiana Focal Point & hosiery/auto-parts factories (night-shift worker pickup), Mohali IT City / Quark City, Chandigarh airport transfers, PGIMER and private hospitals, tricity colleges, hotels, Amritsar tour operators, and GeM government contracts.
 
@@ -236,7 +238,7 @@ Corporate contracts (properly priced) and the subscription-cost saving are what 
 
 ## 17. The software
 
-The Aura Fleet app supports this model end to end:
+The Auto Moto Mobility Solutions fleet CRM supports this model end to end:
 
 - **Fleet dashboard** — total fleet gross, company revenue, driver payouts, EMI tracker, maintenance tracker, insurance/PUC/fitness reminders, vehicle utilization, and daily/weekly/monthly/yearly reports.
 - **Fleet register** — every Dzire Tour S CNG with registration details, EMI schedule, insurance, fitness certificate, PUC, permit, service history, tyre & battery replacement, accident history, depreciation and current estimated value.

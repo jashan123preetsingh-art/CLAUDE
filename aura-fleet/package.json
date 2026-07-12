@@ -1,8 +1,8 @@
 {
-  "name": "aura-fleet",
+  "name": "auto-moto-mobility-crm",
   "private": true,
   "version": "1.0.0",
-  "description": "Aura Fleet - commercial CNG cab fleet manager for Ludhiana / Chandigarh tricity",
+  "description": "Auto Moto Mobility Solutions - fleet CRM for a commercial Dzire Tour S CNG cab fleet in Ludhiana / Chandigarh tricity",
   "type": "module",
   "scripts": {
     "dev": "vite",
