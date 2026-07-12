@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
@@ -50,6 +50,26 @@ const resaleFrac = (y) => {
 /* ================= business model constants ================= */
 const COMPANY = "Auto Moto Mobility Solutions";
 const COMPANY_LEGAL = "Auto Moto Mobility Solutions LLP";
+/* fill these in once the LLP registration and bank account are live */
+const COMPANY_ADDRESS = "[Registered office] · Ludhiana, Punjab";
+const COMPANY_GSTIN = "[GSTIN]";
+const COMPANY_CONTACT = "[Phone] · [Email]";
+const COMPANY_BANK = "[Bank · A/c no · IFSC] · UPI: [UPI ID]";
+
+/* persist app state in the browser so the CRM survives reloads */
+const usePersist = (key, seed) => {
+  const [v, setV] = useState(() => {
+    try { const s = localStorage.getItem("amms." + key); return s ? JSON.parse(s) : seed; } catch { return seed; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("amms." + key, JSON.stringify(v)); } catch { /* storage unavailable */ }
+  }, [key, v]);
+  return [v, setV];
+};
+const resetData = () => {
+  try { Object.keys(localStorage).filter((k) => k.startsWith("amms.")).forEach((k) => localStorage.removeItem(k)); } catch { /* noop */ }
+  window.location.reload();
+};
 const VEHICLE = "Maruti Suzuki Dzire Tour S CNG";
 const DRIVER_PCT = 60;                 // driver keeps 60% of gross fares
 const COMPANY_PCT = 100 - DRIVER_PCT;  // company takes 40%
@@ -231,7 +251,7 @@ const Table = ({ head, rows }) => (
     </table>
   </div>
 );
-const PIE_COLORS = ["#18181b", "#b45309", "#065f46", "#9f1239", "#155e75", "#a16207", "#3f3f46", "#7c2d12", "#4d7c0f", "#6d28d9"];
+const PIE_COLORS = ["#18181b", "#d97706", "#059669", "#e11d48", "#0284c7", "#7c3aed", "#65a30d", "#db2777", "#0891b2", "#a16207"];
 const tooltipFmt = (v) => inr(v);
 
 /* ================= OVERVIEW ================= */
@@ -332,15 +352,15 @@ function Overview({ cars, drivers, stats, expenses }) {
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend} margin={{ left: 4, right: 8, top: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f3" vertical={false} />
                 <XAxis dataKey="m" tick={{ fontSize: 11 }} />
                 <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={52} />
                 <Tooltip formatter={tooltipFmt} />
                 <Legend />
-                <Line type="monotone" dataKey="Fleet gross" stroke="#71717a" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Company 40%" stroke="#065f46" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="EMI" stroke="#9f1239" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Net" stroke="#b45309" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="Fleet gross" stroke="#a1a1aa" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="Company 40%" stroke="#059669" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="EMI" stroke="#e11d48" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="Net" stroke="#d97706" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -765,7 +785,7 @@ function EmiTab() {
           <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={amort} margin={{ left: 4, right: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f3" vertical={false} />
                 <XAxis dataKey="m" tick={{ fontSize: 11 }} label={{ value: "month", position: "insideBottomRight", offset: -2, fontSize: 10 }} />
                 <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={52} />
                 <Tooltip formatter={tooltipFmt} />
@@ -956,14 +976,14 @@ function SimulatorTab({ sim, setSim }) {
         <div className="mt-3 h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={yearly} margin={{ left: 4, right: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f3" vertical={false} />
               <XAxis dataKey="y" tick={{ fontSize: 11 }} />
               <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={56} />
               <Tooltip formatter={tooltipFmt} />
               <Legend />
-              <Line type="monotone" dataKey="Cumulative cash" name="Cumulative cash" stroke="#065f46" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="Cash" name={isCo ? "Post-tax cash" : "Net cash"} stroke="#b45309" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="Loan remaining" name="Loan remaining" stroke="#9f1239" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="Cumulative cash" name="Cumulative cash" stroke="#059669" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="Cash" name={isCo ? "Post-tax cash" : "Net cash"} stroke="#d97706" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="Loan remaining" name="Loan remaining" stroke="#e11d48" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1012,14 +1032,14 @@ function DepTab() {
         <div className="mt-3 h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={rows} margin={{ left: 4, right: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f3" vertical={false} />
               <XAxis dataKey="y" tick={{ fontSize: 11 }} />
               <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={52} />
               <Tooltip formatter={tooltipFmt} />
               <Legend />
-              <Line type="monotone" dataKey="SLM" stroke="#71717a" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="WDV" stroke="#155e75" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="Market" stroke="#b45309" strokeWidth={2} dot />
+              <Line type="monotone" dataKey="SLM" stroke="#a1a1aa" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="WDV" stroke="#0284c7" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="Market" stroke="#d97706" strokeWidth={2} dot />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1063,11 +1083,11 @@ function ScaleTab({ sim }) {
       <div className="mt-3 h-56">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows.map((r) => ({ n: `${r.N} cars`, "Net profit / mo": Math.round(r.net) }))} margin={{ left: 4, right: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f3" vertical={false} />
             <XAxis dataKey="n" tick={{ fontSize: 11 }} />
             <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={56} />
             <Tooltip formatter={tooltipFmt} />
-            <Bar dataKey="Net profit / mo" fill="#065f46" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Net profit / mo" fill="#059669" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -1330,11 +1350,11 @@ function BreakEvenTab({ sim }) {
         <div className="mt-3 h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={curve} margin={{ left: 4, right: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f3" vertical={false} />
               <XAxis dataKey="m" tick={{ fontSize: 11 }} label={{ value: "month", position: "insideBottomRight", offset: -2, fontSize: 10 }} />
               <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={56} />
               <Tooltip formatter={tooltipFmt} />
-              <Line type="monotone" dataKey="Cumulative net / car" stroke="#065f46" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="Cumulative net / car" stroke="#059669" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1398,13 +1418,13 @@ function CashFlowTab({ sim }) {
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={rows} margin={{ left: 4, right: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f3" vertical={false} />
               <XAxis dataKey="m" tick={{ fontSize: 11 }} label={{ value: "month", position: "insideBottomRight", offset: -2, fontSize: 10 }} />
               <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={56} />
               <Tooltip formatter={tooltipFmt} />
               <Legend />
-              <Line type="monotone" dataKey="cash" name="Cash balance" stroke="#065f46" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="net" name="Net / month" stroke="#b45309" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="cash" name="Cash balance" stroke="#059669" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="net" name="Net / month" stroke="#d97706" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1612,12 +1632,52 @@ function Expenses({ expenses, setExpenses, cars }) {
 }
 
 /* ================= CLIENTS & LEADS ================= */
+function invoiceText(k, kCars, kDrivers) {
+  const period = NOW.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  const invNo = `INV-${NOW.getFullYear()}${String(NOW.getMonth() + 1).padStart(2, "0")}-${k.id.toUpperCase()}`;
+  const taxable = k.billing - k.penalties;
+  const gstAmt = taxable * k.gst / 100;
+  const total = taxable + gstAmt;
+  return `TAX INVOICE
+${COMPANY_LEGAL}
+${COMPANY_ADDRESS}
+GSTIN: ${COMPANY_GSTIN} · SAC 9964 (passenger transport services) · ${COMPANY_CONTACT}
+
+Invoice no: ${invNo} · Date: ${fmtD(NOW.toISOString())} · Period: ${period}
+
+Bill to: ${k.name}
+Service: ${k.type} · ${k.timings}
+Vehicles: ${kCars.length ? kCars.join(", ") : "—"} (${VEHICLE})
+Drivers on duty: ${kDrivers.length ? kDrivers.join(", ") : "—"}
+Contract term: ${fmtD(k.start)} to ${fmtD(k.end)}
+
+Monthly contract value                      ${inr(k.billing)}
+  (includes ${k.includedKm?.toLocaleString("en-IN")} km/month; additional
+   kilometres billed @ ₹${k.extraKmRate}/km as incurred)
+Less: SLA penalties this period             −${inr(k.penalties)}
+Taxable value                               ${inr(taxable)}
+GST @ ${k.gst}% (with ITC)                       ${inr(gstAmt)}
+────────────────────────────────────────────────────
+TOTAL PAYABLE                               ${inr(total)}
+
+Payment within 7 days of invoice date to:
+${COMPANY_BANK}
+
+E&OE · Subject to Ludhiana jurisdiction · This is a system-generated draft;
+verify GSTIN, invoice numbering and tax treatment with your CA before issue.
+
+For ${COMPANY_LEGAL}
+Authorised signatory: ____________________`;
+}
+
 function Clients({ clients, setClients, leads, setLeads, cars, drivers }) {
   const [addLead, setAddLead] = useState(false);
+  const [doc, setDoc] = useState(null);
   const [lf, setLf] = useState({ name: "", type: "IT Company", value: 50000, note: "" });
   const statusTone = (s) => (s === "Won" ? "green" : s === "Lost" ? "red" : s === "Negotiation" || s === "Quotation" ? "amber" : "blue");
   const regOf = (id) => cars.find((c) => c.id === id)?.reg;
   const nameOf = (id) => drivers.find((d) => d.id === id)?.name;
+  const copyDoc = async (t) => { try { await navigator.clipboard.writeText(t); } catch (e) { /* noop */ } };
 
   return (
     <div className="space-y-4">
@@ -1656,14 +1716,22 @@ function Clients({ clients, setClients, leads, setLeads, cars, drivers }) {
               <div className="col-span-2"><span className="text-zinc-500">Drivers: </span>{kDrivers.length ? kDrivers.join(", ") : "—"}</div>
               <div className="sm:col-span-4"><span className="text-zinc-500">SLA: </span>{k.sla}</div>
             </div>
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <Btn kind="dark" onClick={() => setClients(clients.map((x) => x.id === k.id ? { ...x, invoicePending: !x.invoicePending } : x))}>
                 {k.invoicePending ? "Mark invoice paid" : "Raise next invoice"}
               </Btn>
+              <Btn kind="ghost" onClick={() => setDoc({ title: `Tax invoice · ${k.name.split(",")[0]}`, text: invoiceText(k, kCars, kDrivers) })}>Generate invoice</Btn>
             </div>
           </Card>
         );
       })}
+
+      {doc && (
+        <Modal title={doc.title} onClose={() => setDoc(null)} wide>
+          <pre style={MONO} className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-xl bg-zinc-50 p-4 text-xs leading-relaxed text-zinc-800">{doc.text}</pre>
+          <div className="mt-4 flex justify-end gap-2"><Btn kind="ghost" onClick={() => setDoc(null)}>Close</Btn><Btn kind="accent" onClick={() => copyDoc(doc.text)}>Copy text</Btn></div>
+        </Modal>
+      )}
 
       <div className="flex items-center justify-between pt-2">
         <H sub="Hotels, IT parks, hospitals, schools, factories, tour operators">Lead pipeline</H>
@@ -1760,13 +1828,13 @@ function Plan({ sim, stats }) {
         <div className="mt-3 h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={proj} margin={{ left: 4, right: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f3" vertical={false} />
               <XAxis dataKey="y" tick={{ fontSize: 11 }} label={{ value: "year", position: "insideBottomRight", offset: -2, fontSize: 10 }} />
               <YAxis tickFormatter={inrS} tick={{ fontSize: 11 }} width={56} />
               <Tooltip formatter={tooltipFmt} />
               <Legend />
-              <Line type="monotone" dataKey="valuation" name="Business valuation" stroke="#065f46" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="equity" name="Fleet equity" stroke="#b45309" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="valuation" name="Business valuation" stroke="#059669" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="equity" name="Fleet equity" stroke="#d97706" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1953,12 +2021,12 @@ function Playbook() {
 /* ================= APP ================= */
 export default function App() {
   const [tab, setTab] = useState("overview");
-  const [cars, setCars] = useState(SEED_CARS);
-  const [drivers, setDrivers] = useState(SEED_DRIVERS);
-  const [expenses, setExpenses] = useState(SEED_EXPENSES);
-  const [clients, setClients] = useState(SEED_CLIENTS);
-  const [leads, setLeads] = useState(SEED_LEADS);
-  const [sim, setSim] = useState({ cars: 5, price: 820000, dp: 100000, rate: DEF_RATE, tenure: DEF_TENURE, gross: AVG_GROSS_MO, companyPct: COMPANY_PCT, floor: 20000, subscription: 3500, insurance: 28000, service: 15000, tyres: 16000, battery: 6500, annualMaint: 6000, misc: 500, parking: 0, accountant: 2000, office: 0, processing: 5000, mode: "company", outputGstPct: 18, itcPerCar: 90000, inputItcPct: 18, corpTaxPct: 25.17, wdvRate: 30, claimItc: true });
+  const [cars, setCars] = usePersist("cars", SEED_CARS);
+  const [drivers, setDrivers] = usePersist("drivers", SEED_DRIVERS);
+  const [expenses, setExpenses] = usePersist("expenses", SEED_EXPENSES);
+  const [clients, setClients] = usePersist("clients", SEED_CLIENTS);
+  const [leads, setLeads] = usePersist("leads", SEED_LEADS);
+  const [sim, setSim] = usePersist("sim", { cars: 5, price: 820000, dp: 100000, rate: DEF_RATE, tenure: DEF_TENURE, gross: AVG_GROSS_MO, companyPct: COMPANY_PCT, floor: 20000, subscription: 3500, insurance: 28000, service: 15000, tyres: 16000, battery: 6500, annualMaint: 6000, misc: 500, parking: 0, accountant: 2000, office: 0, processing: 5000, mode: "company", outputGstPct: 18, itcPerCar: 90000, inputItcPct: 18, corpTaxPct: 25.17, wdvRate: 30, claimItc: true });
 
   const stats = useMemo(() => {
     const total = cars.length;
@@ -2067,7 +2135,14 @@ export default function App() {
         {tab === "clients" && <Clients clients={clients} setClients={setClients} leads={leads} setLeads={setLeads} cars={cars} drivers={drivers} />}
         {tab === "plan" && <Plan sim={sim} stats={stats} />}
         {tab === "playbook" && <Playbook />}
-        <p className="mt-6 text-center text-xs text-zinc-400">{COMPANY} · fleet CRM prototype with sample data · figures are estimates, not accounting or tax advice · session data resets on reload</p>
+        <footer className="mt-10 border-t border-zinc-200/70 pt-5 text-center">
+          <div style={DISP} className="text-[13px] font-semibold tracking-tight text-zinc-700">{COMPANY_LEGAL}</div>
+          <p className="mt-1 text-xs text-zinc-400">Professional fleet management · {VEHICLE} · Ludhiana & Chandigarh tricity, Punjab</p>
+          <p className="mt-1 text-xs text-zinc-400">© {NOW.getFullYear()} {COMPANY_LEGAL} · data is stored locally in this browser · figures are estimates, not accounting or tax advice</p>
+          <button onClick={resetData} className="mt-2 rounded-full px-3 py-1 text-[11px] font-medium text-zinc-400 transition-colors duration-200 hover:bg-zinc-100 hover:text-zinc-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400/30">
+            Reset to sample data
+          </button>
+        </footer>
       </main>
     </div>
   );
