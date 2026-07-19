@@ -14,6 +14,23 @@ script.
 
 - `SmartMoneyInstitutional.pine` — the complete indicator (single file).
 
+## Design philosophy — clean by default
+
+A trading tool should give a fast, calm market read, not bury the chart. So the
+indicator ships **minimal by default** — only the high-signal modules are on:
+
+- Color-adaptive **dynamic trend line** (the centerpiece)
+- **BOS / CHoCH** structure breaks (subtle dashed line + small text tag)
+- Clean **swing HH/HL/LH/LL** text (no chip boxes)
+- A few **Order Blocks** and **Fair Value Gaps** (mitigated ones auto-removed)
+- **Premium / Discount** equilibrium
+- The **dashboard** with the MTF panel, **probability meter**, Signal Status and
+  Entry/SL/TP
+
+Everything else — MSS labels, Inducement, Sweeps, Liquidity balls/voids, Volume
+Profile, Sessions/Kill zones, internal structure — is **off by default** and one
+checkbox away when you want it. Turn on only what you read.
+
 ## How to use
 
 1. Open TradingView → **Pine Editor**.

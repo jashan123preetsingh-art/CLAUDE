@@ -63,12 +63,12 @@ themeNeutral = i_neutralUser
 themeBG      = themeMode == "Dark" ? color.new(#131722, 10) : color.new(#ffffff, 10)
 
 // Object budget scales with performance mode (keeps CPU/memory bounded).
-maxObjects   = perfMode == "Lite" ? 5 : perfMode == "Balanced" ? 10 : 20
+maxObjects   = perfMode == "Lite" ? 4 : perfMode == "Balanced" ? 8 : 16
 
 // 1.2 Market Structure Engine -------------------------------------------------
 showInternal     = input.bool(false, "Show internal structure", group=GRP_MS, tooltip="Off by default for a cleaner chart. Turn on to see fast internal HH/HL/LH/LL.")
 showSwing        = input.bool(true,  "Show swing structure",    group=GRP_MS)
-showHPLabels     = input.bool(true,  "Show HP reversal labels (HP-UP / HP-DOWN)", group=GRP_MS, tooltip="Tags high-probability reversal swings instead of plain HH/HL/LH/LL text for a cleaner chart.")
+showHPLabels     = input.bool(false, "Show HP reversal labels (HP-UP / HP-DOWN)", group=GRP_MS, tooltip="Optional tags on reversal swings. Off by default — the BOS/CHoCH lines already convey structure cleanly.")
 intLen           = input.int(5,  "Internal swing length", minval=2, maxval=50, group=GRP_MS, tooltip="Pivot lookback for fast internal structure. Lower = more sensitive.")
 swgLen           = input.int(25, "Swing structure length", minval=5, maxval=100, group=GRP_MS, tooltip="Pivot lookback for major swing structure.")
 useATRfilter     = input.bool(true,  "ATR noise filter", group=GRP_MS, tooltip="Ignore micro-swings smaller than a fraction of ATR.")
@@ -79,7 +79,7 @@ structSensitivity= input.string("Normal", "Structure sensitivity", options=["Con
 // 1.3 BOS / CHoCH / MSS -------------------------------------------------------
 showBOS          = input.bool(true,  "Show BOS",   group=GRP_BOS, inline="b1")
 showCHOCH        = input.bool(true,  "Show CHoCH", group=GRP_BOS, inline="b1")
-showMSS          = input.bool(true,  "Show MSS",   group=GRP_BOS, inline="b1")
+showMSS          = input.bool(false, "Show MSS",   group=GRP_BOS, inline="b1")
 requireClose     = input.bool(true,  "Require candle close to confirm break", group=GRP_BOS)
 useDisplacement  = input.bool(true,  "Displacement filter", group=GRP_BOS, tooltip="Break candle range must exceed an ATR multiple (true expansion).")
 dispMult         = input.float(1.2, "Displacement ATR mult", minval=0.1, step=0.1, group=GRP_BOS)
@@ -88,7 +88,7 @@ chochColor       = input.color(#ff9800, "CHoCH color", group=GRP_BOS, inline="b2
 mssColor         = input.color(#9c27b0, "MSS color",   group=GRP_BOS, inline="b2")
 
 // 1.4 Inducement --------------------------------------------------------------
-showIDM          = input.bool(true,  "Enable inducement engine", group=GRP_IDM)
+showIDM          = input.bool(false, "Enable inducement engine", group=GRP_IDM)
 idmColor         = input.color(#2962ff, "IDM color", group=GRP_IDM)
 idmShowZones     = input.bool(true,  "Show trap zones", group=GRP_IDM)
 idmEqTol         = input.float(0.1, "Equal-level tolerance (ATR)", minval=0.01, step=0.01, group=GRP_IDM, tooltip="How close two highs/lows must be to count as equal liquidity / inducement.")
@@ -97,13 +97,13 @@ idmEqTol         = input.float(0.1, "Equal-level tolerance (ATR)", minval=0.01, 
 showLiquidity    = input.bool(true,  "Enable liquidity engine", group=GRP_LIQ)
 liqEqTol         = input.float(0.1, "Equal high/low tolerance (ATR)", minval=0.01, step=0.01, group=GRP_LIQ)
 showLiqVoid      = input.bool(false, "Show liquidity voids", group=GRP_LIQ)
-showLiqBalls     = input.bool(true,  "Show liquidity balls (pending pools)", group=GRP_LIQ, tooltip="Blue markers on resting/uncollected liquidity — handy as logical take-profit targets.")
+showLiqBalls     = input.bool(false, "Show liquidity balls (pending pools)", group=GRP_LIQ, tooltip="Blue markers on resting/uncollected liquidity — handy as logical take-profit targets.")
 liqBallColor     = input.color(#2962ff, "Liquidity ball color", group=GRP_LIQ)
 bslColor         = input.color(#f23645, "Sell-side liq (highs)", group=GRP_LIQ, inline="l1")
 sslColor         = input.color(#089981, "Buy-side liq (lows)",  group=GRP_LIQ, inline="l1")
 
 // 1.6 Sweeps ------------------------------------------------------------------
-showSweeps       = input.bool(true,  "Enable sweep engine", group=GRP_SWP)
+showSweeps       = input.bool(false, "Enable sweep engine", group=GRP_SWP)
 sweepWickRatio   = input.float(0.5, "Min wick ratio for wick-sweep", minval=0.1, maxval=0.95, step=0.05, group=GRP_SWP)
 
 // 1.7 Order Blocks ------------------------------------------------------------
@@ -135,7 +135,7 @@ showPD           = input.bool(true,  "Enable premium/discount", group=GRP_PD)
 pdShade          = input.bool(true,  "Shade zones", group=GRP_PD)
 
 // 1.10b Volume Profile --------------------------------------------------------
-showVP           = input.bool(true,  "Enable volume profile", group=GRP_VP)
+showVP           = input.bool(false, "Enable volume profile", group=GRP_VP)
 vpLookback       = input.int(200, "Lookback (bars)", minval=20, maxval=1000, group=GRP_VP, tooltip="How many bars of volume to profile.")
 vpBins           = input.int(24,  "Rows (price bins)", minval=6, maxval=50, group=GRP_VP)
 vpWidth          = input.int(40,  "Profile width (bars)", minval=10, maxval=150, group=GRP_VP, tooltip="Visual width of the histogram, drawn to the right of price.")
@@ -177,8 +177,8 @@ dashShowTrade    = input.bool(true,  "Show Entry / SL / TP rows", group=GRP_DASH
 dashShowDetail   = input.bool(false, "Show detailed SMC rows", group=GRP_DASH, tooltip="Adds structure / liquidity / OB / FVG / probability rows under the MTF panel.")
 
 // 1.15 Sessions ---------------------------------------------------------------
-showSessions     = input.bool(true,  "Enable session engine", group=GRP_SESS)
-showKillzones    = input.bool(true,  "Show ICT kill zones", group=GRP_SESS)
+showSessions     = input.bool(false, "Enable session engine", group=GRP_SESS)
+showKillzones    = input.bool(false, "Show ICT kill zones", group=GRP_SESS)
 showSilverBullet = input.bool(false, "Show Silver Bullet windows", group=GRP_SESS)
 sessAsia         = input.session("0000-0800", "Asian session", group=GRP_SESS)
 sessLondon       = input.session("0800-1600", "London session", group=GRP_SESS)
@@ -396,10 +396,11 @@ if not na(intLastL.price) and not na(intPrevLow) and intLastL.price < intPrevLow
 f_lineStyle(string s) => s == "Dotted" ? line.style_dotted : s == "Dashed" ? line.style_dashed : line.style_solid
 
 // Helper to draw a horizontal break line + label without repeating code.
+// Subtle dashed line + small text-only tag (no heavy chips) for a clean look.
 drawBreak(float lvl, int fromBar, string txt, color col, bool up) =>
     if barstate.isconfirmed
-        ln = line.new(fromBar, lvl, bar_index, lvl, color=col, style=line.style_dashed, width=1)
-        label.new(bar_index, lvl, txt, style=up ? label.style_label_down : label.style_label_up, color=col, textcolor=color.white, size=size.tiny)
+        line.new(fromBar, lvl, bar_index, lvl, color=color.new(col, 35), style=line.style_dashed, width=1)
+        label.new(bar_index, lvl, txt, style=label.style_none, textcolor=col, size=size.tiny)
 
 if showBOS and bullBOS
     drawBreak(swgLastH.price, swgLastH.bar, "BOS", i_bullColor, true)
@@ -414,22 +415,21 @@ if showMSS and bullMSS
 if showMSS and bearMSS
     drawBreak(swgLastL.price, swgLastL.bar, "MSS", mssColor, false)
 
-// Swing tags — either clean "HP-DOWN / HP-UP" reversal labels (institutional
-// look) or the classic HH/HL/LH/LL classification text.
+// Swing tags — clean text-only HH/HL/LH/LL (no chip boxes) or optional HP labels.
 if showSwing and not na(swgPH)
     if showHPLabels
         label.new(swgLastH.bar, swgLastH.price, "HP-DOWN", style=label.style_label_down, color=color.new(i_bearColor, 10), textcolor=color.white, size=size.tiny)
     else
         txt = classifyHigh(swgLastH.price, swgPrevHigh)
         if txt != ""
-            label.new(swgLastH.bar, swgLastH.price, txt, style=label.style_label_down, color=color.new(themeNeutral, 20), textcolor=themeText, size=size.small)
+            label.new(swgLastH.bar, swgLastH.price, txt, style=label.style_none, textcolor=color.new(txt == "HH" ? i_bullColor : i_bearColor, 15), size=size.tiny)
 if showSwing and not na(swgPL)
     if showHPLabels
         label.new(swgLastL.bar, swgLastL.price, "HP-UP", style=label.style_label_up, color=color.new(i_bullColor, 10), textcolor=color.white, size=size.tiny)
     else
         txt = classifyLow(swgLastL.price, swgPrevLow)
         if txt != ""
-            label.new(swgLastL.bar, swgLastL.price, txt, style=label.style_label_up, color=color.new(themeNeutral, 20), textcolor=themeText, size=size.small)
+            label.new(swgLastL.bar, swgLastL.price, txt, style=label.style_none, textcolor=color.new(txt == "HL" ? i_bullColor : i_bearColor, 15), size=size.tiny)
 if showInternal and not na(intPH)
     txt = classifyHigh(intLastH.price, intPrevHigh)
     if txt != ""
@@ -1011,6 +1011,14 @@ f_infoRow(table t, int r, string k, string v, color vc, string extra, color hl, 
     table.cell(t, 1, r, v, text_color=vc, text_size=sz, text_halign=text.align_center, bgcolor=hl)
     table.cell(t, 2, r, extra, text_color=themeNeutral, text_size=sz, text_halign=text.align_right, bgcolor=hl)
 
+// Clean text gauge for the probability meter, e.g. "▰▰▰▰▰▰▱▱▱▱".
+f_meter(float pct) =>
+    int filled = math.max(0, math.min(10, int(math.round(pct / 10))))
+    string barStr = ""
+    for i = 1 to 10
+        barStr += i <= filled ? "▰" : "▱"
+    barStr
+
 var table dash = na
 if showDash and na(dash)
     dash := table.new(f_tablePos(), 3, 26, bgcolor=themeBG, border_color=color.new(dashGridColor, 35), border_width=1, frame_color=color.new(dashGridColor, 20), frame_width=2)
@@ -1046,6 +1054,10 @@ if showDash and barstate.islast and not na(dash)
     chartMs   = nz(timeframe.in_seconds(), 60) * 1000.0
     r += 1
     f_infoRow(dash, r, "Signal Status", signalTxt, signalCol, posActive ? "" : f_tfTimer(chartMs), signalHL, sz)
+    // Probability meter — clean visual gauge of the dominant-side confluence score.
+    probCol = longBias ? i_bullColor : i_bearColor
+    r += 1
+    f_infoRow(dash, r, longBias ? "Buy Prob." : "Sell Prob.", f_meter(probability), probCol, str.tostring(math.round(probability)) + "%", na, sz)
     // Trade rows — Entry / Stop Loss (pts) / TP1 (pts), mirroring the reference.
     // Points = price distance expressed in the instrument's quote units.
     slPts = not na(slPrice) and not na(entryPrice) ? str.tostring(math.abs(entryPrice - slPrice), format.mintick) + "pts" : ""
