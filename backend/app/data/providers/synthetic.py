@@ -35,18 +35,45 @@ def _business_days(n: int) -> list[date]:
     return list(reversed(days))
 
 
-def _synthesize(symbol: str, days: int, uptrend: bool, mcap: float) -> pd.DataFrame:
+def _regime_for(symbol: str) -> str:
+    """Assign a deterministic market regime per symbol so the demo shows a
+    realistic spread of setups across all screener tabs."""
+    r = _seed_for(symbol) % 100
+    if r < 46:
+        return "breakout"    # clean uptrend into fresh highs -> weekly / F&O / long-term
+    if r < 70:
+        return "pullback"    # uptrend with a healthy recent dip -> monthly / delivery
+    if r < 85:
+        return "range"       # sideways / choppy -> mostly filtered out
+    return "weak"            # downtrend / laggard -> filtered out
+
+
+def _synthesize(symbol: str, days: int, regime: str, mcap: float) -> pd.DataFrame:
     rng = np.random.default_rng(_seed_for(symbol))
     dates = _business_days(days)
 
     base = 150 + (mcap % 4000) / 2.0  # keep prices comfortably above ₹100
-    drift = 0.0009 if uptrend else rng.uniform(-0.0006, 0.0006)
-    vol = rng.uniform(0.012, 0.028)
 
-    # geometric random walk with a mild trend + a late accumulation ramp
+    # Low noise so the trend (not day-to-day randomness) drives structure: this
+    # gives clean, high-ADX uptrends that sit near their 52-week highs.
+    if regime == "breakout":
+        drift, vol = 0.0018, rng.uniform(0.007, 0.010)
+    elif regime == "pullback":
+        drift, vol = 0.0015, rng.uniform(0.008, 0.012)
+    elif regime == "range":
+        drift, vol = rng.uniform(-0.0003, 0.0004), rng.uniform(0.012, 0.020)
+    else:  # weak
+        drift, vol = rng.uniform(-0.0014, -0.0003), rng.uniform(0.012, 0.020)
+
     shocks = rng.normal(drift, vol, size=days)
-    if uptrend:
-        shocks[-40:] += np.linspace(0.0, 0.0015, 40)  # base breakout tail
+    # A gentle breakout tail keeps price near its highs while holding RSI in the
+    # 55-70 sweet-spot (avoids a parabolic, overbought finish).
+    if regime == "breakout":
+        shocks[-20:] += np.linspace(0.0, 0.0004, 20)
+    elif regime == "pullback":
+        shocks[-45:-6] += 0.0012            # prior leg up
+        shocks[-6:] -= rng.uniform(0.0007, 0.0013)  # shallow, healthy pullback
+
     log_price = np.cumsum(shocks)
     close = base * np.exp(log_price)
 
@@ -57,10 +84,13 @@ def _synthesize(symbol: str, days: int, uptrend: bool, mcap: float) -> pd.DataFr
     open_ = np.clip(open_, low, high)
 
     base_vol = max(5e5, mcap * 200)
-    volume = rng.lognormal(mean=np.log(base_vol), sigma=0.4, size=days)
-    if uptrend:
-        volume[-15:] *= rng.uniform(1.4, 2.2)  # volume expansion on breakout
-    delivery = volume * rng.uniform(0.35, 0.65, size=days)
+    volume = rng.lognormal(mean=np.log(base_vol), sigma=0.35, size=days)
+    if regime in ("breakout", "pullback"):
+        # expand the most recent bars above the 20-day average so relative
+        # volume (latest / 20d-avg) reads as a genuine, > 1.5x spike
+        avg20 = float(np.mean(volume[-25:-5]))
+        volume[-5:] = avg20 * rng.uniform(1.8, 2.8, size=5)
+    delivery = volume * rng.uniform(0.45, 0.70, size=days)
 
     return pd.DataFrame(
         {
@@ -85,12 +115,11 @@ class SyntheticProvider(MarketDataProvider):
         return self._universe
 
     async def get_history(self, meta: StockMeta, days: int) -> pd.DataFrame:
-        # ~55% of names are shaped as clean uptrends so screeners have hits
-        uptrend = _seed_for(meta.symbol) % 100 < 55
-        return _synthesize(meta.symbol, days, uptrend, meta.market_cap_cr)
+        return _synthesize(meta.symbol, days, _regime_for(meta.symbol), meta.market_cap_cr)
 
     async def get_benchmark(self, symbol: str, days: int) -> pd.DataFrame:
-        return _synthesize(f"BENCH_{symbol}", days, uptrend=True, mcap=1000.0)
+        # a steady, unremarkable index so strong stocks show positive rel. strength
+        return _synthesize(f"BENCH_{symbol}", days, "range", mcap=1000.0)
 
     async def get_fundamentals(self, meta: StockMeta) -> FundamentalData:
         rng = np.random.default_rng(_seed_for(meta.symbol) + 7)
