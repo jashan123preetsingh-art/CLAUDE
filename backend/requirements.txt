@@ -1,0 +1,27 @@
+# Core
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+pydantic-settings>=2.2
+python-dotenv>=1.0
+
+# Data / numerics
+pandas>=2.2
+numpy>=1.26
+
+# HTTP / async
+httpx>=0.27
+tenacity>=8.2          # retry logic
+
+# Persistence / cache / queue (optional at runtime — graceful fallbacks provided)
+SQLAlchemy>=2.0
+redis>=5.0
+celery>=5.3
+
+# Testing
+pytest>=8.0
+pytest-asyncio>=0.23
+
+# Optional accelerators (not required — native implementations are the default)
+# TA-Lib>=0.4          # needs the TA-Lib C library installed on the host
+# vectorbt>=0.26
