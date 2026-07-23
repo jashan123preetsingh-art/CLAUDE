@@ -19,6 +19,12 @@ def test_health(client):
     assert r.json()["status"] == "ok"
 
 
+def test_dashboard_serves(client):
+    r = client.get("/dashboard")
+    assert r.status_code == 200
+    assert "AI SWING SCREENER" in r.text or "AI Swing Trading Screener" in r.text
+
+
 def test_scan_produces_results(client):
     r = client.post("/api/scan")
     assert r.status_code == 200

@@ -24,7 +24,8 @@ cp .env.example .env            # optional; defaults are fine for a demo
 
 # Run the API
 uvicorn app.main:app --reload --port 8000
-# → http://localhost:8000/docs         (interactive Swagger)
+# → http://localhost:8000/dashboard     (built-in dark-themed dashboard)
+# → http://localhost:8000/docs          (interactive Swagger)
 # → http://localhost:8000/api/top-picks
 
 # …or run a scan straight from the CLI

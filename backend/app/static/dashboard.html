@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Swing Trading Screener</title>
+<style>
+  :root {
+    --bg: #0a0e14; --panel: #111722; --panel2: #0d131c; --border: #1e2733;
+    --text: #d6e1f0; --muted: #7d8ba0; --accent: #37d67a; --accent2: #4aa8ff;
+    --warn: #f5a623; --danger: #ff5c5c; --chip: #16202e;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f6fa; --panel: #ffffff; --panel2: #eef1f6; --border: #dde3ec;
+    --text: #1a2230; --muted: #5b6675; --accent: #12a150; --accent2: #1f6fe0;
+    --warn: #b7791f; --danger: #d64545; --chip: #eef2f8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px; padding: 14px 20px;
+    border-bottom: 1px solid var(--border); background: var(--panel2);
+    position: sticky; top: 0; z-index: 10; flex-wrap: wrap;
+  }
+  header h1 { font-size: 15px; margin: 0; letter-spacing: .5px; }
+  header h1 .dot { color: var(--accent); }
+  .spacer { flex: 1; }
+  button, select, input {
+    background: var(--chip); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent2); }
+  input { cursor: text; min-width: 160px; }
+  .main { padding: 18px 20px; max-width: 1400px; margin: 0 auto; }
+  .overview { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .stat .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; }
+  .stat .value { font-size: 22px; font-weight: 600; margin-top: 4px; }
+  .stat .value.accent { color: var(--accent); }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tab { padding: 8px 16px; border-radius: 8px 8px 0 0; border: 1px solid var(--border); border-bottom: none; background: var(--panel2); }
+  .tab.active { background: var(--panel); color: var(--accent); border-color: var(--accent); }
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .toolbar label { color: var(--muted); font-size: 11px; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 10px; overflow: hidden; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+  th, td { padding: 9px 11px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; cursor: pointer; user-select: none; background: var(--panel2); position: sticky; top: 0; }
+  tbody tr:hover { background: var(--panel2); }
+  .sym { font-weight: 700; color: var(--accent2); }
+  .name { color: var(--muted); font-size: 11px; }
+  .score { font-weight: 700; }
+  .score.hi { color: var(--accent); } .score.mid { color: var(--warn); }
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 10px; background: var(--chip); font-size: 11px; color: var(--muted); }
+  .pos { color: var(--accent); } .neg { color: var(--danger); }
+  .patterns { color: var(--accent2); font-size: 11px; }
+  .muted { color: var(--muted); }
+  .expand td { background: var(--panel2); text-align: left; white-space: normal; font-size: 12px; padding: 12px 16px; }
+  .expand .kv { color: var(--muted); } .expand b { color: var(--text); }
+  .empty { padding: 40px; text-align: center; color: var(--muted); }
+  .loading { padding: 40px; text-align: center; color: var(--accent2); }
+  footer { padding: 16px 20px; color: var(--muted); font-size: 11px; text-align: center; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="dot">●</span> AI SWING SCREENER <span class="muted" id="provider"></span></h1>
+  <div class="spacer"></div>
+  <input id="search" placeholder="Search symbol / sector…" />
+  <button id="rescan" title="Force a fresh scan">↻ Rescan</button>
+  <button id="csv" title="Export current tab to CSV">⭳ CSV</button>
+  <button id="theme" title="Toggle dark / light">◐ Theme</button>
+</header>
+
+<div class="main">
+  <div class="overview" id="overview"></div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-type="weekly">Weekly</div>
+    <div class="tab" data-type="monthly">Monthly</div>
+    <div class="tab" data-type="long_term">Delivery / Long-Term</div>
+    <div class="tab" data-type="fno">F&amp;O</div>
+    <div class="tab" data-type="sectors">Sector Strength</div>
+  </div>
+
+  <div class="toolbar" id="toolbar">
+    <label>Sort</label>
+    <select id="sort">
+      <option value="score">Confidence Score</option>
+      <option value="volume">Volume Spike %</option>
+      <option value="delivery">Delivery %</option>
+      <option value="rr">Risk / Reward</option>
+    </select>
+    <label>Min score</label>
+    <input id="minscore" type="number" value="0" style="min-width:70px" />
+    <span class="muted" id="count"></span>
+  </div>
+
+  <div id="content" class="table-wrap"></div>
+</div>
+
+<footer>
+  Not investment advice — analytical/research output only. Powered by the AI Swing Trading Screener API.
+</footer>
+
+<script>
+const API = ""; // same origin
+let state = { type: "weekly", sort: "score", search: "", min: 0, rows: [] };
+
+const fmt = (v, d=2) => (v==null || isNaN(v)) ? "—" : Number(v).toLocaleString("en-IN",{maximumFractionDigits:d});
+const cr = (v) => v==null ? "—" : "₹" + Number(v).toLocaleString("en-IN",{maximumFractionDigits:0}) + " Cr";
+const signed = (v,d=1) => v==null ? "—" : (v>=0?"+":"") + fmt(v,d);
+
+async function getJSON(path){ const r = await fetch(API+path); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+
+async function loadOverview(){
+  try {
+    const o = await getJSON("/api/market-overview");
+    const h = await getJSON("/health");
+    document.getElementById("provider").textContent = "· " + (h.provider||"") + " · v" + (h.version||"");
+    document.getElementById("overview").innerHTML = [
+      ["Candidates", o.total_candidates, false],
+      ["Weekly", o.weekly, true],
+      ["Monthly", o.monthly, true],
+      ["Delivery", o.delivery, true],
+      ["F&O", o.fno, true],
+      ["Avg Confidence", fmt(o.avg_confidence,1), false],
+      ["Strongest Sector", o.strongest_sector||"—", false],
+    ].map(([l,v,a]) => `<div class="stat"><div class="label">${l}</div><div class="value ${a?'accent':''}">${v}</div></div>`).join("");
+  } catch(e){ document.getElementById("overview").innerHTML = `<div class="stat"><div class="label">API</div><div class="value neg">offline</div></div>`; }
+}
+
+function scoreClass(s){ return s>=90?"hi":s>=80?"mid":""; }
+
+function renderTable(rows){
+  if(!rows.length) return `<div class="empty">No qualifying setups.</div>`;
+  const head = ["Symbol","Name","Sector","Price","Score","Tech","Fund","News","Entry","SL","T2","R:R","Del%","VolSpk%","RSI","ADX","RS","Patterns"];
+  let html = "<table><thead><tr>" + head.map(h=>`<th>${h}</th>`).join("") + "</tr></thead><tbody>";
+  rows.forEach((r,i)=>{
+    html += `<tr data-i="${i}" class="row">
+      <td class="sym">${r.symbol}</td>
+      <td class="name">${r.name}</td>
+      <td>${r.sector}</td>
+      <td>${fmt(r.current_price)}</td>
+      <td class="score ${scoreClass(r.confidence_score)}">${fmt(r.confidence_score,1)}</td>
+      <td>${fmt(r.scores.technical,0)}</td>
+      <td>${fmt(r.scores.fundamental,0)}</td>
+      <td>${fmt(r.scores.news,0)}</td>
+      <td>${fmt(r.risk.entry_low)}–${fmt(r.risk.entry_high)}</td>
+      <td class="neg">${fmt(r.risk.stop_loss)}</td>
+      <td class="pos">${fmt(r.risk.target2)}</td>
+      <td>${fmt(r.risk.risk_reward,2)}</td>
+      <td>${fmt(r.delivery_pct,0)}</td>
+      <td class="${(r.volume_spike_pct||0)>=0?'pos':'neg'}">${signed(r.volume_spike_pct,0)}</td>
+      <td>${fmt(r.rsi,0)}</td>
+      <td>${fmt(r.adx,0)}</td>
+      <td class="${(r.relative_strength||0)>=0?'pos':'neg'}">${signed(r.relative_strength,1)}</td>
+      <td class="patterns">${(r.patterns||[]).join(", ")||"—"}</td>
+    </tr>`;
+  });
+  html += "</tbody></table>";
+  return html;
+}
+
+function renderSectors(rows){
+  if(!rows.length) return `<div class="empty">No sector data.</div>`;
+  let html = "<table><thead><tr><th>Sector</th><th>Avg Score</th><th>Count</th><th>Top Symbol</th></tr></thead><tbody>";
+  rows.forEach(s=>{ html += `<tr><td class="sym">${s.sector}</td><td class="score ${scoreClass(s.avg_score)}">${fmt(s.avg_score,1)}</td><td>${s.count}</td><td>${s.top_symbol||"—"}</td></tr>`; });
+  return html + "</tbody></table>";
+}
+
+function expandRow(tr, r){
+  const next = tr.nextElementSibling;
+  if(next && next.classList.contains("expand")){ next.remove(); return; }
+  const el = document.createElement("tr");
+  el.className = "expand";
+  el.innerHTML = `<td colspan="18">
+    <b>Targets:</b> T1 ${fmt(r.risk.target1)} · T2 ${fmt(r.risk.target2)} · T3 ${fmt(r.risk.target3)}
+    &nbsp;|&nbsp; <b>ATR-stop:</b> ${fmt(r.risk.atr_stop)} · <b>Hold ~</b>${r.risk.expected_holding_days}d
+    · <b>Size:</b> ${r.risk.position_size_shares} sh · <b>Max risk:</b> ${r.risk.max_risk_pct}%<br>
+    <span class="kv">Reasons:</span> ${(r.reasons||[]).join(", ")||"—"}<br>
+    <span class="kv">Risk factors:</span> ${(r.risk_factors||[]).join(", ")||"—"}
+  </td>`;
+  tr.after(el);
+}
+
+async function loadTab(){
+  const c = document.getElementById("content");
+  c.innerHTML = `<div class="loading">scanning…</div>`;
+  try {
+    if(state.type === "sectors"){
+      const rows = await getJSON("/api/sectors");
+      c.innerHTML = renderSectors(rows);
+      document.getElementById("count").textContent = rows.length + " sectors";
+      return;
+    }
+    const key = state.type === "long_term" ? "delivery" : state.type;
+    let rows = await getJSON(`/api/${key}?sort=${state.sort}&limit=100`);
+    if(state.search){ const q = state.search.toLowerCase();
+      rows = rows.filter(r => r.symbol.toLowerCase().includes(q) || r.name.toLowerCase().includes(q) || r.sector.toLowerCase().includes(q)); }
+    if(state.min>0) rows = rows.filter(r => r.confidence_score >= state.min);
+    state.rows = rows;
+    c.innerHTML = renderTable(rows);
+    document.getElementById("count").textContent = rows.length + " setups";
+    c.querySelectorAll("tr.row").forEach(tr => tr.addEventListener("click", () => expandRow(tr, rows[+tr.dataset.i])));
+  } catch(e){ c.innerHTML = `<div class="empty">Error: ${e.message}</div>`; }
+}
+
+function toCsv(rows){
+  const head = ["Symbol","Name","Sector","Type","Price","MarketCapCr","Confidence","Tech","Fund","News","EntryLow","EntryHigh","StopLoss","T1","T2","T3","RR","HoldDays","DeliveryPct","VolSpikePct","ATR","RSI","ADX","RS","Patterns","Reasons"];
+  const esc = v => `"${String(v??"").replace(/"/g,'""')}"`;
+  const lines = rows.map(r=>[r.symbol,r.name,r.sector,r.swing_type,r.current_price,r.market_cap_cr,r.confidence_score,r.scores.technical,r.scores.fundamental,r.scores.news,r.risk.entry_low,r.risk.entry_high,r.risk.stop_loss,r.risk.target1,r.risk.target2,r.risk.target3,r.risk.risk_reward,r.risk.expected_holding_days,r.delivery_pct,r.volume_spike_pct,r.atr,r.rsi,r.adx,r.relative_strength,(r.patterns||[]).join("; "),(r.reasons||[]).join("; ")].map(esc).join(","));
+  return [head.join(","),...lines].join("\n");
+}
+
+// --- events ---
+document.getElementById("tabs").addEventListener("click", e => {
+  const t = e.target.closest(".tab"); if(!t) return;
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active"); state.type = t.dataset.type; loadTab();
+});
+document.getElementById("sort").addEventListener("change", e => { state.sort = e.target.value; loadTab(); });
+document.getElementById("minscore").addEventListener("input", e => { state.min = +e.target.value||0; loadTab(); });
+let searchT; document.getElementById("search").addEventListener("input", e => { clearTimeout(searchT); searchT = setTimeout(()=>{ state.search = e.target.value; loadTab(); }, 250); });
+document.getElementById("csv").addEventListener("click", () => {
+  const csv = toCsv(state.rows||[]); const blob = new Blob([csv],{type:"text/csv"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `screener_${state.type}.csv`; a.click();
+});
+document.getElementById("rescan").addEventListener("click", async e => {
+  e.target.textContent = "↻ scanning…"; e.target.disabled = true;
+  try { await fetch(API+"/api/scan",{method:"POST"}); } catch(_){}
+  await loadOverview(); await loadTab(); e.target.textContent = "↻ Rescan"; e.target.disabled = false;
+});
+document.getElementById("theme").addEventListener("click", () => {
+  const root = document.documentElement;
+  const now = root.getAttribute("data-theme") === "light" ? "" : "light";
+  if(now) root.setAttribute("data-theme", now); else root.removeAttribute("data-theme");
+});
+
+loadOverview(); loadTab();
+</script>
+</body>
+</html>

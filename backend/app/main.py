@@ -10,9 +10,13 @@ http://localhost:8000/api/top-picks for the headline results.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 from app import __version__
 from app.api.routes import router
@@ -55,6 +59,13 @@ app.add_middleware(
 app.include_router(router)
 
 
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard():
+    """Built-in dark-themed dashboard (Market Overview, top picks per category,
+    sector strength, search, filters, sort, CSV export, dark/light toggle)."""
+    return FileResponse(STATIC_DIR / "dashboard.html")
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": __version__, "provider": settings.data_provider}
@@ -65,6 +76,7 @@ async def root():
     return {
         "name": "AI Swing Trading Screener",
         "version": __version__,
+        "dashboard": "/dashboard",
         "docs": "/docs",
         "endpoints": [
             "/api/weekly", "/api/monthly", "/api/delivery", "/api/fno",
